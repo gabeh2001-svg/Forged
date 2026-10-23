@@ -110,6 +110,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .nud{display:flex;align-items:center;gap:12px}.nud>div{flex:1}.nud .btn{margin:0}
 .mgrid{display:grid;gap:4px 14px}.mgrid.two{grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:4px}
 .mrow{display:flex;align-items:center;gap:8px;font-size:14px;min-width:0}.mrow span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mrow b{font-variant-numeric:tabular-nums;white-space:nowrap}.mrow b small{color:var(--dim);font-weight:500}.mrow .dot{width:12px;height:12px}
+.bmd{display:block;font-size:12px;color:var(--dim);margin-top:2px}.bms{display:block;font-size:13px;color:rgba(255,255,255,.42);margin-top:3px}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -332,7 +333,7 @@ function diet0(){const t=today(),ml=(S.meals=S.meals||{})[t]||[],m=S.macros[t]||
  return`<h1>Diet</h1><div class="card"><h2>Today</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<div class="sm">goal ${S.setup[k]||'-'} ${LBL[k][1]}</div></div><input type="number" inputmode="decimal" placeholder="0" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">Totals reset every day. Edit them to adjust by hand.</p></div>
  <div class="card"><h2>Log a meal</h2><button class="btn big scanb" data-a="scan">Scan label</button><input type="file" id="fi" accept="image/*" capture="environment" style="position:absolute;opacity:0;width:0;height:0">${(S.saved||[]).length?`<div class="chips" style="padding-top:10px">${S.saved.map((x,i)=>`<button class="chip" data-a="usem" data-i="${i}">${esc(x.n)}</button>`).join('')}</div>`:''}<input placeholder="Meal name" data-b="M.n" value="${esc(M.n)}"><div class="row">${mi('k','Calories')}${mi('p','Protein (g)')}</div><div class="row">${mi('f','Fat (g)')}${mi('c','Carbs (g)')}</div><div class="row"><button class="btn on" data-a="addm">Add meal</button><button class="chip ${M.sv?'on':''}" data-a="msv">Save for later</button></div></div>
  ${ml.length?`<h2 style="margin:4px 2px 8px">Logged today</h2>`+ml.map((x,i)=>`<div class="sr"><div class="del" data-a="delm" data-i="${i}">Delete</div><div class="in"><b>${esc(x.n)}</b><div class="sm">${x.k} kcal, ${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</div></div></div>`).join(''):''}
- <div class="card"><h2>Body metrics</h2><div class="row">${ZB.slice(0,2).map(z=>bi(z,b)).join('')}</div><div class="row">${ZB.slice(2,4).map(z=>bi(z,b)).join('')}</div><div class="row">${ZB.slice(4).map(z=>bi(z,b)).join('')}</div><p class="sm">Saved automatically for today. Greyed hints show your last entry.</p></div>`}
+ ${bmCard()}`}
 const bi=(z,b)=>`<label>${z[1].replace('(kg)','('+(S.setup.u||'kg')+')')}<input type="number" inputmode="decimal" step="0.1" placeholder="${esc(lastBM(z[0]))}" data-b="B.${z[0]}" value="${esc(b[z[0]])}"></label>`;
 function scanFx(src){const o=document.createElement('div');o.id='sc';o.innerHTML=`<div class="scw"><img src="${src}" alt="Label"><i class="ln"></i></div><div style="margin-top:22px">${$('#ov .ringw').outerHTML}</div><div class="hero">Reading label…</div>`;document.body.appendChild(o);
  setTimeout(()=>{o.remove();const r=(a,b)=>Math.round(a+Math.random()*(b-a));M={...M,n:M.n||'Scanned item',k:r(180,500),p:r(8,32),f:r(4,20),c:r(15,60)};render()},3200)}
@@ -692,5 +693,21 @@ function splash(){if($('#splash'))return;const d=document.createElement('div');d
  d.addEventListener('click',()=>d.getAnimations({subtree:true}).forEach(a=>a.finish()))}
 let HID=0;document.addEventListener('visibilitychange',()=>{if(document.hidden)HID=Date.now();else if(HID&&Date.now()-HID>30*60e3)splash()});
 splash();
+/* ---------- v10: persistent body metrics with estimates ---------- */
+function bmL(){if(S.bmL)return S.bmL;const L={};let w;Object.keys(S.bm||{}).sort().forEach(d=>{const e=S.bm[d];if(e.w!==undefined&&e.w!==''){w=+e.w;L.w={v:w,d}}ZB.forEach(z=>{const k=z[0];if(k!=='w'&&e[k]!==undefined&&e[k]!=='')L[k]={v:+e[k],d,w}})});return S.bmL=L}
+const fmtD=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+function est(k,e,w1,L){const W0=+e.w,dW=w1-W0,dF=dW<0?.75*dW:.6*dW,dL=dW-dF,u=U(),bf0=L.bf?+L.bf.v:25;
+ if(k==='bf'){const f=W0*e.v/100+dF;return(f/w1*100).toFixed(1)+'%'}
+ if(k==='smm')return(+e.v+.5*dL).toFixed(1)+u;
+ if(k==='tbw')return((W0*e.v/100+.73*dL)/w1*100).toFixed(1)+'%';
+ if(k==='vf'){const f0=W0*bf0/100;return f0>0?String(Math.max(1,Math.round(e.v*(f0+dF)/f0*2)/2)):null}
+ return null}
+function bmCard(){const L=bmL(),u=U(),w=L.w?+L.w.v:0;
+ const f=z=>{const k=z[0],e=L[k],lab=z[1].replace('(kg)','('+u+')');let sug='';
+  if(k!=='w'&&e&&e.w&&w&&Math.abs(w-e.w)>=0.2){const s=est(k,e,w,L);if(s!=null)sug=`<span class="bms">Estimated now: ${s}</span>`}
+  return`<label>${lab}<input type="number" step="0.1" data-bm="${k}" value="${e?esc(e.v):''}">${e?`<span class="bmd">${k==='w'?'Logged':'Measured'} ${fmtD(e.d)}</span>`:''}${sug}</label>`};
+ return`<div class="card"><h2>Body metrics</h2><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(0,2).map(f).join('')}</div><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(2,4).map(f).join('')}</div><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(4).map(f).join('')}</div><p class="sm">Your readings stay here until you change them. When you log a new weight, Forged estimates how the rest may have shifted and shows it in grey under each reading. Your own numbers stay as you entered them, so re-measure on a body composition scale when you can.</p></div>`}
+document.addEventListener('change',e=>{const el=e.target,k=el.dataset.bm;if(!k)return;const L=bmL(),t=today();if(el.value===''){delete L[k]}else{const v=+el.value;L[k]={v,d:t,w:k==='w'?undefined:(L.w?+L.w.v:undefined)};S.bm=S.bm||{};(S.bm[t]=S.bm[t]||{})[k]=v}save();render()});
+(()=>{const s=TOUR.find(x=>x.h==='Body metrics');if(s)s.p='Your scale readings stay saved until you change them. Log a new weight and Forged estimates the rest, shown in grey under each one.'})();
 render();periodic();
 </script></body></html>
