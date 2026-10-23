@@ -117,6 +117,12 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 #ptr.spin svg{animation:spin .8s linear infinite}
 #ptr .pr{position:absolute;inset:-1px;width:46px;height:46px;transform:rotate(-90deg)}
 .upd{display:flex;align-items:center;gap:12px}.upd>div{flex:1}.upd .btn{margin:0}
+.ssg{border-left:3px solid rgba(255,255,255,.45);padding-left:12px;margin:10px 0 6px}
+.ssh{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700;color:var(--dim);margin-bottom:4px}.ssh svg,.chip svg{width:14px;height:14px;vertical-align:-2px}
+#imp{position:fixed;inset:0;z-index:65;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+#imp .mwb{position:absolute;inset:0;background:rgba(4,6,12,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#imp .mwc{position:relative;width:100%;max-width:528px;max-height:88vh;overflow:auto;margin:0 0 calc(8px + env(safe-area-inset-bottom,0px));background:rgba(22,26,40,.95);animation:up .32s cubic-bezier(.3,1.2,.5,1)}
+#impt{width:100%;min-height:220px;resize:vertical;font:14px/1.45 ui-monospace,Menlo,monospace;background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--edge);border-radius:16px;padding:12px;box-sizing:border-box;margin:10px 0}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -323,7 +329,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  else if(a==='edone')ED=false;
  else if(a==='editp'){const p=S.plans.find(q=>q.id===i);D=JSON.parse(JSON.stringify(p));D.total=D.days.length;D.sel=0;D.eid=p.id;X={eq:'Bar',t:'Target Reps',bar:20}}
  else if(a==='xedit'){X={...D.days[D.sel].ex[+i],ei:+i}}
- else if(a==='addx2'){if(X.t==='Rep Range')X.v=(X.v1&&X.v2)?X.v1+'-'+X.v2:'';if(!X.n||!X.s||!X.v){X.err='Exercise name, sets and '+(X.t==='Time Under Tension'?'seconds':'reps')+' are all required.'}else{const ex={n:X.n,t:X.t,s:X.s,v:X.v,eq:X.eq,bar:X.bar,w:X.w,o:X.o,ro:X.ro},L=D.days[D.sel].ex;X.ei!=null?L[X.ei]=ex:L.push(ex);X={eq:X.eq,t:X.t,bar:X.bar}}}
+ else if(a==='addx2'){if(X.t==='Rep Range')X.v=(X.v1&&X.v2)?X.v1+'-'+X.v2:'';if(X.t==='Until Failure')X.v='';if(!X.n||!X.s||(!X.v&&X.t!=='Until Failure')){X.err='Exercise name, sets and '+(X.t==='Time Under Tension'?'seconds':'reps')+' are all required.'}else{const ex={n:X.n,t:X.t,s:X.s,v:X.v,eq:X.eq,bar:X.bar,w:X.w,o:X.o,ro:X.ro,g:X.g},L=D.days[D.sel].ex;X.ei!=null?L[X.ei]=ex:L.push(ex);X={eq:X.eq,t:X.t,bar:X.bar}}}
  else if(a==='conf2'){if(!D.name||!D.days.some(d=>d.ex.length)){D.err='Name the plan and add at least one exercise.'}else{D.err='';const old=D.eid&&S.plans.find(p=>p.id===D.eid),plan={id:D.eid||'p'+Date.now(),name:D.name,perWeek:D.perWeek||1,days:D.days,cur:old?Math.min(old.cur,D.days.length-1):0},ov=$('#ov'),q=$('#q');ov.classList.add('on');let n=Math.floor(Math.random()*QUOTES.length);q.textContent=QUOTES[n];const tm=setInterval(()=>{q.textContent=QUOTES[++n%QUOTES.length]},30000);setTimeout(()=>{clearInterval(tm);ov.classList.remove('on');old?S.plans.splice(S.plans.indexOf(old),1,plan):S.plans.push(plan);if(!S.active)S.active=plan.id;D=null;save();render()},3600);return}}
  else return;save();render()});
 /* ---------- v3: Diet, Timer, widget remove/add ---------- */
@@ -495,7 +501,7 @@ function onb(){
  return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 4</small>${steps[st]}<button class="btn big on" data-a="st">${st<3?'Next':'Start forging'}</button></div>`}
 function plates(w){const u=U(),P=u==='lb'?[45,35,25,10,5,2.5]:[20,15,10,5,2.5,1.25],o=[];let r=w;for(const p of P){const n=Math.floor(r/p+1e-9);if(n){o.push(n+' × '+p+u);r-=n*p}}return o.join(' + ')}
 function load(e){const w=+e.w,u=U();if(!w)return'';if(e.eq==='Bar'){const bar=+e.bar||BAR(),side=(w-bar)/2;return side<0?'Total is below the bar weight':side===0?'Just the bar':`${plates(side)} on each side`}if(e.eq==='Free Weights')return`${w/2}${u} in each hand`;if(e.eq==='Body Weight')return`Add ${w}${u}`;return`Set the machine to ${w}${u}`}
-const tgt2=e=>e.t==='Time Under Tension'?`${e.s||'?'} × ${e.v||'?'} second hold`:`${e.s||'?'} × ${e.v||'?'} reps`;
+const repTxt=e=>e.t==='Until Failure'?'until failure':e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?`${e.v||'?'} second hold`:`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
 const restOf=(e,d)=>+e.ro?e.ro*1000:((d&&d.rest)||90000);
 function exBlock(e){const u=U(),w=+e.w,r=[];
  if(w)r.push([e.eq==='Body Weight'?'Added weight':'Total weight',w+u]);
@@ -504,12 +510,12 @@ function exBlock(e){const u=U(),w=+e.w,r=[];
  if(+e.ro)r.push(['Rest',mmss(e.ro*1000)]);
  return`<div class="exn">${esc(e.n)}</div><div class="ext">${tgt2(e)}</div>${r.length?`<dl class="kv">${r.map(x=>`<dt>${x[0]}</dt><dd>${x[1]}</dd>`).join('')}</dl>`:''}${e.o?`<div class="exnote">${esc(e.o)}</div>`:''}`}
 function builder(){const d=D.days[D.sel],u=U(),opt=(a,v)=>a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
- const vf=X.t==='Rep Range'?`<label>Min reps<input type="number" data-b="X.v1" value="${esc(X.v1)}"></label><label>Max reps<input type="number" data-b="X.v2" value="${esc(X.v2)}"></label>`:`<label>${X.t==='Time Under Tension'?'Seconds per set':'Reps per set'}<input type="number" data-b="X.v" value="${esc(X.v)}"></label>`;
+ const vf=X.t==='Until Failure'?'<p class="sm" style="margin:8px 0">Each set goes until you can’t do another rep.</p>':X.t==='Custom'?`<label>Target per set<input placeholder="e.g. 5 lengths or 40 metres" data-b="X.cv" value="${esc(X.cv??X.v??'')}"></label>`:X.t==='Rep Range'?`<label>Min reps<input type="number" data-b="X.v1" value="${esc(X.v1)}"></label><label>Max reps<input type="number" data-b="X.v2" value="${esc(X.v2)}"></label>`:`<label>${X.t==='Time Under Tension'?'Seconds per set':'Reps per set'}<input type="number" data-b="X.v" value="${esc(X.v)}"></label>`;
  return`<h1>${D.eid?'Edit plan':'New plan'}</h1><div class="card"><input placeholder="e.g. Yoga" data-b="D.name" value="${esc(D.name)}"><div class="row"><label>Total days<input type="number" min="1" max="14" data-b="D.total" data-r value="${D.total}"></label><label>Days per week<input type="number" min="1" max="7" data-b="D.perWeek" data-r value="${D.perWeek}"></label></div><p class="sm">Finishes in ${Math.ceil(D.total/(D.perWeek||1))} weeks.</p></div>
  <div class="chips">${D.days.map((x,i)=>`<button class="chip ${i===D.sel?'on':''}" data-a="sel" data-i="${i}">${esc(x.name)}</button>`).join('')}</div>
  <div class="card"><label>Day name<input data-b="day.name" data-r value="${esc(d.name)}"></label><label>Body part(s) trained<input data-b="day.body" value="${esc(d.body)}"></label><label>Need to bring anything to the gym for this day?<input data-b="day.equip" placeholder="e.g. yoga mat, towel" value="${esc(d.equip)}"></label></div>
- <div class="card"><h2>Exercises</h2>${d.ex.map((e,i)=>`<div class="sr"><div class="del" data-a="delx" data-i="${i}">Delete</div><div class="in" data-a="xedit" data-i="${i}" style="cursor:pointer">${exBlock(e)}</div></div>`).join('')||'<p class="sm">None yet.</p>'}${d.ex.length?'<p class="sm">Tap an exercise to edit it. Swipe left to delete.</p>':''}</div>
- <div class="card"><h2>${X.ei!=null?'Edit exercise':'Add exercise'}</h2><label>Exercise name<input placeholder="e.g. Bench press" data-b="X.n" value="${esc(X.n)}"></label><div class="row"><label>Target type<select data-b="X.t" data-r>${opt(['Target Reps','Rep Range','Time Under Tension'],X.t)}</select></label><label>Sets<input type="number" min="1" data-b="X.s" value="${esc(X.s)}"></label></div><div class="row">${vf}</div>
+ <div class="card"><h2>Exercises</h2>${exList(d.ex,(e,i)=>`<div class="sr"><div class="del" data-a="delx" data-i="${i}">Delete</div><div class="in" data-a="xedit" data-i="${i}" style="cursor:pointer">${exBlock(e)}</div></div>`)||'<p class="sm">None yet.</p>'}${d.ex.length?'<p class="sm">Tap an exercise to edit it. Swipe left to delete.</p>':''}</div>
+ <div class="card"><h2>${X.ei!=null?'Edit exercise':'Add exercise'}</h2><label>Exercise name<input placeholder="e.g. Bench press" data-b="X.n" value="${esc(X.n)}"></label>${ssChip(d)}<div class="row"><label>Target type<select data-b="X.t" data-r>${opt(['Target Reps','Rep Range','Until Failure','Time Under Tension','Custom'],X.t)}</select></label><label>Sets<input type="number" min="1" data-b="X.s" value="${esc(X.s)}"></label></div><div class="row">${vf}</div>
  <label>Equipment used<select data-b="X.eq" data-r>${opt(['Bar','Free Weights','Machine','Body Weight'],X.eq)}</select></label><div class="row"><label>${X.eq==='Body Weight'?`Added weight (${u}, optional)`:`Total weight (${u})`}<input type="number" step="0.5" data-b="X.w" value="${esc(X.w)}"></label>${X.eq==='Bar'?`<label>Bar weight (${u})<input type="number" step="0.5" data-b="X.bar" value="${esc(X.bar)}"></label>`:''}</div>
  <div class="prev" ${X.n?'':'hidden'}>${prevX()}</div>
  <label>Rest period override (seconds, optional)<input type="number" data-b="X.ro" placeholder="Uses the day’s rest time" value="${esc(X.ro)}"></label><label>Additional notes<input placeholder="e.g. Bench at height 3" data-b="X.o" value="${esc(X.o)}"></label>${X.err?`<p class="err">${X.err}</p>`:''}<div class="row"><button class="btn on" data-a="addx2">${X.ei!=null?'Update exercise':'Add to '+esc(d.name)}</button>${X.ei!=null?'<button class="btn" data-a="xcancel">Cancel edit</button>':''}</div></div>
@@ -518,7 +524,7 @@ function ensureSched(){const p=activePlan();if(!p||!p.days.length)return;const t
  if(S.schV!==sig){Object.keys(S.sch).forEach(d=>{if(d>=t)delete S.sch[d]});S.schV=sig;S.schP=p.id;S.schC=(p.cur||0)%p.days.length}
  for(let i=-7;i<42;i++){const d=addDays(t,i);if(S.sch[d]!==undefined)continue;if(d<t){S.sch[d]=null;continue}const w=(new Date(d+'T12:00').getDay()+6)%7;if((PAT[Math.min(7,p.perWeek||3)]||PAT[3]).includes(w)){S.sch[d]=S.schC%p.days.length;S.schC++}else S.sch[d]=null}}
 function planner0(){const ps=[...S.plans].sort((a,b)=>(b.id===S.active)-(a.id===S.active));
- return`<h1>Workout plans</h1><p class="sm" style="margin:-8px 2px 12px">The tick marks your active plan, which fills your week on Home. Tap a plan to edit it, swipe left to delete.</p>`+(ps.map(p=>{const on=S.active===p.id;return`<div class="sr"><div class="del" data-a="delp" data-i="${p.id}">Delete</div><div class="in ${on?'act-on':''}" data-a="editp" data-i="${p.id}"><div class="row" style="align-items:center;justify-content:space-between;flex-wrap:nowrap"><h2 style="margin:0">${esc(p.name)}</h2><button class="act ${on?'on':''}" data-a="use" data-i="${p.id}" aria-label="${on?'Active plan':'Make this the active plan'}">${ico(on?'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/>':'<circle cx="12" cy="12" r="9"/>')}</button></div><span class="pill">${p.days.length} days</span> <span class="pill">${p.perWeek} per week</span>${on?' <span class="pill">Active</span>':''}${p.days.map(d=>`<p class="sm" style="margin:6px 0 0"><b>${esc(d.name)}</b>, ${esc(d.body||'no focus set')}: ${d.ex.length} exercises${d.equip?`. Bring ${esc(d.equip)}.`:''}</p>`).join('')}</div></div>`}).join('')||'<div class="card"><p>No plans yet. Build your first one.</p></div>')+`<button class="btn big on" data-a="newp">New plan</button>`}
+ return`<h1>Workout plans</h1><p class="sm" style="margin:-8px 2px 12px">The tick marks your active plan, which fills your week on Home. Tap a plan to edit it, swipe left to delete.</p>`+(ps.map(p=>{const on=S.active===p.id;return`<div class="sr"><div class="del" data-a="delp" data-i="${p.id}">Delete</div><div class="in ${on?'act-on':''}" data-a="editp" data-i="${p.id}"><div class="row" style="align-items:center;justify-content:space-between;flex-wrap:nowrap"><h2 style="margin:0">${esc(p.name)}</h2><button class="act ${on?'on':''}" data-a="use" data-i="${p.id}" aria-label="${on?'Active plan':'Make this the active plan'}">${ico(on?'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/>':'<circle cx="12" cy="12" r="9"/>')}</button></div><span class="pill">${p.days.length} days</span> <span class="pill">${p.perWeek} per week</span>${on?' <span class="pill">Active</span>':''}${p.days.map(d=>`<p class="sm" style="margin:6px 0 0"><b>${esc(d.name)}</b>, ${esc(d.body||'no focus set')}: ${d.ex.length} exercises${d.equip?`. Bring ${esc(d.equip)}.`:''}</p>`).join('')}</div></div>`}).join('')||'<div class="card"><p>No plans yet. Build your first one.</p></div>')+`<button class="btn big on" data-a="newp">New plan</button><button class="btn big" data-a="imp">Paste a plan</button>`}
 function wd(l){if(l.id==='work'){const p=activePlan(),t=today();ensureSched();const s=S.sch&&S.sch[t];
   if(!p)return'<h2>Today’s workout</h2><small>No plan yet. Build one in the Workout tab.</small>';
   if(s==null)return'<h2>Rest day</h2><small>No workout planned today. Start one any time.</small>';
@@ -546,7 +552,7 @@ function awr(){let o=$('#aw');if(!AW){o&&o.remove();return}if(!o){o=document.cre
  if(ph==='go')b=`<small>Next up</small><div class="big2">Go to the ${esc(e.n)} area in your gym</div><small>Tap Next when you’re there.</small>${nx('Next')}`;
  else if(ph==='load')b=`<small>Get set up</small><div class="big2">${setup2(e)}</div>${nx('Next')}`;
  else if(ph==='begin')b=`<div class="big2">${esc(e.n)}</div><small>${tgt2(e)}, ${mmss(restOf(e,AW.d))} rest between sets</small>${nx('Begin exercise')}`;
- else if(ph==='set')b=tut?`<small>${esc(e.n)}</small><div class="pulse"></div><div class="big2">Set ${AW.s} of ${e.s}</div><small>Get into position, then start your ${e.v||'?'} second hold.</small><button class="btn big on" data-a="awtut">Start ${e.v||''}s hold</button>`:`<small>${esc(e.n)}</small><div class="pulse"></div><div class="big2">Set ${AW.s} of ${e.s}</div><small>${e.v||'?'} reps</small>${nx('Completed set '+AW.s)}`;
+ else if(ph==='set')b=tut?`<small>${esc(e.n)}</small><div class="pulse"></div><div class="big2">Set ${AW.s} of ${e.s}</div><small>Get into position, then start your ${e.v||'?'} second hold.</small><button class="btn big on" data-a="awtut">Start ${e.v||''}s hold</button>`:`<small>${esc(e.n)}</small><div class="pulse"></div><div class="big2">Set ${AW.s} of ${e.s}</div><small>${repTxt(e)}${e.g?', superset':''}</small>${nx('Completed set '+AW.s)}`;
  else if(ph==='tut')b=`<small>${esc(e.n)}, set ${AW.s} of ${e.s}</small><div class="num" id="awtt">${fmt(awLeft())}</div><small>Hold</small><div class="row" style="justify-content:center"><button class="btn on" data-a="awp" aria-label="Pause">${ico(AW.run?IC.pause:IC.play)}</button><button class="btn" data-a="awn">Done early</button></div>`;
  else if(ph==='rest')b=`<small>Rest</small><div class="num" id="awt">${fmt(awLeft())}</div><div class="row" style="justify-content:center"><button class="btn on" data-a="awp" aria-label="Pause">${ico(AW.run?IC.pause:IC.play)}</button><button class="btn" data-a="awn">Skip rest</button></div><small>Up next: set ${AW.s} of ${e.s}</small>`;
  else b=`<div class="big2">Workout complete. Brilliant work, that’s another one done.</div><button class="btn big on" data-a="awx">Done</button>`;
@@ -614,7 +620,7 @@ function wd7(l){if(l.id==='work'){const t=today();let p=activePlan(),d=null;ensu
   if((S.fd||{})[t])return`<h2>Workout complete</h2><small>${esc(d.name)} done. Nice work.</small>`;
   if(l.w===1)return`<small>Today</small><h2>${esc(d.name)}</h2><small>${d.ex.length} exercises</small>`;
   const ck=S.checks[t]=S.checks[t]||[],all=d.ex.length&&d.ex.every((_,i)=>ck[i]);
-  return`<h2>${esc(d.name)}</h2>`+d.ex.map((e,i)=>`<div class="ck ${ck[i]?'done':''}" data-a="chk" data-i="${i}" role="checkbox" aria-checked="${!!ck[i]}" tabindex="0"><div class="box">${ck[i]?'✓':''}</div><div class="t">${exBlock(e)}</div></div>`).join('')+(all?'<button class="btn on" data-a="fin">Finish workout</button>':'')}
+  return`<h2>${esc(d.name)}</h2>`+exList(d.ex,(e,i)=>`<div class="ck ${ck[i]?'done':''}" data-a="chk" data-i="${i}" role="checkbox" aria-checked="${!!ck[i]}" tabindex="0"><div class="box">${ck[i]?'✓':''}</div><div class="t">${exBlock(e)}</div></div>`)+(all?'<button class="btn on" data-a="fin">Finish workout</button>':'')}
  return wd0(l)}
 const bnr=(h,p,l,a)=>`<div class="card nud"><div><b>${h}</b><div class="sm">${p}</div></div><button class="btn on" data-a="${a}">${l}</button></div>`;
 function nudge(){const n=new Date(),hm=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'),t=realToday();if(today()!==t)return'';
@@ -730,5 +736,63 @@ let ETAG=null;
 async function chkUpd(){if(!/^https?:$/.test(location.protocol)||!/netlify\.app$/.test(location.hostname))return;try{const r=await fetch(location.pathname,{method:'HEAD',cache:'no-store'}),t=r.headers.get('etag')||r.headers.get('last-modified');if(!t)return;if(ETAG==null){ETAG=t;return}if(t!==ETAG&&!$('#upd')){const d=document.createElement('div');d.id='upd';d.className='toast upd';d.innerHTML='<div><b>New version of Forged</b><div class="sm">Pull down or tap Refresh to get it.</div></div><button class="btn on" data-a="updgo">Refresh</button>';document.body.appendChild(d)}}catch(_){}}
 chkUpd();document.addEventListener('visibilitychange',()=>{if(!document.hidden)chkUpd()});
 document.addEventListener('click',e=>{if(e.target.closest('[data-a=updgo]')){save();try{sessionStorage.setItem('ptr','1')}catch(_){}location.reload()}});
+/* ---------- v12: paste a plan, supersets, until failure ---------- */
+let IMP=null;
+const SSI='<path d="M7 4v16M17 4v16M7 8h10M7 16h10"/>';
+function exList(L,f){let o='';L.forEach((e,i)=>{const st=e.g&&(i===0||L[i-1].g!==e.g),en=e.g&&(i===L.length-1||L[i+1].g!==e.g);if(st)o+=`<div class="ssg"><div class="ssh">${ico(SSI)}Superset, ${e.s||'?'} sets</div>`;o+=f(e,i);if(en)o+='</div>'});return o}
+function ssChip(d){const i=X.ei!=null?X.ei:d.ex.length;if(i<1)return'';return`<button class="chip ${X.ss?'on':''}" data-a="xss" style="margin:8px 0 2px">${ico(SSI)} Superset with ${esc(d.ex[i-1].n)}</button>`}
+function grpRange(i){const L=AW.d.ex,g=L[i].g;let a=i,b=i;if(g){while(a>0&&L[a-1].g===g)a--;while(b<L.length-1&&L[b+1].g===g)b++}return[a,b]}
+function completeSet(now){const L=AW.d.ex,x=L[AW.e],[a,b]=grpRange(AW.e),sets=+L[a].s||+x.s||1;
+ if(AW.e<b){AW.e++;AW.ph=AW.s===1?'go':'set';return}
+ const r=restOf(L[a].ro?L[a]:x,AW.d);
+ if(AW.s<sets){AW.s++;AW.e=a;AW.ph='rest';AW.left=r;AW.end=now+r;AW.run=true;return}
+ if(b<L.length-1){AW.e=b+1;AW.s=1;AW.ph='go'}else{AW.ph='done';S.fd=S.fd||{};S.fd[today()]=1;S.done=today();save();boom('day')}}
+const cap=t=>t.replace(/\b\w/g,c=>c.toUpperCase());
+function kind(n){const l=n.toLowerCase();if(/machine|cable|leg press|pull ?-?down|leg curl|leg extension|hack squat|smith|pec deck|seated row/.test(l))return'Machine';if(/dumbbell|kettlebell|farmer|hammer curl|goblet|\bdb\b/.test(l))return'Free Weights';if(/barbell|bench press|squat|deadlift|shoulder press|ez bar|curl bar|clean/.test(l))return'Bar';return''}
+function parseEx(b,grp){const notes=[];let m=b.match(/^(.*?)\s+[-–—]\s+(?:(\d+)\s*[x×]\s*)?(.+)$/i),nm=b,sets=null,rest='';
+ if(m){nm=m[1];sets=m[2];rest=m[3]}
+ nm=nm.replace(/\(([^()]*)\)/g,(_,x)=>{notes.push(x.trim());return''}).replace(/\s{2,}/g,' ').trim();
+ let br=null;const bm=rest.match(/\(([^()]*)\)\s*$/);if(bm){br=bm[1].trim();rest=rest.slice(0,bm.index).trim()}
+ let t='Custom',v=rest,w=null,perSide=false;const lr=rest.toLowerCase();let q;
+ if(/until failure/.test(lr)){t='Until Failure';v=''}
+ else if(q=lr.match(/(\d+)\s*[-–]\s*(\d+)\s*reps?/)){t='Rep Range';v=q[1]+'-'+q[2]}
+ else if(q=lr.match(/(\d+)\s*reps?\b/)){t='Target Reps';v=q[1]}
+ else if(q=lr.match(/(\d+(?:\.\d+)?)\s*(?:min|mins|minute|minutes)\b/)){t='Time Under Tension';v=String(Math.round(+q[1]*60))}
+ else if(q=lr.match(/(\d+)\s*(?:s|sec|secs|second|seconds)\b/)){t='Time Under Tension';v=q[1]}
+ if(/per (side|leg|arm)|each (side|leg|arm)/.test(lr))notes.push(cap((lr.match(/(per|each) (side|leg|arm)/)||[''])[0]));
+ if(br){if(q=br.match(/^((?:height|seat|level|notch|setting)\s*[\w.]+)\s*[-–:]\s*([\d.]+)\s*(?:kg|lb)?$/i)){notes.unshift(cap(q[1]));w=+q[2];perSide='set'}
+  else if(q=br.match(/^([\d.]+)\s*(?:kg|lbs?)?\s*((?:on |in )?(?:each|per) (?:arm|side|hand|leg))?$/i)){w=+q[1];perSide=!!q[2]}
+  else notes.push(br)}
+ let eq=kind(nm);if(!eq)eq=perSide==='set'?'Machine':'Body Weight';
+ let tw=w;if(w!=null){if(eq==='Bar')tw=w+BAR();else if(eq==='Free Weights')tw=w*2}
+ const s=grp?grp.s:(+sets||1);
+ return{n:nm,t,v,s:String(s),eq,bar:eq==='Bar'?BAR():undefined,w:tw!=null?+(+tw).toFixed(2):'',o:notes.filter(Boolean).join('. '),g:grp?grp.id:undefined}}
+function parsePlan(txt){const lines=String(txt).replace(/\r/g,'').split('\n');let name='',days=[],cur=null,grp=null,k=0;
+ for(const raw of lines){const ind=(raw.match(/^[ \t]*/)[0]).replace(/\t/g,'    ').length;const l=raw.trim().replace(/^["“”]+|["“”]+$/g,'').trim();if(!l)continue;
+  const dm=l.match(/^(day\s*\d+)\s*[:\-–]\s*(.*)$/i);
+  if(dm){cur={name:cap(dm[1].replace(/\s+/,' ')),body:dm[2].trim(),equip:'',ex:[]};days.push(cur);grp=null;continue}
+  if(!cur){if(!name)name=l;continue}
+  const b=l.replace(/^[*\-•·]\s*/,'');
+  const sm=b.match(/^super ?set\b[^\d]*(\d+)\s*sets?/i);
+  if(sm){grp={id:'g'+Date.now()+'_'+(k++),s:+sm[1],ind,seen:false};continue}
+  if(grp){const hasSets=/\s[-–—]\s+\d+\s*[x×]/i.test(b);if(ind>grp.ind)grp.seen=true;else if(grp.seen||hasSets)grp=null}
+  cur.ex.push(parseEx(b,grp))}
+ return{name:name||'Imported plan',days}}
+function impr(){let o=$('#imp');if(!IMP){o&&o.remove();return}if(!o){o=document.createElement('div');o.id='imp';document.body.appendChild(o)}
+ o.innerHTML=`<div class="mwb" data-a="impx"></div><div class="card mwc" role="dialog" aria-label="Paste a plan"><h2>Paste a plan</h2><p class="sm">Plan name on the first line, then start each day with “Day 1:”. One exercise per line, like “Bench Press - 3 x 8-10 reps (60)”. The number in brackets is the weight you add to the bar, or hold in each hand. “Superset - 3 Sets:” groups the exercises under it.</p><textarea id="impt" placeholder="FARMER&#10;&#10;Day 1: Heavy Compounds (Chest &amp; Back)&#10;* Machine Bench Press - 2 x 6-8 reps (60)">${esc(IMP.txt||'')}</textarea>${IMP.err?`<p class="err">${IMP.err}</p>`:''}<button class="btn big on" data-a="impgo">Read my plan</button><button class="btn big" data-a="impx">Cancel</button></div>`}
+document.addEventListener('input',e=>{if(e.target.id==='impt'&&IMP)IMP.txt=e.target.value});
+addEventListener('click',e=>{const el=e.target.closest('[data-a=addx2]');if(!el||!D)return;const L=D.days[D.sel].ex,i=X.ei!=null?X.ei:L.length;if(X.t==='Custom')X.v=X.cv??X.v??'';
+ const ok=X.n&&X.s&&(X.v||X.t==='Until Failure'||X.t==='Rep Range');
+ if(X.ss&&i>0&&ok){const p=L[i-1];X.g=p.g||('g'+Date.now());p.g=X.g}else if(!X.ss)X.g=undefined;
+ if(X.g&&X.s&&ok)L.forEach(q=>{if(q.g===X.g)q.s=X.s})},true);
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='imp'){IMP={txt:''};impr();return}
+ else if(a==='impx'){IMP=null;impr();return}
+ else if(a==='impgo'){IMP.txt=($('#impt')||{}).value||IMP.txt;const P=parsePlan(IMP.txt||'');if(!P.days.length||!P.days.some(d=>d.ex.length)){IMP.err='I couldn’t find any days. Start each day with “Day 1:” and put one exercise per line.';impr();return}
+  D={name:P.name,total:P.days.length,perWeek:Math.min(7,+S.setup.freq||3),sel:0,days:P.days};X={eq:'Bar',t:'Target Reps',bar:BAR()};IMP=null;impr();tab='plan';render();scrollTo(0,0);toast(`Read ${P.days.length} days and ${P.days.reduce((n,d)=>n+d.ex.length,0)} exercises. Check each day, then tap Confirm plan.`);return}
+ else if(a==='xss')X.ss=!X.ss;
+ else if(a==='xedit'){const L=D.days[D.sel].ex,i=X.ei;X.ss=!!(X.g&&i>0&&L[i-1].g===X.g);if(X.t==='Custom')X.cv=X.v}
+ else return;render()});
+(()=>{const t=TOUR.find(x=>x.h==='Your plans');if(t)t.p='Build a plan from scratch, or tap Paste a plan to drop in one you already have written out. The tick marks your active plan, which fills your week on Home. Tap a plan to edit it, swipe left to delete.'})();
 render();periodic();
 </script></body></html>
