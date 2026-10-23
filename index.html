@@ -111,6 +111,12 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .mgrid{display:grid;gap:4px 14px}.mgrid.two{grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:4px}
 .mrow{display:flex;align-items:center;gap:8px;font-size:14px;min-width:0}.mrow span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mrow b{font-variant-numeric:tabular-nums;white-space:nowrap}.mrow b small{color:var(--dim);font-weight:500}.mrow .dot{width:12px;height:12px}
 .bmd{display:block;font-size:12px;color:var(--dim);margin-top:2px}.bms{display:block;font-size:13px;color:rgba(255,255,255,.42);margin-top:3px}
+#ptr{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));z-index:90;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:rgba(22,26,40,.9);border:1px solid var(--edge);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);display:grid;place-items:center;opacity:0;transform:translateY(-60px);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#ptr svg{width:22px;height:22px;transition:transform .2s}
+#ptr.ready svg{transform:rotate(180deg)}
+#ptr.spin svg{animation:spin .8s linear infinite}
+#ptr .pr{position:absolute;inset:-1px;width:46px;height:46px;transform:rotate(-90deg)}
+.upd{display:flex;align-items:center;gap:12px}.upd>div{flex:1}.upd .btn{margin:0}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -692,7 +698,7 @@ function splash(){if($('#splash'))return;const d=document.createElement('div');d
  const out=d.animate([{opacity:1},{opacity:0}],{duration:520,delay:3100,easing:'ease',...f});out.onfinish=()=>d.remove();
  d.addEventListener('click',()=>d.getAnimations({subtree:true}).forEach(a=>a.finish()))}
 let HID=0;document.addEventListener('visibilitychange',()=>{if(document.hidden)HID=Date.now();else if(HID&&Date.now()-HID>30*60e3)splash()});
-splash();
+(()=>{let skip=false;try{skip=sessionStorage.getItem('ptr')==='1';sessionStorage.removeItem('ptr')}catch(_){}if(!skip)splash()})();
 /* ---------- v10: persistent body metrics with estimates ---------- */
 function bmL(){if(S.bmL)return S.bmL;const L={};let w;Object.keys(S.bm||{}).sort().forEach(d=>{const e=S.bm[d];if(e.w!==undefined&&e.w!==''){w=+e.w;L.w={v:w,d}}ZB.forEach(z=>{const k=z[0];if(k!=='w'&&e[k]!==undefined&&e[k]!=='')L[k]={v:+e[k],d,w}})});return S.bmL=L}
 const fmtD=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
@@ -709,5 +715,20 @@ function bmCard(){const L=bmL(),u=U(),w=L.w?+L.w.v:0;
  return`<div class="card"><h2>Body metrics</h2><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(0,2).map(f).join('')}</div><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(2,4).map(f).join('')}</div><div class="row" style="align-items:flex-start;margin-bottom:6px">${ZB.slice(4).map(f).join('')}</div><p class="sm">Your readings stay here until you change them. When you log a new weight, Forged estimates how the rest may have shifted and shows it in grey under each reading. Your own numbers stay as you entered them, so re-measure on a body composition scale when you can.</p></div>`}
 document.addEventListener('change',e=>{const el=e.target,k=el.dataset.bm;if(!k)return;const L=bmL(),t=today();if(el.value===''){delete L[k]}else{const v=+el.value;L[k]={v,d:t,w:k==='w'?undefined:(L.w?+L.w.v:undefined)};S.bm=S.bm||{};(S.bm[t]=S.bm[t]||{})[k]=v}save();render()});
 (()=>{const s=TOUR.find(x=>x.h==='Body metrics');if(s)s.p='Your scale readings stay saved until you change them. Log a new weight and Forged estimates the rest, shown in grey under each one.'})();
+/* ---------- v11: pull to refresh, update check ---------- */
+(()=>{const ok=()=>isStandalone()||/[?&]ptr\b/.test(location.search);const el=document.createElement('div');el.id='ptr';el.setAttribute('aria-hidden','true');
+ el.innerHTML='<svg class="pr" viewBox="0 0 46 46"><circle cx="23" cy="23" r="21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="132" stroke-dashoffset="132"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>';
+ document.body.appendChild(el);const ring=el.querySelector('.pr circle'),ic=el.querySelectorAll('svg')[1],app=$('#app'),TH=80;let y0=null,x0=0,dy=0,on=false,busy=false;
+ const blocked=t=>busy||ED||TU!=null||$('#aw,#mw,#splash,#sc,.toast-block')||(t&&t.closest('.chipw,.wd,.sr,input,select,textarea,.nav'));
+ const paint=()=>{const p=Math.min(1,dy/TH);el.style.transition='none';app.style.transition='none';el.style.opacity=Math.min(1,dy/30);el.style.transform=`translateY(${Math.min(dy,TH+20)*0.9-60}px)`;ring.style.strokeDashoffset=132*(1-p);el.classList.toggle('ready',p>=1);app.style.transform=`translateY(${Math.min(dy,TH+30)*0.45}px)`};
+ const reset=()=>{el.style.transition='transform .35s cubic-bezier(.3,1.2,.5,1),opacity .3s';app.style.transition='transform .35s cubic-bezier(.3,1.2,.5,1)';el.style.transform='translateY(-60px)';el.style.opacity=0;app.style.transform='';el.classList.remove('ready')};
+ addEventListener('touchstart',e=>{if(!ok()||scrollY>0||e.touches.length>1||blocked(e.target)){y0=null;return}y0=e.touches[0].clientY;x0=e.touches[0].clientX;dy=0;on=false},{passive:true});
+ addEventListener('touchmove',e=>{if(y0==null)return;const t=e.touches[0],d=t.clientY-y0,dx=t.clientX-x0;if(!on){if(Math.abs(dx)>Math.abs(d)||d<6){if(d<0||Math.abs(dx)>12)y0=null;return}on=true}dy=d*0.6;if(e.cancelable)e.preventDefault();paint()},{passive:false});
+ addEventListener('touchend',()=>{if(y0==null||!on){y0=null;return}y0=null;if(dy>=TH){busy=true;navigator.vibrate&&navigator.vibrate(10);el.classList.remove('ready');el.classList.add('spin');ring.style.strokeDashoffset=90;el.style.transition='transform .25s';el.style.transform='translateY(14px)';app.style.transition='transform .25s';app.style.transform='translateY(36px)';ic.innerHTML='<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/>';save();try{sessionStorage.setItem('ptr','1')}catch(_){}setTimeout(()=>location.reload(),650)}else reset()});
+ addEventListener('touchcancel',()=>{y0=null;reset()});})();
+let ETAG=null;
+async function chkUpd(){if(!/^https?:$/.test(location.protocol)||!/netlify\.app$/.test(location.hostname))return;try{const r=await fetch(location.pathname,{method:'HEAD',cache:'no-store'}),t=r.headers.get('etag')||r.headers.get('last-modified');if(!t)return;if(ETAG==null){ETAG=t;return}if(t!==ETAG&&!$('#upd')){const d=document.createElement('div');d.id='upd';d.className='toast upd';d.innerHTML='<div><b>New version of Forged</b><div class="sm">Pull down or tap Refresh to get it.</div></div><button class="btn on" data-a="updgo">Refresh</button>';document.body.appendChild(d)}}catch(_){}}
+chkUpd();document.addEventListener('visibilitychange',()=>{if(!document.hidden)chkUpd()});
+document.addEventListener('click',e=>{if(e.target.closest('[data-a=updgo]')){save();try{sessionStorage.setItem('ptr','1')}catch(_){}location.reload()}});
 render();periodic();
 </script></body></html>
