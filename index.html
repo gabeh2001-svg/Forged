@@ -181,6 +181,11 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .tok .ck1{stroke-dasharray:40;stroke-dashoffset:40;animation:drawck .45s .1s cubic-bezier(.3,1,.4,1) forwards}.tok .ck0{transform-origin:center;animation:popc .35s cubic-bezier(.3,1.6,.5,1)}
 @keyframes drawck{to{stroke-dashoffset:0}}@keyframes popc{from{transform:scale(.4);opacity:0}}
 .tdots{display:flex;gap:4px;margin:0 0 8px}.tdots i{height:4px;border-radius:2px;background:rgba(255,255,255,.22);flex:1;transition:background .3s}.tdots i.on{background:#fff}
+#wn{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:16px}
+#wn .mwb{position:absolute;inset:0;background:rgba(4,6,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#wn .mwc{position:relative;width:100%;max-width:480px;max-height:86vh;overflow:auto;background:rgba(22,26,40,.97);animation:up .4s cubic-bezier(.3,1.2,.5,1)}
+.wni{display:flex;gap:12px;padding:10px 0;border-top:1px solid rgba(255,255,255,.1)}.wni:first-of-type{border-top:0}.wni>span{flex:none;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center}.wni svg{width:18px;height:18px}.wni b{display:block;font-size:15px}.wni div{font-size:13.5px;color:var(--dim);line-height:1.45}
+.wnbadge{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:9px;background:var(--g1);color:#fff;margin-bottom:8px}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -1089,8 +1094,8 @@ function estForm(){const E=EST,u=U(),r=calcEst(E),opt=(a,v)=>a.map(x=>`<option v
  <label>How active are you?<select data-b="EST.act" data-est>${opt(ACT.map((a,i)=>[i+1,a[0]]),E.act)}</select></label>
  <p class="sm" style="margin:10px 0 4px">Goal</p><div class="chips" style="padding:0 0 4px;flex-wrap:wrap">${[['lose','Lose weight'],['maintain','Maintain'],['gain','Gain / build']].map(x=>`<button class="chip ${E.goal===x[0]?'on':''}" data-a="estset" data-k="goal" data-i="${x[0]}">${x[1]}</button>`).join('')}</div>
  ${E.goal!=='maintain'?`<label>How fast?<select data-b="EST.rate" data-est>${opt(rates.map(x=>[x,`About ${rl(x)} a week${x===rates[rates.length-1]&&E.goal==='lose'?' (fastest)':x===.25?' (steady)':''}`]),E.rate)}</select></label>`:''}
- <div id="estres">${estRes(r)}</div><button class="btn big" data-a="shx">Cancel</button>`}
-function estRes(r){if(!r)return`<p class="sm" style="margin-top:12px">Fill in your weight, height, age and sex to see your estimate.</p>`;
+ <div id="estres">${estRes(r)}</div><button class="btn big" data-a="shx">${E.req?'Skip for now':'Cancel'}</button>`}
+function estRes(r){if(EST&&!EST.goal)return`<p class="sm" style="margin-top:12px">Choose your goal to see your estimate.</p>`;if(!r){const m=[];if(!(+EST.w>0))m.push('weight');if(!(+S.setup.h>0))m.push('height');if(!(+EST.age>0))m.push('age');if(!EST.sex)m.push('sex');return`<p class="sm" style="margin-top:12px">Add your ${m.join(', ').replace(/, ([^,]*)$/,' and $1')} to see your estimate.</p>`}
  return`<div class="est4"><div><b>${r.k}</b><span>kcal</span></div><div><b>${r.p}g</b><span>Protein</span></div><div><b>${r.f}g</b><span>Fat</span></div><div><b>${r.c}g</b><span>Carbs</span></div></div><p class="sm">Your body uses about ${r.tdee} kcal a day at this activity level.${r.floored?' This is the lowest daily target Forged will suggest, so aim for a slower pace or more activity instead.':''} This is an estimate (the Mifflin-St Jeor formula). Check your progress after 2 to 3 weeks and adjust.</p><button class="btn big on" data-a="estuse">Use these goals</button>`}
 function estOpen(){const L=bmL(),g=S.goal2?S.goal2.type:'',f=+S.setup.freq||3;EST={w:L.w?L.w.v:(S.setup.w||''),age:S.setup.age||'',sex:S.setup.sex||'',act:S.setup.act||(f>=6?4:f>=3?3:2),goal:/Lose/.test(g)?'lose':/Gain/.test(g)?'gain':'maintain',rate:/Lose/.test(g)?.5:.25};sheet(estForm())}
 document.addEventListener('input',e=>{if(EST&&(e.target.matches('[data-est]')||e.target.matches('[data-hcm],[data-hft],[data-hin]'))&&$('#estres')){S.setup.age=+EST.age||S.setup.age;$('#estres').innerHTML=estRes(calcEst(EST))}});
@@ -1162,6 +1167,30 @@ function tourShow(){let o=$('#tour');if(TU==null||!S.user||!S.setup.done){TEL=nu
   swapCard(cd,pos,`${tDots()}<small>${TU+1} of ${TOUR.length}</small><h2>${s.h}</h2><p>${s.p}</p><div class="row"><button class="btn" data-a="tback" ${TU?'':'disabled'}>Back</button>${act?'<button class="btn" data-a="tnext">Skip this</button>':`<button class="btn on" data-a="tnext">${TU===TOUR.length-1?'Finish':'Next'}</button>`}<button class="btn" data-a="tskip2" style="margin-left:auto">End tour</button></div>`,k)},cd.innerHTML?360:60)}
 function tourOk(){const o=$('#tour');if(!o)return;const cd=o.querySelector('.tcard'),rg=o.querySelector('.tring');rg&&rg.classList.add('ok');if(cd){cd.innerHTML=`<div class="tok"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="ck0" cx="22" cy="22" r="20" fill="var(--G)"/><path class="ck1" d="M13 22.5l6 6L31 16" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Nice, that’s it.</b><div class="sm">On to the next one.</div></div></div>`;cd.dataset.k='ok'}navigator.vibrate&&navigator.vibrate([10,40,10])}
 TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.now()-st._t>900;if(f(b)){st._t=Date.now();tourOk()}return false};const af=st.after;st.after=()=>{st._t=0;af&&af()}});
-document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen()}else{const er=$('#reqerr');er&&(er.hidden=false)}});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
+/* ---------- v20: what's new for existing users ---------- */
+/* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
+const APP_VER='2026.10.24';
+const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
+ {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
+ {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
+ {i:'<path d="M5 12l4.5 4.5L19 7"/>',h:'Record a session',p:'Develop goals now have a Record a session button to count each one.'},
+ {i:'<circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/>',h:'Smoother guided tour',p:'The tour glides between steps and celebrates when you try things yourself.'}],
+ tour:[{t:'home',q:'[data-a=settings]',h:'New: Settings',p:'Settings now lives here. It holds Customise look, your food goals, units and the tour.'},
+  {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings to have a look inside.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
+  {t:'home',q:'.wd[data-id=goal]',h:'New: Record a session',p:'For a Develop goal, tap your goal and use Record a session after each workout that counts.'},
+  {t:'diet',q:'[data-a=estopen]',h:'New: Work out my goals',p:'Tap here any time to work out your daily calories and macros from your details and goal.'}]}];
+let MINI=null,NEWU=!(S.user&&S.setup.done)||TU===0;
+function wrapOk(st){if(!st.ok||st._w)return st;const f=st.ok;st._w=1;st.ok=b=>{if(st._t)return Date.now()-st._t>900;if(f(b)){st._t=Date.now();tourOk()}return false};const af=st.after;st.after=()=>{st._t=0;af&&af()};return st}
+function wnShow(){if($('#wn')||$('#req')||$('#splash')||$('#sheet')||$('#lx')||AW||TU!=null||!S.user||!S.setup.done)return;
+ if(NEWU||!S.seenVer&&!S.tourDone){S.seenVer=APP_VER;save();return}
+ if(S.seenVer===APP_VER)return;const R=RELEASES.filter(r=>!S.seenVer||r.v>S.seenVer);S.seenVer=APP_VER;save();if(!R.length)return;
+ tab='home';VD=null;render();const items=R.flatMap(r=>r.items),steps=R.flatMap(r=>r.tour||[]);
+ const o=document.createElement('div');o.id='wn';o.innerHTML=`<div class="mwb" data-a="wnx"></div><div class="card mwc" role="dialog" aria-label="What’s new"><span class="wnbadge">Updated ${R[R.length-1].date}</span><h2 style="margin:0 0 10px">What’s new</h2>${items.map(x=>`<div class="wni"><span>${ico(x.i)}</span><div><b>${x.h}</b>${x.p}</div></div>`).join('')}${steps.length?'<button class="btn big on" data-a="wntour">Show me how</button>':''}<button class="btn big" data-a="wnx">Got it</button></div>`;document.body.appendChild(o);o._steps=steps}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='wnx'){const o=$('#wn');o&&o.remove();return}
+ if(a==='wntour'){const o=$('#wn'),st=o?o._steps:[];o&&o.remove();if(!st.length)return;MINI=TOUR.slice();TOUR.length=0;st.forEach(x=>TOUR.push(wrapOk({...x})));TB=null;TU=0;tab='home';render();return}
+ if((a==='tdone2'||a==='tskip2')&&MINI){setTimeout(()=>{TOUR.length=0;MINI.forEach(x=>TOUR.push(x));MINI=null},0)}});
+setInterval(wnShow,800);
 render();periodic();reqShow();
 </script></body></html>
