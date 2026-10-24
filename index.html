@@ -174,6 +174,13 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 #lx .lxp{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;padding:14px 16px;background:rgba(18,22,34,.9);touch-action:auto;max-height:52vh;overflow:auto}
 #lx .lxp .chips{padding:2px 0 8px}#lx .sw2{width:22px;height:22px;border-radius:50%;display:inline-block;vertical-align:-6px;margin-right:6px;border:1px solid rgba(255,255,255,.5)}
 #lx .hint{position:absolute;left:0;right:0;top:calc(58px + env(safe-area-inset-top,0px));text-align:center;font-size:13px;color:rgba(255,255,255,.75);text-shadow:0 1px 6px rgba(0,0,0,.7);pointer-events:none}
+#tour .tring{transition:left .5s cubic-bezier(.3,1.15,.4,1),top .5s cubic-bezier(.3,1.15,.4,1),width .5s cubic-bezier(.3,1.15,.4,1),height .5s cubic-bezier(.3,1.15,.4,1),opacity .3s,outline-color .3s}
+#tour .tring.ok{outline-color:var(--G);box-shadow:0 0 0 9999px rgba(4,6,12,.76),0 0 0 6px rgba(61,220,132,.35)}
+#tour .tbk{transition:background .35s}
+.tok{display:flex;align-items:center;gap:12px;padding:6px 0}.tok svg{width:44px;height:44px;flex:none}.tok b{font-size:19px}
+.tok .ck1{stroke-dasharray:40;stroke-dashoffset:40;animation:drawck .45s .1s cubic-bezier(.3,1,.4,1) forwards}.tok .ck0{transform-origin:center;animation:popc .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes drawck{to{stroke-dashoffset:0}}@keyframes popc{from{transform:scale(.4);opacity:0}}
+.tdots{display:flex;gap:4px;margin:0 0 8px}.tdots i{height:4px;border-radius:2px;background:rgba(255,255,255,.22);flex:1;transition:background .3s}.tdots i.on{background:#fff}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -1066,7 +1073,7 @@ document.addEventListener('input',e=>{const el=e.target;if(el.matches('[data-hcm
 const REQS=[{ok:()=>+S.setup.h>0,why:'height'}];
 function reqShow(){let o=$('#req');const miss=S.user&&S.setup.done?REQS.filter(r=>!r.ok()):[];if(!miss.length){o&&o.remove();return}
  if(o)return;o=document.createElement('div');o.id='req';document.body.appendChild(o);
- o.innerHTML=`<div class="mwb"></div><div class="card mwc" role="dialog" aria-label="One more thing"><h2>One more thing</h2><p class="sm">Forged now uses your ${miss.map(r=>r.why).join(' and ')} to work out food estimates for you. Add it to carry on.</p><div id="hbox">${hField()}</div><p class="err" id="reqerr" hidden>Enter your height to carry on.</p><button class="btn big on" data-a="reqsave">Save and continue</button></div>`}
+ o.innerHTML=`<div class="mwb"></div><div class="card mwc" role="dialog" aria-label="One more thing"><h2>One more thing</h2><p class="sm">Forged now uses your ${miss.map(r=>r.why).join(' and ')} to work out food estimates for you. Add it to carry on.</p><div id="hbox">${hField()}</div><p class="err" id="reqerr" hidden>Enter your height to carry on.</p><button class="btn big on" data-a="reqsave">Save and continue</button><button class="btn big" data-a="reqest">Save and generate estimated macros</button><p class="sm" style="text-align:center;margin:6px 0 0">Works out your daily calories and macros on your phone using the Mifflin-St Jeor equation.</p></div>`}
 const ACT=[['Mostly sitting, little exercise',1.2],['Light: 1 to 3 workouts a week',1.375],['Moderate: 3 to 5 workouts a week',1.55],['Very active: 6 to 7 workouts a week',1.725],['Athlete or physical job plus training',1.9]];
 function calcEst(E){const u=U(),wkg=u==='lb'?+E.w*0.4536:+E.w,h=+S.setup.h,age=+E.age;if(!(wkg>0&&h>0&&age>0&&E.sex))return null;
  const bmr=10*wkg+6.25*h-5*age+(E.sex==='Male'?5:-161),tdee=bmr*ACT[(+E.act||2)-1][1];let adj=E.goal==='lose'?-(+E.rate||.5)*1100:E.goal==='gain'?(+E.rate||.25)*1100:0;
@@ -1136,5 +1143,25 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  else if(a==='lxreset'){S.lights=defLights();S.tone='#080b13';LS=0}
  else if(a==='lxtone'){S.tone=el.dataset.i}
  else return;save();lxr()});
+/* ---------- v19: animated tour, macros from the height prompt ---------- */
+function tDots(){return`<div class="tdots" aria-hidden="true">${TOUR.map((_,i)=>`<i class="${i<=TU?'on':''}"></i>`).join('')}</div>`}
+function swapCard(cd,pos,html,k){const go=()=>{cd.style.cssText=pos;cd.innerHTML=html;cd.dataset.k=k;cd.animate([{opacity:0,transform:'translateY(16px) scale(.97)'},{opacity:1,transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.8,.2,1)'})};
+ if(!cd.innerHTML)return go();const a=cd.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-10px) scale(.97)'}],{duration:170,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'});a.onfinish=()=>{go();a.cancel()}}
+function tourShow(){let o=$('#tour');if(TU==null||!S.user||!S.setup.done){TEL=null;if(o&&!o.dataset.out){o.dataset.out=1;const a=o.animate([{opacity:1},{opacity:0}],{duration:260,fill:'forwards'});a.onfinish=()=>o.remove()}return}
+ if(o&&o.dataset.out){o.remove();o=null}
+ if(!o){o=document.createElement('div');o.id='tour';o.innerHTML='<div class="tbk"></div><div class="tring" style="opacity:0"></div><div class="tcard"></div>';document.body.appendChild(o);o.animate([{opacity:0},{opacity:1}],{duration:320,easing:'ease-out'})}
+ const bk=o.querySelector('.tbk'),rg=o.querySelector('.tring'),cd=o.querySelector('.tcard');
+ if(TU>=TOUR.length){TEL=null;if(tab!=='home'){tab='home';return render()}rg.style.opacity=0;bk.style.background='rgba(4,6,12,.76)';bk.style.pointerEvents='';if(cd.dataset.k!=='end')swapCard(cd,'top:30vh',`<h2>You’re all set</h2><p>Put your plan in once and the app does the rest. You can replay this tour any time from Settings at the bottom of Home.</p><button class="btn big on" data-a="tdone2">Let’s go</button>`,'end');return}
+ const s=TOUR[TU];if(tab!==s.t){tab=s.t;D=null;return render()}
+ const all=[...document.querySelectorAll('#app '+s.q)],el=s.pick?s.pick(all):all[(s.n||0)<0?all.length+s.n:(s.n||0)];if(!el){TU++;TB=null;return tourShow()}
+ if(!TB||TB.i!==TU)TB={i:TU,b:s.base?s.base():null};TEL=el;const act=!!s.ok;el.scrollIntoView({block:'center',behavior:cd.innerHTML?'smooth':'auto'});const k=TU;
+ setTimeout(()=>{if(TU!==k||tab!==s.t||!el.isConnected)return;const r=el.getBoundingClientRect(),pad=8,vh=innerHeight,top=Math.max(4,r.top-pad),h=Math.min(r.bottom+pad,vh-4)-top,below=r.top+r.height/2<vh/2;
+  bk.style.background='';bk.style.pointerEvents=act?'none':'';rg.className='tring'+(act?' go':'');Object.assign(rg.style,{opacity:1,left:(r.left-pad)+'px',top:top+'px',width:(r.width+pad*2)+'px',height:h+'px'});
+  const pos=below?`top:${Math.min(top+h+14,vh-260)}px`:`bottom:${Math.min(vh-top+14,vh-260)}px`;
+  if(cd.dataset.k===String(k)){cd.style.cssText=pos;return}
+  swapCard(cd,pos,`${tDots()}<small>${TU+1} of ${TOUR.length}</small><h2>${s.h}</h2><p>${s.p}</p><div class="row"><button class="btn" data-a="tback" ${TU?'':'disabled'}>Back</button>${act?'<button class="btn" data-a="tnext">Skip this</button>':`<button class="btn on" data-a="tnext">${TU===TOUR.length-1?'Finish':'Next'}</button>`}<button class="btn" data-a="tskip2" style="margin-left:auto">End tour</button></div>`,k)},cd.innerHTML?360:60)}
+function tourOk(){const o=$('#tour');if(!o)return;const cd=o.querySelector('.tcard'),rg=o.querySelector('.tring');rg&&rg.classList.add('ok');if(cd){cd.innerHTML=`<div class="tok"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="ck0" cx="22" cy="22" r="20" fill="var(--G)"/><path class="ck1" d="M13 22.5l6 6L31 16" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>Nice, that’s it.</b><div class="sm">On to the next one.</div></div></div>`;cd.dataset.k='ok'}navigator.vibrate&&navigator.vibrate([10,40,10])}
+TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.now()-st._t>900;if(f(b)){st._t=Date.now();tourOk()}return false};const af=st.after;st.after=()=>{st._t=0;af&&af()}});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen()}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 render();periodic();reqShow();
 </script></body></html>
