@@ -132,6 +132,11 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .awc .tag{display:inline-block;font-size:11px;font-weight:700;color:#fff;background:rgba(255,255,255,.14);border-radius:8px;padding:2px 7px;margin-bottom:6px}
 #aw.cw{animation:pls 1.6s ease-in-out infinite}#aw.cr{background:#080b13}
 .seg{font-size:15px;font-weight:700;letter-spacing:.02em;padding:4px 12px;border-radius:10px;background:rgba(255,255,255,.12)}
+.dp{padding:16px}.dph{display:flex;gap:14px;align-items:center}.dph b{font-size:17px}.ring2{width:58px;height:58px;flex:none}
+.pb{margin-top:10px}.pbl{display:flex;justify-content:space-between;font-size:13px;margin:0 0 5px;color:var(--dim)}.pbl span:last-child{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+.pbt{height:8px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}.pbt.big{height:12px;border-radius:8px}.pbt i{display:block;height:100%;border-radius:inherit;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
+@keyframes grow{from{transform:scaleX(0)}}
+.pb2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.pb2 .pbl{flex-direction:column;gap:1px}.pb2 .pbl span:last-child{font-size:13px}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -590,7 +595,7 @@ function tourShow(){let o=$('#tour');if(TU==null||!S.user||!S.setup.done){o&&o.r
  el.scrollIntoView({block:'center'});const k=TU;
  requestAnimationFrame(()=>{if(TU!==k||tab!==s.t||!el.isConnected)return;const r=el.getBoundingClientRect(),pad=8,vh=innerHeight,top=Math.max(4,r.top-pad),h=Math.min(r.bottom+pad,vh-4)-top,below=r.top+r.height/2<vh/2;
   o.innerHTML=`<div class="tbk"></div><div class="tring" style="left:${r.left-pad}px;top:${top}px;width:${r.width+pad*2}px;height:${h}px"></div><div class="tcard" style="${below?`top:${Math.min(top+h+14,vh-250)}px`:`bottom:${Math.min(vh-top+14,vh-250)}px`}"><small>${TU+1} of ${TOUR.length}</small><h2>${s.h}</h2><p>${s.p}</p><div class="row"><button class="btn" data-a="tback" ${TU?'':'disabled'}>Back</button><button class="btn on" data-a="tnext">${TU===TOUR.length-1?'Finish':'Next'}</button><button class="btn" data-a="tskip2" style="margin-left:auto">Skip tour</button></div></div>`})}
-function render(){applyBg();syncCur();const a=$('#app');if(!S.user||!S.setup.done)a.innerHTML=onb();else a.innerHTML=hdr()+({home,diet,plan:planner,timer})[tab]()+nav2();
+function render(){applyBg();syncCur();const a=$('#app');if(!S.user||!S.setup.done)a.innerHTML=onb();else a.innerHTML=hdr2()+({home,diet,plan:planner,timer})[tab]()+nav2();
  a.querySelectorAll('input[type=number]').forEach(i=>{const k=i.dataset.b||'',int=i.dataset.rt||/^(X\.(s|v|v1|v2|ro)|N\.(s|m|c)|W\.(rm|rs)|D\.(total|perWeek)|setup\.(freq|thr|k))$/.test(k);i.setAttribute('inputmode',int?'numeric':'decimal');if(int)i.setAttribute('pattern','[0-9]*')});
  tourShow()}
 addEventListener('resize',()=>{if(TU!=null)tourShow()});
@@ -857,5 +862,30 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  if(a==='xk'){if(el.dataset.i==='Cardio'){X.eq='Cardio'}else{X.eq='Bar';X.t=X.t==='Cardio'?'Target Reps':X.t}}
  else if(a==='xedit'&&X.eq==='Cardio'){X.dur=X.v}
  else return;render()});
+/* ---------- v14: lighter header on Home/Timer, day progress and summaries ---------- */
+function hdr2(){const h=hdr();return(tab==='home'||tab==='timer')?h.replace(/<div class="wk">[\s\S]*?<\/div>/,''):h}
+(()=>{const i=TOUR.findIndex(x=>x.q==='.hdr'),j=TOUR.findIndex(x=>x.q==='.hdr .wd2:not(.on)');if(i<0||j<0)return;const a=TOUR[i],b=TOUR[j];a.t='diet';b.t='diet';a.p='Tap a day to look back at what you hit, or ahead at what’s planned. Ticks mark winning days, and the bolt counts them in a row.';TOUR.splice(j,1);TOUR.splice(i,1);const k=TOUR.findIndex(x=>x.t==='diet');TOUR.splice(k,0,a,b)})();
+const C3={g:'var(--G)',a:'var(--A)',r:'var(--R)'},ACC='linear-gradient(90deg,color-mix(in srgb,var(--g1) 55%,#fff),#fff)';
+function ring(pct,col,inner){const c=2*Math.PI*21;return`<svg class="ring2" viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="21" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="5"/><circle cx="25" cy="25" r="21" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(c*Math.min(1,pct)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 25 25)"/>${inner||''}</svg>`}
+const ICK='<path d="M17 25.5l5.5 5.5L33 20" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',IX='<path d="M19 19l12 12M31 19L19 31" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>',IDOT='<path d="M18 25h14" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>';
+const pctT=(p)=>`<text x="25" y="29.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="system-ui">${Math.round(p*100)}%</text>`;
+function bar(label,val,goal,unit,col,big){const p=goal?Math.min(1,val/goal):0;return`<div class="pb"><div class="pbl"><span>${label}</span><span>${Math.round(val)}${goal?` / ${goal}`:''}${unit}</span></div><div class="pbt ${big?'big':''}"><i style="width:${(p*100).toFixed(1)}%;background:${col}"></i></div></div>`}
+function dietPanel(){const t=today(),r=realToday(),m=S.macros[t]||{},g=S.setup,v=k=>+m[k]||0,rg=SZ.map(k=>m[k]===undefined||m[k]===''||!g[k]?-1:RULES[k](+m[k],+g[k]));
+ if(t>r)return`<div class="card dp"><div class="dph">${ring(0,'transparent')}<div><b>Planned day</b><div class="sm">Your goals: ${g.k||'-'} kcal, ${g.p||'-'}g protein, ${g.f||'-'}g fat, ${g.c||'-'}g carbs.</div></div></div></div>`;
+ const mini=SZ.slice(1).map((k,i)=>bar(LBL[k][0],v(k),+g[k]||0,'g',t<r?(rg[i+1]>=0?C3[cls(rg[i+1])]:'rgba(255,255,255,.3)'):(rg[i+1]===0?C3.g:ACC))).join('');
+ if(t===r){const p=g.k?v('k')/g.k:0;return`<div class="card dp"><div class="dph">${ring(p,rg[0]===0?'var(--G)':'#fff',pctT(p))}<div><b>Today so far</b><div class="sm">${Math.max(0,(+g.k||0)-v('k'))} kcal left of your ${g.k||'-'} kcal goal.</div></div></div>${bar('Calories',v('k'),+g.k||0,' kcal',rg[0]===0?C3.g:ACC,1)}<div class="pb2">${mini}</div></div>`}
+ const dr=dayRag(t),logged=SZ.some(k=>m[k]!==undefined&&m[k]!=='');
+ const head=!logged?['No food logged','Nothing was recorded for this day.',ring(0,'transparent',IDOT)]:dr===0?['Macros hit','Every macro was on target.',ring(1,'var(--G)',ICK)]:dr===1?['Close on macros','Some macros were near but not on target.',ring(1,'var(--A)',IDOT)]:dr===2?['Macros missed','At least one macro was well off target.',ring(1,'var(--R)',IX)]:['Part logged','Not every macro was filled in.',ring(.5,'#fff',IDOT)];
+ return`<div class="card dp"><div class="dph">${head[2]}<div><b>${head[0]}</b><div class="sm">${head[1]}</div></div></div>${logged?bar('Calories',v('k'),+g.k||0,' kcal',rg[0]>=0?C3[cls(rg[0])]:'rgba(255,255,255,.3)',1)+`<div class="pb2">${mini}</div>`:''}</div>`}
+function dayWork(t){const sl=S.solo&&S.solo.d===t?S.solo.k.split('|'):null;if(sl){const pp=S.plans.find(x=>x.id===sl[0]);if(pp&&pp.days[+sl[1]])return pp.days[+sl[1]]}const p=activePlan();ensureSched();const s=S.sch&&S.sch[t];return p&&s!=null?p.days[s%p.days.length]:null}
+function workPanel(){const t=today(),r=realToday(),d=dayWork(t),fd=!!(S.fd||{})[t],n=d?d.ex.length:0,c=Math.min(n,(S.checks[t]||[]).filter(Boolean).length),title=d?`${esc(d.name)}${d.body?` - ${esc(d.body)}`:''}`:'';
+ if(!d&&!fd)return`<div class="card dp"><div class="dph">${ring(0,'transparent',IDOT)}<div><b>Rest day</b><div class="sm">${t<r?'No workout was planned.':t>r?'Nothing planned for this day.':'No workout planned today. You can still start one below.'}</div></div></div></div>`;
+ if(t>r)return`<div class="card dp"><div class="dph">${ring(0,'transparent')}<div><b>Planned</b><div class="sm">${title}, ${n} exercises.</div></div></div></div>`;
+ if(fd)return`<div class="card dp"><div class="dph">${ring(1,'var(--G)',ICK)}<div><b>Workout done</b><div class="sm">${title||'Session complete'}</div></div></div>${n?bar('Exercises',n,n,'',C3.g,1):''}</div>`;
+ const p=n?c/n:0;
+ if(t===r)return`<div class="card dp"><div class="dph">${ring(p,'#fff',pctT(p))}<div><b>Today’s workout</b><div class="sm">${title}</div></div></div>${bar('Exercises done',c,n,'',ACC,1)}</div>`;
+ return c?`<div class="card dp"><div class="dph">${ring(p,'var(--A)',IDOT)}<div><b>Part done</b><div class="sm">${title}: ${c} of ${n} exercises ticked off.</div></div></div>${bar('Exercises done',c,n,'',C3.a,1)}</div>`:`<div class="card dp"><div class="dph">${ring(1,'var(--R)',IX)}<div><b>Workout missed</b><div class="sm">${title} was planned but not done.</div></div></div></div>`}
+function diet(){return diet0().replace('<h1>Diet</h1>','<h1>Diet</h1>'+dietPanel()).replace('<div class="card"><h2>Today</h2>',`<div class="card"><h2>${today()===realToday()?'Today\u2019s totals':'Totals for this day'}</h2>`)+eatCard()}
+function planner(){if(D)return builder();return`<h1>Workout</h1>${workPanel()}`+startCard()+planner0().replace('<h1>Workout plans</h1>','<h2 style="font-size:22px;margin:22px 2px 10px">Your plans</h2>')}
 render();periodic();
 </script></body></html>
