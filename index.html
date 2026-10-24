@@ -1011,5 +1011,32 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  else if(a==='gno2'){sheet(`<h2>Give yourself more time</h2><div class="row">${[['1 week',7],['2 weeks',14],['1 month',30]].map(x=>`<button class="btn" data-a="gext2" data-i="${x[1]}">${x[0]}</button>`).join('')}</div><button class="btn big" data-a="shx">Cancel</button>`);return}
  else if(a==='gext2'){S.goal2.due=addDays(realToday(),i);sheet(null)}
  else return;save();render()});
+/* ---------- v16: refreshed guided tour ---------- */
+(()=>{const H=t=>a=>a.find(x=>{const h=x.querySelector('h2');return h&&h.textContent.trim()===t});TOUR.length=0;TOUR.push(
+ {t:'home',q:'.hdr',h:'Welcome to Forged',p:'Here’s a quick tour. Tip: pull down from the top of any screen to refresh and get the latest version of the app.'},
+ {t:'home',q:'.cal',h:'Your week',p:'Workouts sit on their days. The circle under a day is your diet and the square is your workout: green on target or done, amber close or part done, red missed. Use the arrows to look ahead, and Today to jump back.'},
+ {t:'home',q:'.cal .chipw',h:'Your turn',p:'Hold a workout and drag it onto another day. The dashed outline shows where it will land.',base:()=>JSON.stringify(S.sch),ok:b=>JSON.stringify(S.sch)!==b},
+ {t:'home',q:'[data-a=wsel]',h:'Start workout',p:'Guided walks you through every set, plate and rest. If a machine is taken, you can switch to another exercise and come back. Solo gives you the checklist and timers to run it yourself.'},
+ {t:'home',q:'.wd[data-id=next]',h:'Coming up',p:'Always shows your very next workout and what to bring.'},
+ {t:'home',q:'.wd[data-id=goal]',h:'Your goal',p:'Tap to set a goal: lose, maintain or gain weight, gain muscle, or develop a body part. It charts your progress and suggests updates as you log your weight, body metrics and workouts. For a Develop goal, tap Record a session after each one.'},
+ {t:'home',q:'.wd[data-id=macros]',h:'Macros',p:'Each ring fills as you eat and turns green, amber or red against your goal.'},
+ {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. Drag to move, use the corner handle to resize, tap the minus to remove. Widgets show more as they get bigger.',ok:()=>ED,after:()=>{ED=false}},
+ {t:'home',q:'[data-a=cs]',h:'Your turn',p:'Tap Change colour scheme to see your colour options.',ok:()=>CS,after:()=>{CS=false}},
+ {t:'diet',q:'.hdr',h:'Your day bar',p:'Tap a day to look back at what you hit, or ahead at what’s planned. Ticks mark winning days, and the bolt counts them in a row.'},
+ {t:'diet',q:'.hdr .wd2:not(.on)',pick:a=>a.find(x=>x.dataset.i>realToday())||a[0],h:'Your turn',p:'Tap another day. We’ll bring you back to today straight after.',ok:()=>VD!=null,after:()=>{VD=null}},
+ {t:'diet',q:'.dp',h:'Today so far',p:'Shows how much of your calories and macros you’ve had. On a past day it becomes a summary of whether you hit your goals.'},
+ {t:'diet',q:'[data-a=editgoal]',h:'Your goals',p:'Tap any goal number to change it.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals you add with it on go into Saved meals, ready to add again in one tap.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
+ {t:'diet',q:'.card',pick:H('Saved meals'),h:'Saved meals',p:'Tap a saved meal and Forged asks if you’ve eaten it today. Add a picture to spot it quickly. Swipe left to delete.'},
+ {t:'diet',q:'.card',pick:H('Body metrics'),h:'Body metrics',p:'Your scale readings stay saved until you change them. Log a new weight and Forged estimates the rest, shown in grey under each one.'},
+ {t:'diet',q:'.eat',h:'Eating schedule',p:'Add your meal times. Forged nudges you on Home, and “Add reminders to my calendar” gets your phone to notify you.'},
+ {t:'plan',q:'.dp',h:'Today’s workout',p:'Tracks how many exercises you’ve done. On a past day it shows whether the workout was done, part done or missed.'},
+ {t:'plan',q:'.card',pick:H('Start workout'),h:'Start any workout',p:'Pick a plan and day, then choose Guided or Solo. Set the rest between sets here. It’s saved with that day.'},
+ {t:'plan',q:'[data-a=newp]',h:'Your plans',p:'Build a plan with strength or cardio exercises and supersets. Tap the circle to make a plan active and it fills your week on Home. Tap a plan to edit it, swipe left to delete.'},
+ {t:'plan',q:'[data-a=imp]',h:'Paste a plan',p:'Already have a plan written out? Paste it here and Forged builds it for you.'},
+ {t:'timer',q:'[data-a=tal]',h:'Your turn',p:'Tap +1 set to count a set. Turn on auto-start rest and your rest timer begins on its own.',base:()=>(S.tal||{})[today()]||0,ok:b=>((S.tal||{})[today()]||0)>b},
+ {t:'timer',q:'.card',n:1,h:'Rest timer',p:'Set minutes, seconds and milliseconds. The pause icon holds it if you get interrupted.'},
+ {t:'timer',q:'[data-a=savt]',h:'Saved timers',p:'Save sets and rest as a timer, like an alarm. Tap one to run it, tap Edit to tweak, swipe left to delete.'})})();
 render();periodic();
 </script></body></html>
