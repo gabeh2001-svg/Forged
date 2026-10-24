@@ -1,4 +1,4 @@
-# Brisa (formerly Forged) – working notes
+# Swell (formerly Forged) – working notes
 
 Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStorage only). Netlify publishes the `main` branch to forgedtest.netlify.app.
 
