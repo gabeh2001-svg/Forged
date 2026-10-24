@@ -137,6 +137,25 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 .pbt{height:8px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}.pbt.big{height:12px;border-radius:8px}.pbt i{display:block;height:100%;border-radius:inherit;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;transform-origin:left}
 @keyframes grow{from{transform:scaleX(0)}}
 .pb2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.pb2 .pbl{flex-direction:column;gap:1px}.pb2 .pbl span:last-child{font-size:13px}
+#sheet{position:fixed;inset:0;z-index:66;display:flex;align-items:flex-end;justify-content:center;padding:16px}
+#sheet .mwb{position:absolute;inset:0;background:rgba(4,6,12,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#sheet .mwc{position:relative;width:100%;max-width:528px;max-height:88vh;overflow:auto;margin:0 0 calc(8px + env(safe-area-inset-bottom,0px));background:rgba(22,26,40,.96);animation:up .32s cubic-bezier(.3,1.2,.5,1)}
+.glink{display:block;background:none;border:0;padding:2px 0 0;color:var(--dim);font:inherit;font-size:13px;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
+.smr{display:flex;align-items:center;gap:12px;cursor:pointer}.smr img,.smph{width:52px;height:52px;border-radius:14px;object-fit:cover;flex:none;background:rgba(255,255,255,.08);display:grid;place-items:center}.smph svg{width:22px;height:22px;opacity:.6}
+.smt{flex:1;min-width:0}.smt>span{color:var(--dim);font-weight:600}.smb{margin:0;padding:8px 12px;font-size:13px;flex:none}
+.smbig{width:100%;max-height:220px;object-fit:cover;border-radius:18px;margin:6px 0 10px}
+.cu{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px}
+.cu .when{font-size:12px;font-weight:600;color:var(--dim)}.cu .big{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.cu .sub{font-size:14px;color:rgba(255,255,255,.82);max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cu .pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px}.cu .pills span{font-size:12px;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.1)}
+.cu ol{margin:8px 0 0;padding:0;list-style:none;font-size:13px;color:var(--dim);line-height:1.6}
+.mg{display:grid;gap:8px;height:calc(100% - 30px);align-content:center}.mg.four{grid-template-columns:repeat(4,1fr)}.mg.two{grid-template-columns:1fr 1fr;gap:4px 8px}
+.mr{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;min-width:0}.mr .ring2{width:50px;height:50px}.mg.two .mr .ring2{width:40px;height:40px}
+.mr b{font-size:12px;font-weight:600}.mr small{font-size:11px;color:var(--dim)}.mr div{display:flex;flex-direction:column;align-items:center;line-height:1.25}.mg.two .mr small{display:none}.mg.two{gap:6px 4px}
+.gw{height:100%;display:flex;flex-direction:column}.gw .gt{font-size:15px;font-weight:700;line-height:1.25}.gw .gs{font-size:12px;color:var(--dim)}
+.gstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px;text-align:center}.gstats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}.gstats span{font-size:11px;color:var(--dim)}
+.gsug{font-size:12.5px;color:rgba(255,255,255,.75);line-height:1.45;margin-top:6px}.wd .gsug{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gchart{display:block;width:100%;overflow:visible}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -236,7 +255,7 @@ function home(){
   else{const ck=S.checks[t]=S.checks[t]||[];const all=d.ex.length&&d.ex.every((_,i)=>ck[i]);
    list=`<div class="card"><h2>Today’s workout</h2>${d.ex.map((e,i)=>`<div class="ck ${ck[i]?'done':''}" data-a="chk" data-i="${i}" role="checkbox" aria-checked="${!!ck[i]}" tabindex="0"><div class="box">${ck[i]?'✓':''}</div><div><div class="t"><b>${esc(e.n)}</b> ${tgt(e)}</div>${load(e)?`<span class="load">${esc(load(e))}</span>`:''}${e.o?`<div class="sm">${esc(e.o)}</div>`:''}</div></div>`).join('')||'<p class="sm">This day has no exercises.</p>'}${all?'<button class="btn big on" data-a="fin">Finish workout</button>':''}</div>`}}
  const m=S.macros[t]||{},rs=ragState();
- const ragCard=`<div class="card"><h2>Today’s macros</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<div class="sm">goal ${S.setup[k]||'-'} ${LBL[k][1]}</div></div><input type="number" inputmode="decimal" placeholder="eaten" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">The Diet tab will take over detailed logging.</p></div>`;
+ const ragCard=`<div class="card"><h2>Today’s macros</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<button class="glink" data-a="editgoal" data-i="${k}">goal ${S.setup[k]||'-'} ${LBL[k][1]}</button></div><input type="number" inputmode="decimal" placeholder="eaten" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">The Diet tab will take over detailed logging.</p></div>`;
  return`<h1>${g}, ${esc(S.user)}</h1><div class="sw">${BG.map((c,i)=>`<i data-a="bg" data-i="${i}" style="background:linear-gradient(135deg,${c[0]},${c[2]})" title="Background ${i+1}"></i>`).join('')}</div><div class="card">${up}</div>${list}${ragCard}${goalCard()}`}
 
 function goalCard(){const g=S.goal||{},t=today();
@@ -267,7 +286,7 @@ function render(){applyBg();const a=$('#app');
  else a.innerHTML=({home,diet:soon,plan:planner,timer:soon})[tab]()+nav()}
 
 /* ---------- events ---------- */
-const root=k=>({E:()=>E,W:()=>W,N:()=>N,M:()=>M,B:()=>(S.bm=S.bm||{})[today()]||(S.bm[today()]={}),S:()=>S,D:()=>D,X:()=>X,setup:()=>S.setup,macro:()=>S.macros[today()]||(S.macros[today()]={}),goal:()=>S.goal||(S.goal={}),day:()=>D.days[D.sel]})[k]();
+const root=k=>({GF:()=>GF,E:()=>E,W:()=>W,N:()=>N,M:()=>M,B:()=>(S.bm=S.bm||{})[today()]||(S.bm[today()]={}),S:()=>S,D:()=>D,X:()=>X,setup:()=>S.setup,macro:()=>S.macros[today()]||(S.macros[today()]={}),goal:()=>S.goal||(S.goal={}),day:()=>D.days[D.sel]})[k]();
 function bind(el,final){const[r,k]=el.dataset.b.split('.');const o=root(r);o[k]=el.type==='number'?(el.value===''?'':+el.value):el.value;
  if(r==='D'&&k==='total'&&final)resize();
  save();if(final&&el.dataset.r!==undefined){render();if(r==='macro')evalDay()}}
@@ -356,8 +375,8 @@ function lastBM(k){const d=Object.keys(S.bm||{}).filter(x=>x<today()&&S.bm[x][k]
 function addTot(x,s){const t=today(),m=S.macros[t]=S.macros[t]||{};SZ.forEach(k=>m[k]=Math.max(0,(+m[k]||0)+s*x[k]))}
 const mi=(k,l)=>`<label>${l}<input type="number" inputmode="decimal" data-b="M.${k}" value="${esc(M[k])}"></label>`;
 function diet0(){const t=today(),ml=(S.meals=S.meals||{})[t]||[],m=S.macros[t]||{},rs=ragState(),b=(S.bm=S.bm||{})[t]||{};
- return`<h1>Diet</h1><div class="card"><h2>Today</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<div class="sm">goal ${S.setup[k]||'-'} ${LBL[k][1]}</div></div><input type="number" inputmode="decimal" placeholder="0" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">Totals reset every day. Edit them to adjust by hand.</p></div>
- <div class="card"><h2>Log a meal</h2><button class="btn big scanb" data-a="scan">Scan label</button><input type="file" id="fi" accept="image/*" capture="environment" style="position:absolute;opacity:0;width:0;height:0">${(S.saved||[]).length?`<div class="chips" style="padding-top:10px">${S.saved.map((x,i)=>`<button class="chip" data-a="usem" data-i="${i}">${esc(x.n)}</button>`).join('')}</div>`:''}<input placeholder="Meal name" data-b="M.n" value="${esc(M.n)}"><div class="row">${mi('k','Calories')}${mi('p','Protein (g)')}</div><div class="row">${mi('f','Fat (g)')}${mi('c','Carbs (g)')}</div><div class="row"><button class="btn on" data-a="addm">Add meal</button><button class="chip ${M.sv?'on':''}" data-a="msv">Save for later</button></div></div>
+ return`<h1>Diet</h1><div class="card"><h2>Today</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<button class="glink" data-a="editgoal" data-i="${k}">goal ${S.setup[k]||'-'} ${LBL[k][1]}</button></div><input type="number" inputmode="decimal" placeholder="0" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">Totals reset every day. Edit them to adjust by hand.</p></div>
+ <div class="card"><h2>Log a meal</h2><button class="btn big scanb" data-a="scan">Scan label</button><input type="file" id="fi" accept="image/*" capture="environment" style="position:fixed;left:-9999px;top:0;opacity:0" tabindex="-1" aria-hidden="true"><input placeholder="Meal name" data-b="M.n" value="${esc(M.n)}"><div class="row">${mi('k','Calories')}${mi('p','Protein (g)')}</div><div class="row">${mi('f','Fat (g)')}${mi('c','Carbs (g)')}</div><div class="row"><button class="btn on" data-a="addm">Add meal</button><button class="chip ${M.sv?'on':''}" data-a="msv">Save for later</button></div></div>
  ${ml.length?`<h2 style="margin:4px 2px 8px">Logged today</h2>`+ml.map((x,i)=>`<div class="sr"><div class="del" data-a="delm" data-i="${i}">Delete</div><div class="in"><b>${esc(x.n)}</b><div class="sm">${x.k} kcal, ${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</div></div></div>`).join(''):''}
  ${bmCard()}`}
 const bi=(z,b)=>`<label>${z[1].replace('(kg)','('+(S.setup.u||'kg')+')')}<input type="number" inputmode="decimal" step="0.1" placeholder="${esc(lastBM(z[0]))}" data-b="B.${z[0]}" value="${esc(b[z[0]])}"></label>`;
@@ -887,5 +906,106 @@ function workPanel(){const t=today(),r=realToday(),d=dayWork(t),fd=!!(S.fd||{})[
  return c?`<div class="card dp"><div class="dph">${ring(p,'var(--A)',IDOT)}<div><b>Part done</b><div class="sm">${title}: ${c} of ${n} exercises ticked off.</div></div></div>${bar('Exercises done',c,n,'',C3.a,1)}</div>`:`<div class="card dp"><div class="dph">${ring(1,'var(--R)',IX)}<div><b>Workout missed</b><div class="sm">${title} was planned but not done.</div></div></div></div>`}
 function diet(){return diet0().replace('<h1>Diet</h1>','<h1>Diet</h1>'+dietPanel()).replace('<div class="card"><h2>Today</h2>',`<div class="card"><h2>${today()===realToday()?'Today\u2019s totals':'Totals for this day'}</h2>`)+eatCard()}
 function planner(){if(D)return builder();return`<h1>Workout</h1>${workPanel()}`+startCard()+planner0().replace('<h1>Workout plans</h1>','<h2 style="font-size:22px;margin:22px 2px 10px">Your plans</h2>')}
+/* ---------- v15: saved meals, editable goals, Coming up, macros rings, goals ---------- */
+let GF=null,SMI=null;
+function sheet(h){let o=$('#sheet');if(!h){o&&o.remove();return}if(!o){o=document.createElement('div');o.id='sheet';document.body.appendChild(o)}o.innerHTML=`<div class="mwb" data-a="shx"></div><div class="card mwc" role="dialog">${h}</div>`}
+const dLbl=d=>d===realToday()?'today':d===addDays(realToday(),-1)?'yesterday':'on '+new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+const fD=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+function savedCard(){const L=S.saved||[];
+ return`<div class="card"><h2>Saved meals</h2>${L.length?L.map((x,i)=>`<div class="sr"><div class="del" data-a="dels" data-i="${i}">Delete</div><div class="in smr" data-a="smask" data-i="${i}">${x.img?`<img src="${x.img}" alt="">`:`<span class="smph">${ico(IC.diet)}</span>`}<div class="smt"><b>${esc(x.n)}</b> <span>- ${Math.round(x.k)} kcal</span><div class="sm">${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</div><button class="glink" data-a="smpic" data-i="${i}">${x.img?'Change picture':'Add picture'}</button></div></div></div>`).join('')+'<p class="sm">Tap a meal to add it to your day. Swipe left to delete.</p>':'<p class="sm">Turn on Save for later when you log a meal and it will appear here.</p>'}<input type="file" id="smfi" accept="image/*" style="position:fixed;left:-9999px;top:0;opacity:0" tabindex="-1" aria-hidden="true"></div>`}
+function diet(){const t=today();return diet0().replace('<h1>Diet</h1>','<h1>Diet</h1>'+dietPanel()).replace('<div class="card"><h2>Today</h2>',`<div class="card"><h2>${t===realToday()?'Today’s totals':'Totals for this day'}</h2>`).replace('<div class="card"><h2>Body metrics</h2>',savedCard()+'<div class="card"><h2>Body metrics</h2>')+eatCard()}
+function shrink(file,cb){const im=new Image();im.onload=()=>{const m=360,r=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.72));URL.revokeObjectURL(im.src)};im.src=URL.createObjectURL(file)}
+document.addEventListener('change',e=>{if(e.target.id==='smfi'&&e.target.files&&e.target.files[0]&&SMI!=null){const i=SMI;shrink(e.target.files[0],u=>{if(S.saved[i]){S.saved[i].img=u;save();render()}});e.target.value=''}});
+/* Coming up */
+function nextUp(){const p=activePlan();if(!p||!p.days.length)return null;ensureSched();const r=realToday();for(let i=0;i<42;i++){const d=addDays(r,i),s=S.sch[d];if(s!=null&&!(S.fd||{})[d])return{i,d,day:p.days[s%p.days.length]}}return null}
+function comingUp(l){const n=nextUp();if(!n)return`<div class="cu"><span class="when">Coming up</span><span class="big" style="font-size:20px">No plan yet</span><span class="sub">Build one in the Workout tab.</span></div>`;
+ const w=n.i===0?'today':n.i===1?'tomorrow':n.i<7?'on '+new Date(n.d+'T12:00').toLocaleDateString('en-GB',{weekday:'long'}):'on '+fD(n.d),x=n.day;
+ const pills=`<div class="pills"><span>${x.ex.length} exercises</span>${x.equip?`<span>Bring ${esc(x.equip)}</span>`:''}</div>`;
+ if(l.w===1)return`<div class="cu"><span class="when">Coming up ${w}</span><span class="big" style="font-size:22px">${esc(x.name)}</span>${x.body?`<span class="sub" style="font-size:12px">${esc(x.body)}</span>`:''}</div>`;
+ return`<div class="cu"><span class="when">Coming up ${w}</span><span class="big">${esc(x.name)}</span>${x.body?`<span class="sub">${esc(x.body)}</span>`:''}${l.h===2?pills+`<ol>${x.ex.slice(0,5).map(e=>`<li>${esc(e.n||e.act)}</li>`).join('')}${x.ex.length>5?`<li>and ${x.ex.length-5} more</li>`:''}</ol>`:pills}</div>`}
+/* Macros rings */
+function macroW(l){if(l.w===2&&l.h===2)return wd0(l);const m=S.macros[today()]||{},rs=ragState(),two=l.w===1;
+ const it=SZ.map((k,i)=>{const v=+m[k]||0,g=+S.setup[k]||0,p=g?Math.min(1,v/g):0,col=v?(rs[i]>=0?C3[cls(rs[i])]:'#fff'):'rgba(255,255,255,.25)',nm=two?['Cal','Prot','Fat','Carb'][i]:LBL[k][0];
+  return`<div class="mr">${ring(p,col,`<text x="25" y="29" text-anchor="middle" font-size="${two?13:11.5}" font-weight="700" fill="#fff" font-family="system-ui">${two?Math.round(p*100)+'%':Math.round(v)}</text>`)}<div><b>${nm}</b><small>${two?Math.round(v)+'/'+g:'of '+g+(k==='k'?'':'g')}</small></div></div>`}).join('');
+ return`<h2 style="margin:0 0 6px;font-size:16px">Macros</h2><div class="mg ${two?'two':'four'}">${it}</div>`}
+/* Goals */
+const GT=['Lose weight','Maintain weight','Gain weight','Gain muscle','Develop'];
+if(S.goal&&S.goal.set&&!S.goal2){S.goal2={type:'Custom',name:S.goal.text,sd:realToday(),due:S.goal.due};S.goal=null;save()}
+function bmSeries(k,from){return Object.keys(S.bm||{}).filter(d=>d>=from&&S.bm[d][k]!==undefined&&S.bm[d][k]!=='').sort().map(d=>({d,v:+S.bm[d][k]}))}
+const dn=d=>Math.round(new Date(d+'T12:00').getTime()/864e5);
+function adh(N){const r=realToday();let sc=0,dn2=0;for(let i=1;i<=N;i++){const d=addDays(r,-i);if(S.sch&&S.sch[d]!=null)sc++;if((S.fd||{})[d])dn2++}const den=sc||Math.max(1,Math.round((+S.setup.freq||3)*N/7));return Math.min(1,dn2/den)}
+function slope(ser){const L=ser.filter(x=>dn(x.d)>=dn(realToday())-28);if(L.length<2||dn(L[L.length-1].d)-dn(L[0].d)<3)return null;const xs=L.map(x=>dn(x.d)),ys=L.map(x=>x.v),mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;let nu=0,de=0;xs.forEach((x,i)=>{nu+=(x-mx)*(ys[i]-my);de+=(x-mx)**2});return de?nu/de:null}
+const r1=v=>Math.round(v*10)/10;
+function gCalc(G){const u=U(),t=realToday(),L=bmL(),left=G.due?dn(G.due)-dn(t):null,wk=left!=null?Math.max(left,0)/7:null;let c={u,left,ser:[],start:+G.sv,target:+G.tv,now:null,pct:0,proj:null,sugg:'',fmt:v=>r1(v)+u};
+ if(G.type==='Custom'){const tot=Math.max(1,dn(G.due)-dn(G.sd));c.pct=Math.min(1,Math.max(0,(dn(t)-dn(G.sd))/tot));c.fmt=v=>v;c.sugg='Time elapsed towards your deadline.';return c}
+ if(G.type==='Develop'){const fx=(G.focus||'').toLowerCase().trim(),p=activePlan(),any=fx&&p&&p.days.some(d=>(d.name+' '+d.body).toLowerCase().includes(fx));let n=0;const ser=[{d:G.sd,v:0}];
+  Object.keys(S.fd||{}).filter(d=>d>=G.sd&&d<=t).sort().forEach(d=>{const w=dayWork(d);if(!any||(w&&(w.name+' '+w.body).toLowerCase().includes(fx))){n++;ser.push({d,v:n})}});
+  c.ser=ser;c.start=0;c.now=n;c.target=+G.ts||12;c.fmt=v=>Math.round(v);c.pct=Math.min(1,n/c.target);
+  const rate=(+S.setup.freq||3)*adh(28);c.proj=wk!=null?Math.min(c.target*2,n+rate*wk*(any?0.5:1)):null;
+  c.sugg=`${n} of ${c.target} ${any?`${esc(G.focus)} `:''}sessions done.`+(c.proj!=null?` At your recent pace you’re on course for about ${Math.round(c.proj)} by ${fD(G.due)}.`:'')+(fx&&!any?` None of your plan days mention “${esc(G.focus)}”, so every workout counts.`:'');return c}
+ if(G.type==='Gain muscle'){const ser=bmSeries('smm',G.sd);if(!ser.length||ser[0].d!==G.sd)ser.unshift({d:G.sd,v:+G.sv});const ms=L.smm?+L.smm.v:+G.sv;let estNow=null;
+  if(L.smm&&L.smm.w&&L.w&&Math.abs(+L.w.v-L.smm.w)>=.2){const e=est('smm',L.smm,+L.w.v,L);if(e)estNow=parseFloat(e)}
+  c.now=estNow??ms;if(estNow!=null)ser.push({d:t,v:estNow,est:1});c.ser=ser;const a=adh(28),rate=(u==='lb'?.55:.25)*a;c.proj=wk!=null?c.now+rate*wk:null;c.pct=Math.min(1,Math.max(0,(c.now-c.start)/((c.target-c.start)||1)));
+  c.sugg=`You’ve done ${Math.round(a*100)}% of your planned workouts in the last 4 weeks.`+(c.proj!=null?` At that rate, expect about ${r1(c.proj)}${u} of muscle by ${fD(G.due)}.`:'')+(estNow!=null?` Estimated now from your latest weight: ${r1(estNow)}${u}.`:'')+' Guide only. Re-measure on a body composition scale to update it.';return c}
+ const ser=bmSeries('w',G.sd);if(!ser.length||ser[0].d!==G.sd)ser.unshift({d:G.sd,v:+G.sv});c.ser=ser;c.now=L.w&&L.w.d>=G.sd?+L.w.v:+G.sv;
+ if(G.type==='Maintain weight'){const tol=+G.tol||1,off=Math.abs(c.now-c.start);c.target=c.start;c.tol=tol;c.pct=off<=tol?1:Math.max(0,1-(off-tol)/tol);c.sugg=off<=tol?`You’re within your ±${tol}${u} range.`:`You’re ${r1(off-tol)}${u} outside your ±${tol}${u} range.`;return c}
+ c.pct=Math.min(1,Math.max(0,(c.now-c.start)/((c.target-c.start)||1)));const s=slope(ser),dir=Math.sign(c.target-c.start),rem=c.target-c.now;
+ if(Math.sign(rem)!==dir||rem===0){c.sugg='Target reached. Nice work.';c.pct=1}
+ else if(s!=null&&Math.sign(s)===dir){const eta=Math.ceil(rem/s),etaD=addDays(t,eta);c.proj=wk!=null?c.now+s*left:null;c.sugg=G.due&&etaD<=G.due?`On track. At your current rate you’ll reach ${r1(c.target)}${u} around ${fD(etaD)}.`:`At your current rate you’ll be about ${r1(c.proj)}${u} by ${fD(G.due)}. To hit ${r1(c.target)}${u} in time, aim for about ${r1(Math.abs(rem)/Math.max(wk,.15))}${u} a week.`}
+ else c.sugg=wk?`Aim for about ${r1(Math.abs(rem)/Math.max(wk,.15))}${u} a week to reach ${r1(c.target)}${u} by ${fD(G.due)}. Log your weight regularly to see your trend.`:'Log your weight regularly to see your trend.';
+ return c}
+function gChart(G,c,W,H,full){if(!c.ser.length)return'';const x0=dn(G.sd),x1=Math.max(G.due?dn(G.due):x0+28,dn(c.ser[c.ser.length-1].d)),vals=c.ser.map(p=>p.v).concat([c.target,c.start]).concat(c.proj!=null?[c.proj]:[]).concat(c.tol?[c.start+c.tol,c.start-c.tol]:[]);let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*.15||1;lo-=pad;hi+=pad;
+ const pl=full?6:2,pr=full?50:4,pt=6,pb=full?18:4,X=d=>pl+(dn(d)-x0)/((x1-x0)||1)*(W-pl-pr),Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb),last=c.ser[c.ser.length-1];
+ let o=`<svg class="gchart" viewBox="0 0 ${W} ${H}" style="height:${H}px" aria-hidden="true">`;
+ if(c.tol)o+=`<rect x="${pl}" y="${Y(c.start+c.tol)}" width="${W-pl-pr}" height="${Y(c.start-c.tol)-Y(c.start+c.tol)}" fill="rgba(61,220,132,.12)" rx="4"/>`;
+ else{o+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(c.target)}" y2="${Y(c.target)}" stroke="rgba(255,255,255,.45)" stroke-dasharray="4 4"/>`;if(G.due)o+=`<line x1="${X(G.sd)}" y1="${Y(c.start)}" x2="${X(G.due)}" y2="${Y(c.target)}" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>`}
+ if(c.proj!=null&&G.due)o+=`<line x1="${X(last.d)}" y1="${Y(last.v)}" x2="${X(G.due)}" y2="${Y(c.proj)}" stroke="color-mix(in srgb,var(--g1) 60%,#fff)" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>`;
+ o+=`<polyline points="${c.ser.map(p=>X(p.d).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+ o+=`<circle cx="${X(last.d)}" cy="${Y(last.v)}" r="4" fill="#fff"/>`;
+ if(full){o+=`<text x="${W-pr+6}" y="${Y(c.tol?c.start:c.target)+4}" font-size="11" fill="rgba(255,255,255,.7)" font-family="system-ui">${c.tol?'Range':'Target'}</text><text x="${pl}" y="${H-3}" font-size="10.5" fill="rgba(255,255,255,.55)" font-family="system-ui">${fD(G.sd)}</text>${G.due?`<text x="${W-pr}" y="${H-3}" text-anchor="end" font-size="10.5" fill="rgba(255,255,255,.55)" font-family="system-ui">${fD(G.due)}</text>`:''}`}
+ return o+'</svg>'}
+function goalW(l){const G=S.goal2;
+ if(!G)return`<div class="cu"><span class="when">Goal</span><span class="big" style="font-size:19px">No goal yet</span><button class="btn on" data-a="gnew" style="margin-top:8px">Set a goal</button></div>`;
+ if(G.due&&G.due<=realToday())return`<div class="cu"><span class="when">Deadline reached</span><span class="sub" style="font-weight:700;color:#fff">Did you hit “${esc(G.name)}”?</span><div class="pills" style="margin-top:8px"><button class="btn on" data-a="gyes2" style="margin:0">Yes</button><button class="btn" data-a="gno2" style="margin:0">Not yet</button></div></div>`;
+ const c=gCalc(G),left=c.left!=null?`${c.left} day${c.left===1?'':'s'} left`:'Ongoing',col='color-mix(in srgb,var(--g1) 50%,#fff)';
+ if(l.w===1)return`<div class="cu" data-a="gopen">${ring(c.pct,c.pct>=1?'var(--G)':col,pctT(c.pct))}<span class="gt" style="font-size:13px;font-weight:700;margin-top:4px">${esc(G.name)}</span><span class="when">${left}</span></div>`;
+ if(l.h===1)return`<div class="gw" data-a="gopen" style="flex-direction:row;gap:12px;align-items:center"><div style="flex:1;min-width:0"><div class="gt">${esc(G.name)}</div><div style="font-size:20px;font-weight:800;margin:4px 0 2px">${c.now!=null?c.fmt(c.now):Math.round(c.pct*100)+'%'}</div><div class="gs">${c.now!=null&&G.type!=='Custom'?`${c.tol?'aim':'target'} ${c.fmt(c.target)}, `:''}${left}</div></div><div style="width:46%">${G.type==='Custom'?ring(c.pct,col,pctT(c.pct)):gChart(G,c,160,96,false)}</div></div>`;
+ return`<div class="gw" data-a="gopen">${gBody(G,c,left,300,104)}</div>`}
+function gBody(G,c,left,W,H){return`<div class="gt">${esc(G.name)}</div><div class="gs">${esc(G.type==='Develop'?'Develop '+(G.focus||''):G.type)}, ${left}</div>${G.type==='Custom'?`<div style="display:flex;justify-content:center;margin:10px 0">${ring(c.pct,'#fff',pctT(c.pct))}</div>`:`<div class="gstats"><div><b>${c.fmt(c.start)}</b><span>Start</span></div><div><b>${c.now!=null?c.fmt(c.now):'-'}</b><span>Now</span></div><div><b>${c.tol?'±'+c.tol+c.u:c.fmt(c.target)}</b><span>${c.tol?'Range':'Target'}</span></div></div>${gChart(G,c,W,H,true)}`}<div class="gsug">${c.sugg}</div>`}
+function goalSheet(){const G=S.goal2,c=gCalc(G),left=c.left!=null?`${c.left} day${c.left===1?'':'s'} left`:'Ongoing';sheet('<div class="gw">'+gBody(G,c,left,320,160)+'</div>'+`<div class="row" style="margin-top:12px"><button class="btn on" data-a="gedit">Edit goal</button><button class="btn" data-a="gclr2">Clear goal</button><button class="btn" data-a="shx" style="margin-left:auto">Close</button></div>`)}
+function gForm(){const F=GF,u=U(),L=bmL(),T=F.type,dt=`<label>Deadline${T==='Maintain weight'?' (optional)':''}<input type="date" min="${addDays(realToday(),1)}" data-b="GF.due" value="${esc(F.due||'')}"></label>`;
+ let f='';
+ if(T==='Lose weight'||T==='Gain weight')f=`<div class="row"><label>Current weight (${u})<input type="number" step="0.1" data-b="GF.sv" value="${esc(F.sv??(L.w?L.w.v:''))}"></label><label>Target weight (${u})<input type="number" step="0.1" data-b="GF.tv" value="${esc(F.tv??'')}"></label></div>`+dt;
+ else if(T==='Maintain weight')f=`<div class="row"><label>Weight to hold (${u})<input type="number" step="0.1" data-b="GF.sv" value="${esc(F.sv??(L.w?L.w.v:''))}"></label><label>Allowed range ± (${u})<input type="number" step="0.1" data-b="GF.tol" value="${esc(F.tol??1)}"></label></div>`+dt;
+ else if(T==='Gain muscle')f=`<div class="row"><label>Current skeletal muscle (${u})<input type="number" step="0.1" data-b="GF.sv" value="${esc(F.sv??(L.smm?L.smm.v:''))}"></label><label>Muscle to gain (${u})<input type="number" step="0.1" data-b="GF.amt" value="${esc(F.amt??'')}"></label></div>${L.smm?'':'<p class="sm">Tip: log your skeletal muscle in Body metrics on the Diet tab so this stays up to date.</p>'}`+dt;
+ else f=`<label>What do you want to develop?<input placeholder="e.g. Shoulders, glutes, V-taper" data-b="GF.focus" value="${esc(F.focus||'')}"></label><label>Sessions to complete<input type="number" data-b="GF.ts" value="${esc(F.ts??'')}" placeholder="e.g. 24"></label><p class="sm">Workouts you finish that mention this in the day name or body parts count towards it.</p>`+dt;
+ return`<h2>${S.goal2&&F.edit?'Edit goal':'New goal'}</h2><div class="chips" style="flex-wrap:wrap">${GT.map(g=>`<button class="chip ${T===g?'on':''}" data-a="gtype" data-i="${g}">${g}</button>`).join('')}</div>${f}<label>Name (optional)<input data-b="GF.name" placeholder="We’ll name it for you" value="${esc(F.name||'')}"></label>${F.err?`<p class="err">${F.err}</p>`:''}<button class="btn big on" data-a="gsave">Save goal</button><button class="btn big" data-a="shx">Cancel</button>`}
+function gSave(){const F=GF,u=U(),T=F.type,need=(...k)=>k.every(x=>F[x]!==undefined&&F[x]!==''&&!isNaN(+F[x]));const L=bmL();if(F.sv==null&&(T.includes('weight'))&&L.w)F.sv=L.w.v;if(F.sv==null&&T==='Gain muscle'&&L.smm)F.sv=L.smm.v;if(F.tol==null)F.tol=1;
+ if(T!=='Maintain weight'&&T!=='Develop'&&!F.due||T==='Develop'&&!F.due)return'Pick a deadline.';
+ let G={type:T,sd:realToday(),due:F.due||null};
+ if(T==='Lose weight'||T==='Gain weight'){if(!need('sv','tv'))return'Enter your current and target weight.';if(T==='Lose weight'&&+F.tv>=+F.sv)return'Your target should be lower than your current weight.';if(T==='Gain weight'&&+F.tv<=+F.sv)return'Your target should be higher than your current weight.';Object.assign(G,{sv:+F.sv,tv:+F.tv,name:F.name||`Reach ${F.tv}${u}`})}
+ else if(T==='Maintain weight'){if(!need('sv'))return'Enter the weight you want to hold.';Object.assign(G,{sv:+F.sv,tv:+F.sv,tol:+F.tol||1,name:F.name||`Stay at ${F.sv}${u}`})}
+ else if(T==='Gain muscle'){if(!need('sv','amt'))return'Enter your current muscle and how much to gain.';Object.assign(G,{sv:+F.sv,tv:+F.sv+ +F.amt,name:F.name||`Gain ${F.amt}${u} of muscle`})}
+ else{if(!need('ts'))return'Enter how many sessions to complete.';Object.assign(G,{focus:(F.focus||'').trim(),ts:+F.ts,name:F.name||`Develop my ${(F.focus||'physique').trim().toLowerCase()}`})}
+ if(F.edit&&S.goal2&&S.goal2.type===T)G.sd=S.goal2.sd;S.goal2=G;return null}
+function wd(l){if(l.id==='next')return comingUp(l);if(l.id==='macros')return macroW(l);if(l.id==='goal')return goalW(l);return wd7(l)}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,i=+el.dataset.i,t=today();
+ if(a==='shx'){sheet(null);GF=null;return}
+ else if(a==='editgoal'){const k=el.dataset.i;sheet(`<h2>Daily ${LBL[k][0].toLowerCase()} goal</h2><label>${LBL[k][0]} (${LBL[k][1]})<input type="number" id="gvin" value="${esc(S.setup[k]||'')}"></label><button class="btn big on" data-a="egsave" data-i="${k}">Save</button><button class="btn big" data-a="shx">Cancel</button>`);const n=$('#gvin');n&&(n.setAttribute('inputmode','numeric'),n.focus());return}
+ else if(a==='egsave'){const v=+($('#gvin')||{}).value;if(v>0)S.setup[el.dataset.i]=v;sheet(null)}
+ else if(a==='smask'){const x=S.saved[i];sheet(`${x.img?`<img class="smbig" src="${x.img}" alt="">`:''}<h2>Have you eaten ${esc(x.n)} ${dLbl(t)}?</h2><p class="sm">${Math.round(x.k)} kcal, ${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</p><div class="row"><button class="btn on" data-a="smyes" data-i="${i}" style="flex:1">Yes, add it</button><button class="btn" data-a="shx" style="flex:1">No</button></div>`);return}
+ else if(a==='smyes'){const x=S.saved[i];S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:x.n,k:x.k,p:x.p,f:x.f,c:x.c});addTot(x,1);sheet(null);save();render();evalDay();toast(`${x.n} added to ${dLbl(t)}.`);return}
+ else if(a==='smpic'){SMI=i;const f=$('#smfi');f&&f.click();return}
+ else if(a==='dels'){S.saved.splice(i,1)}
+ else if(a==='gnew'){GF={type:'Lose weight'};sheet(gForm());return}
+ else if(a==='gopen'){if(!ED)goalSheet();return}
+ else if(a==='gedit'){const G=S.goal2;GF={type:G.type==='Custom'?'Develop':G.type,edit:1,sv:G.sv,tv:G.tv,tol:G.tol,amt:G.type==='Gain muscle'?r1(G.tv-G.sv):undefined,focus:G.focus,ts:G.ts,due:G.due,name:G.name};sheet(gForm());return}
+ else if(a==='gtype'){GF.type=el.dataset.i;GF.err='';sheet(gForm());return}
+ else if(a==='gsave'){const err=gSave();if(err){GF.err=err;sheet(gForm());return}GF=null;sheet(null);toast('Goal saved.')}
+ else if(a==='gclr2'){S.goal2=null;sheet(null)}
+ else if(a==='gyes2'){(S.goals=S.goals||[]).push({...S.goal2,hit:realToday()});S.goal2=null;boom('month')}
+ else if(a==='gno2'){sheet(`<h2>Give yourself more time</h2><div class="row">${[['1 week',7],['2 weeks',14],['1 month',30]].map(x=>`<button class="btn" data-a="gext2" data-i="${x[1]}">${x[0]}</button>`).join('')}</div><button class="btn big" data-a="shx">Cancel</button>`);return}
+ else if(a==='gext2'){S.goal2.due=addDays(realToday(),i);sheet(null)}
+ else return;save();render()});
 render();periodic();
 </script></body></html>
