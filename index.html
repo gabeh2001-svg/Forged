@@ -407,7 +407,7 @@ const mi=(k,l)=>`<label>${l}<input type="number" inputmode="decimal" data-b="M.$
 function diet0(){const t=today(),ml=(S.meals=S.meals||{})[t]||[],m=S.macros[t]||{},rs=ragState(),b=(S.bm=S.bm||{})[t]||{};
  return`<h1>Diet</h1><div class="card"><h2>Today</h2>${SZ.map((k,i)=>`<div class="rag"><div class="dot ${['g','a','r'][rs[i]]||''}"></div><div>${LBL[k][0]}<button class="glink" data-a="editgoal" data-i="${k}">goal ${S.setup[k]||'-'} ${LBL[k][1]}</button></div><input type="number" inputmode="decimal" placeholder="0" data-b="macro.${k}" data-r value="${esc(m[k])}"></div>`).join('')}<p class="sm">Totals reset every day. Edit them to adjust by hand.</p></div>
  <div class="card"><h2>Log a meal</h2><button class="btn big scanb" data-a="scan">Scan label</button><input type="file" id="fi" accept="image/*" capture="environment" style="position:fixed;left:-9999px;top:0;opacity:0" tabindex="-1" aria-hidden="true"><input placeholder="Meal name" data-b="M.n" value="${esc(M.n)}"><div class="row">${mi('k','Calories')}${mi('p','Protein (g)')}</div><div class="row">${mi('f','Fat (g)')}${mi('c','Carbs (g)')}</div><div class="row"><button class="btn on" data-a="addm">Add meal</button><button class="chip ${M.sv?'on':''}" data-a="msv">Save for later</button></div></div>
- ${ml.length?`<h2 style="margin:4px 2px 8px">Logged today</h2>`+ml.map((x,i)=>`<div class="sr"><div class="del" data-a="delm" data-i="${i}">Delete</div><div class="in"><b>${esc(x.n)}</b><div class="sm">${x.k} kcal, ${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</div></div></div>`).join(''):''}
+ ${ml.length?`<div class="card logc"><h2>${today()===realToday()?'Logged today':'Logged this day'}</h2>`+ml.map((x,i)=>`<div class="sr"><div class="del" data-a="delm" data-i="${i}">Delete</div><div class="in"><b>${esc(x.n)}</b><div class="sm">${x.k} kcal, ${x.p}g protein, ${x.f}g fat, ${x.c}g carbs</div></div></div>`).join('')+`<p class="sm">Swipe left to delete.</p></div>`:''}
  ${bmCard()}`}
 const bi=(z,b)=>`<label>${z[1].replace('(kg)','('+(S.setup.u||'kg')+')')}<input type="number" inputmode="decimal" step="0.1" placeholder="${esc(lastBM(z[0]))}" data-b="B.${z[0]}" value="${esc(b[z[0]])}"></label>`;
 function scanFx(src){const o=document.createElement('div');o.id='sc';o.innerHTML=`<div class="scw"><img src="${src}" alt="Label"><i class="ln"></i></div><div style="margin-top:22px">${$('#ov .ringw').outerHTML}</div><div class="hero">Reading label…</div>`;document.body.appendChild(o);
@@ -1175,7 +1175,9 @@ const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
  {i:'<path d="M5 12l4.5 4.5L19 7"/>',h:'Record a session',p:'Develop goals now have a Record a session button to count each one.'},
- {i:'<circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/>',h:'Smoother guided tour',p:'The tour glides between steps and celebrates when you try things yourself.'}],
+ {i:'<circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/>',h:'Smoother guided tour',p:'The tour glides between steps and celebrates when you try things yourself.'},
+ {i:'<path d="M12 3l2.2 5.6L20 9.5l-4.5 3.8L17 19l-5-3-5 3 1.5-5.7L4 9.5l5.8-.9z"/>',h:'Smoother everywhere',p:'Logging a meal, finishing a set or saving anything now gets a quick tick, totals count up and lists glide into place.'},
+ {i:'<rect x="4" y="5" width="16" height="14" rx="4"/><path d="M8 10h8M8 14h5"/>',h:'Logged today, tidied up',p:'Meals you log now sit in their own card on the Diet page, just like Saved meals.'}],
  tour:[{t:'home',q:'[data-a=settings]',h:'New: Settings',p:'Settings now lives here. It holds Customise look, your food goals, units and the tour.'},
   {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings to have a look inside.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
   {t:'home',q:'.wd[data-id=goal]',h:'New: Record a session',p:'For a Develop goal, tap your goal and use Record a session after each workout that counts.'},
@@ -1192,5 +1194,65 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  if(a==='wntour'){const o=$('#wn'),st=o?o._steps:[];o&&o.remove();if(!st.length)return;MINI=TOUR.slice();TOUR.length=0;st.forEach(x=>TOUR.push(wrapOk({...x})));TB=null;TU=0;tab='home';render();return}
  if((a==='tdone2'||a==='tskip2')&&MINI){setTimeout(()=>{TOUR.length=0;MINI.forEach(x=>TOUR.push(x));MINI=null},0)}});
 setInterval(wnShow,800);
+
+/* ===== v21: Logged today card, premium interaction animations ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.logc .sr+.sr{margin-top:10px}.logc>p.sm{margin:12px 2px 0}
+.fx-in{animation:fxin .46s cubic-bezier(.2,.9,.25,1.08) both}
+@keyframes fxin{from{opacity:0;transform:translateY(10px) scale(.97);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+.fx-glow{position:relative}.fx-glow::after{content:'';position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--g1) 70%,transparent),0 0 24px color-mix(in srgb,var(--g1) 40%,transparent);animation:fxglow 1.2s ease-out forwards}
+@keyframes fxglow{from{opacity:1}to{opacity:0}}
+.fx-burst{position:fixed;z-index:120;pointer-events:none;width:0;height:0}
+.fx-burst .ck{position:absolute;left:-17px;top:-17px;width:34px;height:34px;border-radius:50%;background:var(--g1);display:grid;place-items:center;box-shadow:0 6px 20px color-mix(in srgb,var(--g1) 50%,transparent);animation:fxck .9s cubic-bezier(.2,.9,.3,1.2) forwards}
+.fx-burst .ck path{stroke-dasharray:20;stroke-dashoffset:20;animation:drawck .32s .14s ease-out forwards}
+@keyframes fxck{0%{transform:scale(.3);opacity:0}22%{transform:scale(1.08);opacity:1}38%{transform:scale(1)}78%{transform:scale(1);opacity:1}100%{transform:scale(.85) translateY(-6px);opacity:0}}
+.fx-burst i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--g1);animation:fxdot .62s cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes fxdot{from{transform:rotate(var(--r)) translateX(10px);opacity:1}to{transform:rotate(var(--r)) translateX(34px) scale(.3);opacity:0}}
+.fx-float{position:absolute;font-size:12.5px!important;z-index:110;pointer-events:none;font-weight:700;font-size:14px;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--g1) 85%,#000);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.35);animation:fxfl 1.5s cubic-bezier(.2,.8,.2,1) forwards;white-space:nowrap}
+@keyframes fxfl{0%{opacity:0;transform:translate(-50%,6px) scale(.8)}18%{opacity:1;transform:translate(-50%,-6px) scale(1)}75%{opacity:1;transform:translate(-50%,-14px)}100%{opacity:0;transform:translate(-50%,-26px)}}
+.fx-rip{position:absolute;border-radius:50%;pointer-events:none;background:rgba(255,255,255,.28);transform:scale(0);animation:fxrip .55s ease-out forwards}
+@keyframes fxrip{to{transform:scale(1);opacity:0}}
+.btn,.pill,.glink,.chip{-webkit-tap-highlight-color:transparent}
+.btn{transition:transform .16s cubic-bezier(.3,1.4,.5,1),filter .16s}.btn:active{transform:scale(.965);filter:brightness(1.08)}
+.fx-out{animation:fxout .26s cubic-bezier(.4,0,1,1) forwards;overflow:hidden}
+@keyframes fxout{to{opacity:0;transform:translateX(-24px) scale(.96);filter:blur(2px)}}
+@media (prefers-reduced-motion:reduce){.fx-in,.fx-glow::after,.fx-burst,.fx-float,.fx-out{animation:none!important}.fx-burst,.fx-float{display:none}}`;document.head.appendChild(st)})();
+const FXRM=matchMedia('(prefers-reduced-motion: reduce)');
+const FXSEL='.card,.sr,.chip,.cu,.wk,.tl,.kv';
+function fxKey(el){const h=el.matches('.card')&&el.querySelector('h2,h3');return el.className.split(' ')[0]+'|'+(h?h.textContent:el.textContent).replace(/\s+/g,' ').trim().slice(0,120)}
+function fxFixed(el,root){for(let n=el;n&&n!==root;n=n.parentElement){const p=getComputedStyle(n).position;if(p==='fixed'||p==='sticky')return true}return false}
+function fxSnap(root){const m=new Map(),c={};if(!root)return{m,bars:new Map(),rings:new Map()};
+ root.querySelectorAll(FXSEL).forEach(el=>{let k=fxKey(el);c[k]=(c[k]||0)+1;k+='#'+c[k];const r=el.getBoundingClientRect();m.set(k,{x:r.left,y:r.top,el})});
+ const bars=new Map();root.querySelectorAll('.pb').forEach((b,i)=>{const l=b.querySelector('.pbl span'),v=b.querySelector('.pbl span:last-child'),f=b.querySelector('.pbt i');if(!l||!f)return;bars.set(l.textContent+'#'+i,{w:f.style.width,v:parseFloat(v&&v.textContent)||0,t:v?v.textContent:'',u:(v&&v.textContent.match(/[a-z]+$/i)||[''])[0]})});
+ const rings=new Map();root.querySelectorAll('.ring2').forEach((r,i)=>{const c=r.querySelectorAll('circle')[1];if(c)rings.set(i,c.getAttribute('stroke-dasharray'))});
+ return{m,bars,rings}}
+let FXCTX='',FXLAST=0;
+function fxCtx(){return(S.user||'')+'|'+(typeof tab!=='undefined'?tab:'')+'|'+(typeof today==='function'?today():'')+'|'+(typeof D!=='undefined'&&D?'D':'')}
+function fxApply(root,pre,same){if(!root||FXRM.matches)return;const post=fxSnap(root),now=[];let fresh=[];
+ if(same){post.m.forEach((o,k)=>{const p=pre.m.get(k);if(!p){fresh.push(o.el);return}const dx=p.x-o.x,dy=p.y-o.y;if((Math.abs(dx)>1||Math.abs(dy)>1)&&Math.abs(dy)<600&&!fxFixed(o.el,root))o.el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.8,.2,1)'})});
+  fresh=fresh.filter(el=>!fresh.some(o=>o!==el&&o.contains(el)));
+  if(fresh.length&&fresh.length<=Math.max(3,post.m.size*.5))fresh.forEach((el,j)=>{el.style.animationDelay=(j*45)+'ms';el.classList.add('fx-in');if(el.matches('.sr,.chip,.cu,.wk'))setTimeout(()=>{el.classList.add('fx-glow');setTimeout(()=>el.classList.remove('fx-glow'),1300)},120);el.addEventListener('animationend',()=>{el.classList.remove('fx-in');el.style.animationDelay=''},{once:true})});
+  root.querySelectorAll('.pb').forEach((b,i)=>{const l=b.querySelector('.pbl span'),v=b.querySelector('.pbl span:last-child'),f=b.querySelector('.pbt i');if(!l||!f)return;const p=pre.bars.get(l.textContent+'#'+i);if(!p)return;f.getAnimations().forEach(a=>a.cancel());
+   if(p.w!==f.style.width){f.animate([{width:p.w||'0%'},{width:f.style.width}],{duration:700,easing:'cubic-bezier(.2,.8,.2,1)'})}
+   const nv=parseFloat(v&&v.textContent)||0;if(v&&nv!==p.v){const txt=v.textContent,t0=performance.now(),a0=p.v;(function st(t){const k=Math.min(1,(t-t0)/650),e=1-Math.pow(1-k,3);v.textContent=txt.replace(/^-?[\d.]+/,String(Math.round(a0+(nv-a0)*e)));if(k<1)requestAnimationFrame(st)})(t0);
+    if(nv>p.v){fxFloat(v,'+'+Math.round(nv-p.v)+(p.u?' '+p.u:''),now.length*120);now.push(1)}}});
+  root.querySelectorAll('.ring2').forEach((r,i)=>{const c=r.querySelectorAll('circle')[1],p=pre.rings.get(i);if(!c||!p)return;const n=c.getAttribute('stroke-dasharray');if(n===p)return;const a=parseFloat(p),b=parseFloat(n),rest=n.split(' ')[1],t0=performance.now();(function st(t){const k=Math.min(1,(t-t0)/800),e=1-Math.pow(1-k,3);c.setAttribute('stroke-dasharray',(a+(b-a)*e).toFixed(1)+' '+rest);if(k<1)requestAnimationFrame(st)})(t0)})}
+ else if(post.m.size){root.animate([{opacity:.0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}}
+function fxFloat(h,t,d){const f=document.createElement('div');f.className='fx-float';f.textContent=t;h.style.position='relative';f.style.left='50%';f.style.bottom='100%';f.style.animationDelay=(d||0)+'ms';f.style.opacity=0;h.appendChild(f);setTimeout(()=>f.remove(),1700+(d||0))}
+function fxBurst(el,x,y){if(FXRM.matches)return;if(el&&el.isConnected){const r=el.getBoundingClientRect();if(r.width){x=r.left+r.width/2;y=r.top+r.height/2}}if(x==null)return;const b=document.createElement('div');b.className='fx-burst';b.style.left=x+'px';b.style.top=y+'px';
+ b.innerHTML='<div class="ck"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3.2L14 6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+Array.from({length:8},(_,k)=>`<i style="--r:${k*45+22}deg"></i>`).join('');document.body.appendChild(b);setTimeout(()=>b.remove(),1000);navigator.vibrate&&navigator.vibrate(10)}
+/* wrap renderers so every change is animated */
+{const _r=render;render=function(){const a=$('#app'),c=fxCtx(),same=c===FXCTX,pre=same?fxSnap(a):null;_r.apply(this,arguments);FXCTX=c;try{fxApply(a,pre,same)}catch(_){}}}
+{const _s=sheet;sheet=function(h){const o=$('#sheet'),pre=o&&h?fxSnap(o):null;_s.apply(this,arguments);if(pre)try{fxApply($('#sheet'),pre,true)}catch(_){}}}
+if(typeof awr==='function'){const _w=awr;awr=function(){const o=$('#aw'),pre=o?fxSnap(o):null;_w.apply(this,arguments);if(pre)try{fxApply($('#aw'),pre,true)}catch(_){}}}
+/* moments: a tick burst where you tapped whenever something is added or recorded */
+const FXADD=/^(addm|smyes|usem|adde|addx2?|addw|savt|gsave|grec|gyes2|awsave|egsave|estuse|estset|conf2?|lxadd|reqsave|fin|edone|nyes)$/;
+let FXTAP=null;
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('.btn,.pill');if(!b||FXRM.matches)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2.2,o=document.createElement('span');o.className='fx-rip';o.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;if(getComputedStyle(b).position==='static')b.style.position='relative';b.style.overflow='hidden';b.appendChild(o);setTimeout(()=>o.remove(),600)},true);
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ /* deletes slide out first, then the list closes the gap */
+ if(/^del[a-z]$/.test(a)&&!el._fxgo&&!FXRM.matches){const row=el.closest('.sr');if(row){e.stopImmediatePropagation();e.preventDefault();row.style.height=row.offsetHeight+'px';row.classList.add('fx-out');setTimeout(()=>{el._fxgo=1;el.click();el._fxgo=0},240);return}}
+ if(FXADD.test(a)){const r=el.getBoundingClientRect();FXTAP={x:r.left+r.width/2,y:r.top+r.height/2,t:Date.now()};setTimeout(()=>{if(!FXTAP)return;const err=document.querySelector('#app .err:not([hidden]),#sheet .err:not([hidden])');if(err&&err.textContent.trim())return;fxBurst(el.isConnected?el:null,FXTAP.x,FXTAP.y);FXTAP=null},30)}},true);
+{const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);setTimeout(()=>{const b=$('#aw [data-a=awn]')||$('#aw .btn');fxBurst(b,innerWidth/2,innerHeight*.6)},40);return r}}
 render();periodic();reqShow();
 </script></body></html>
