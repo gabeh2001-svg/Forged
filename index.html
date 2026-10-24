@@ -701,6 +701,7 @@ function splash(){if($('#splash'))return;const d=document.createElement('div');d
  t.animate([{opacity:1,filter:'blur(0px)',transform:'scale(1)',letterSpacing:'.32em'},{opacity:0,filter:'blur(12px)',transform:'scale(.72)',letterSpacing:'.6em'}],{duration:700,delay:2600,easing:E,...f});
  ic.animate([{opacity:0,filter:'blur(14px)',transform:'scale(1.3)'},{opacity:1,filter:'blur(0px)',transform:'scale(1)'}],{duration:900,delay:2850,easing:E,...f});
  sh.animate([{transform:'translateX(-120%)'},{transform:'translateX(120%)'}],{duration:1000,delay:3800,easing:'ease-in-out',composite:'replace',...f});
+ [box,ic].forEach(el=>el.getAnimations().forEach(a=>a.finished.then(()=>{try{a.commitStyles()}catch(_){}a.cancel();el.style.filter='none'}).catch(()=>{})));
  const out=d.animate([{opacity:1},{opacity:0}],{duration:700,delay:5000,easing:'ease',...f});out.onfinish=()=>d.remove();
  d.addEventListener('click',()=>d.getAnimations({subtree:true}).forEach(a=>a.finish()))}
 let HID=0;document.addEventListener('visibilitychange',()=>{if(document.hidden)HID=Date.now();else if(HID&&Date.now()-HID>30*60e3)splash()});
