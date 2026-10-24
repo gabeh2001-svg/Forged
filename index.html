@@ -1170,7 +1170,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.10.24';
+const APP_VER='2026.10.25';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -1184,7 +1184,7 @@ const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
   {t:'diet',q:'[data-a=estopen]',h:'New: Work out my goals',p:'Tap here any time to work out your daily calories and macros from your details and goal.'}]}];
 let MINI=null,NEWU=!(S.user&&S.setup.done)||TU===0;
 function wrapOk(st){if(!st.ok||st._w)return st;const f=st.ok;st._w=1;st.ok=b=>{if(st._t)return Date.now()-st._t>900;if(f(b)){st._t=Date.now();tourOk()}return false};const af=st.after;st.after=()=>{st._t=0;af&&af()};return st}
-function wnShow(){if($('#wn')||$('#req')||$('#splash')||$('#sheet')||$('#lx')||AW||TU!=null||!S.user||!S.setup.done)return;
+function wnShow(){if($('#wn')||$('#req')||$('#splash')||$('#sheet')||$('#lx')||$('#lx2')||AW||TU!=null||!S.user||!S.setup.done)return;
  if(NEWU||!S.seenVer&&!S.tourDone){S.seenVer=APP_VER;save();return}
  if(S.seenVer===APP_VER)return;const R=RELEASES.filter(r=>!S.seenVer||r.v>S.seenVer);S.seenVer=APP_VER;save();if(!R.length)return;
  tab='home';VD=null;render();const items=R.flatMap(r=>r.items),steps=R.flatMap(r=>r.tour||[]);
@@ -1254,5 +1254,72 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  if(/^del[a-z]$/.test(a)&&!el._fxgo&&!FXRM.matches){const row=el.closest('.sr');if(row){e.stopImmediatePropagation();e.preventDefault();row.style.height=row.offsetHeight+'px';row.classList.add('fx-out');setTimeout(()=>{el._fxgo=1;el.click();el._fxgo=0},240);return}}
  if(FXADD.test(a)){const r=el.getBoundingClientRect();FXTAP={x:r.left+r.width/2,y:r.top+r.height/2,t:Date.now()};setTimeout(()=>{if(!FXTAP)return;const err=document.querySelector('#app .err:not([hidden]),#sheet .err:not([hidden])');if(err&&err.textContent.trim())return;fxBurst(el.isConnected?el:null,FXTAP.x,FXTAP.y);FXTAP=null},30)}},true);
 {const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);setTimeout(()=>{const b=$('#aw [data-a=awn]')||$('#aw .btn');fxBurst(b,innerWidth/2,innerHeight*.6)},40);return r}}
+
+/* ===== v22: simpler Customise look, screen lock during tour and pop-ups ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+body.lx2on .nav{transform:translateY(130%);opacity:0;pointer-events:none}.nav{transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s}
+body.lx2on #app{pointer-events:none;padding-bottom:200px}
+#lx2{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:70;max-width:528px;margin:0 auto;background:rgba(18,22,34,.8);backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);border:1px solid var(--edge);border-radius:30px;padding:8px;box-shadow:0 18px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);animation:up .36s cubic-bezier(.3,1.2,.5,1);transition:border-radius .35s,padding .35s}
+#lx2 .lxh{display:flex;align-items:center;gap:6px}
+#lx2 .tabs{display:flex;gap:4px;flex:1;min-width:0;background:rgba(255,255,255,.06);border-radius:999px;padding:4px}
+#lx2 .tabs button{flex:1;border:0;background:none;color:var(--dim);font:600 14px/1 inherit;font-family:inherit;padding:10px 6px;border-radius:999px;white-space:nowrap}
+#lx2 .tabs button.on{background:rgba(255,255,255,.92);color:#10121a}
+#lx2 .dn{border:0;border-radius:999px;padding:11px 16px;font:700 14px/1 inherit;font-family:inherit;background:var(--g1);color:#fff;flex:none}
+#lx2 .mini{display:none;flex:1;min-width:0;align-items:center;gap:10px;padding:4px 8px;color:#fff;font-weight:600;font-size:14px;background:none;border:0;font-family:inherit;text-align:left}
+#lx2 .mini small{display:block;color:var(--dim);font-weight:400;font-size:12px}
+#lx2 .mini i{width:26px;height:26px;border-radius:50%;flex:none;border:1px solid rgba(255,255,255,.5)}
+#lx2 .lxb{display:grid;grid-template-rows:1fr;transition:grid-template-rows .4s cubic-bezier(.2,.8,.2,1),opacity .3s}
+#lx2 .lxb>div{overflow:hidden;min-height:0}
+#lx2 .rowx{display:flex;gap:8px;overflow-x:auto;padding:12px 4px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}#lx2 .rowx::-webkit-scrollbar{display:none}
+#lx2 .lab{font-size:12px;color:var(--dim);margin:8px 6px 0;letter-spacing:.04em}
+#lx2 .ch{flex:none;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--edge);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:8px 14px 8px 8px;font:500 14px/1 inherit;font-family:inherit;white-space:nowrap}
+#lx2 .ch.on{background:#fff;color:#10121a;border-color:#fff}
+#lx2 .ch .dot{width:22px;height:22px;border-radius:50%;flex:none;border:1px solid rgba(255,255,255,.45)}
+#lx2 .ch .pv{width:22px;height:30px;border-radius:7px;flex:none;border:1px solid rgba(255,255,255,.35)}
+#lx2 .ch input{width:26px;height:22px;padding:0;margin:0;border:0;background:none}
+#lx2.min{padding:6px 6px 6px 8px}#lx2.min .lxb{grid-template-rows:0fr;opacity:0}#lx2.min .tabs{display:none}#lx2.min .mini{display:flex}
+html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}`;document.head.appendChild(st)})();
+const LAY=[['corners','Corners',[[0,0,'p'],[100,100,'s']]],['flip','Flipped',[[100,0,'p'],[0,100,'s']]],['topbot','Top and bottom',[[50,-12,'p'],[50,112,'s']]],['sides','Sides',[[-12,40,'p'],[112,62,'s']]],['halo','Single glow',[[50,-8,'p']]]];
+const STR=[['soft','Soft',46,105],['med','Medium',72,120],['bold','Strong',96,140]];
+let LX2={tab:'col',cust:false};
+function lx2Lights(){const L=LAY.find(x=>x[0]===(S.lxl||'corners'))||LAY[0],K=STR.find(x=>x[0]===(S.lxs||'med'))||STR[1];S.lights=L[2].map(([x,y,c])=>({x,y,c,r:K[3],a:c==='s'?Math.min(100,K[2]+4):K[2]}))}
+function lx2pv(L){return`background:${L[2].map(([x,y,c])=>`radial-gradient(90% 70% at ${x}% ${y}%,${lcol(c)},transparent 70%)`).join(',')},${S.tone||'#080b13'}`}
+function lx2r(){let o=$('#lx2');if(!o){o=document.createElement('div');o.id='lx2';o.setAttribute('role','dialog');o.setAttribute('aria-label','Customise look');document.body.appendChild(o)}
+ const T=LX2.tab,pre=PRE.findIndex(p=>S.p===p[1]&&S.s===p[2]);let body='';
+ if(T==='col')body=`<div class="rowx">${PRE.map((p,i)=>`<button class="ch ${i===pre&&!LX2.cust?'on':''}" data-a="lx2pre" data-i="${i}"><span class="dot" style="background:linear-gradient(135deg,${p[1]},${p[2]})"></span>${esc(p[0])}</button>`).join('')}<button class="ch ${pre<0||LX2.cust?'on':''}" data-a="lx2cust"><span class="dot" style="background:conic-gradient(#ff5c5c,#ffc53d,#3ddc84,#2f6bff,#a855f7,#ff5c5c)"></span>Custom</button></div>${LX2.cust||pre<0?`<div class="rowx" style="padding-top:2px"><label class="ch">Main<input type="color" data-lx2c="p" value="${S.p||'#7f0000'}"></label><label class="ch">Second<input type="color" data-lx2c="s" value="${S.s||'#000000'}"></label></div>`:''}`;
+ if(T==='lit')body=`<p class="lab">Where the light comes from</p><div class="rowx">${LAY.map(L=>`<button class="ch ${(S.lxl||'corners')===L[0]&&S.lxm!==1?'on':''}" data-a="lx2lay" data-i="${L[0]}"><span class="pv" style="${lx2pv(L)}"></span>${L[1]}</button>`).join('')}</div><p class="lab">Glow</p><div class="rowx">${STR.map(k=>`<button class="ch ${(S.lxs||'med')===k[0]&&S.lxm!==1?'on':''}" data-a="lx2str" data-i="${k[0]}" style="padding-left:14px">${k[1]}</button>`).join('')}</div>`;
+ if(T==='bg')body=`<div class="rowx">${TONES.map(t=>`<button class="ch ${(S.tone||'#080b13')===t[1]?'on':''}" data-a="lx2tone" data-i="${t[1]}"><span class="dot" style="background:${t[1]}"></span>${t[0]}</button>`).join('')}</div>`;
+ o.innerHTML=`<div class="lxh"><div class="tabs" role="tablist">${[['col','Colours'],['lit','Lights'],['bg','Background']].map(x=>`<button role="tab" aria-selected="${T===x[0]}" class="${T===x[0]?'on':''}" data-a="lx2tab" data-i="${x[0]}">${x[1]}</button>`).join('')}</div><button class="mini" data-a="lx2exp"><i style="background:linear-gradient(135deg,${lcol('p')},${lcol('s')})"></i><span>Customise look<small>Scroll to preview. Tap here to keep editing.</small></span></button><button class="dn" data-a="lx2done">Done</button></div><div class="lxb"><div>${body}</div></div>`;applyBg()}
+let LXY=0;addEventListener('scroll',()=>{const o=$('#lx2');if(!o)return;if(Math.abs(scrollY-LXY)>14&&!o.classList.contains('min'))o.classList.add('min')},{passive:true});
+const lxMin=e=>{const o=$('#lx2');if(o&&!o.contains(e.target)&&!o.classList.contains('min'))o.classList.add('min')};document.addEventListener('touchmove',lxMin,{passive:true});document.addEventListener('wheel',lxMin,{passive:true});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='lxopen'){e.stopImmediatePropagation();sheet(null);if(!S.lights||!S.lights.length)lx2Lights();document.body.classList.add('lx2on');LX2={tab:'col',cust:false};LXY=scrollY;tab='home';render();lx2r();return}
+ if(!$('#lx2')||!a.startsWith('lx2'))return;e.stopImmediatePropagation();const o=$('#lx2');
+ if(a==='lx2done'){o.remove();document.body.classList.remove('lx2on');save();render();return}
+ if(a==='lx2exp'){o.classList.remove('min');LXY=scrollY;return}
+ if(a==='lx2tab'){LX2.tab=el.dataset.i;o.classList.remove('min')}
+ else if(a==='lx2pre'){const p=PRE[+el.dataset.i];S.p=p[1];S.s=p[2];LX2.cust=false;if(p[0]==='Purple Gyal')S.gi=75}
+ else if(a==='lx2cust'){LX2.cust=true}
+ else if(a==='lx2lay'){S.lxl=el.dataset.i;S.lxm=0;lx2Lights()}
+ else if(a==='lx2str'){S.lxs=el.dataset.i;S.lxm=0;lx2Lights()}
+ else if(a==='lx2tone'){S.tone=el.dataset.i}
+ else return;save();LXY=scrollY;lx2r()},true);
+document.addEventListener('input',e=>{const c=e.target.dataset&&e.target.dataset.lx2c;if(!c)return;S[c]=e.target.value;applyBg();const d=$('#lx2 .mini i');d&&(d.style.background=`linear-gradient(135deg,${lcol('p')},${lcol('s')})`)});
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.lx2c)save()});
+/* lock the page while the tour or a pop-up is open: only the tour, its target and the pop-up respond */
+const LOCKQ='#tour,#wn,#req,#sheet,#mw,#imp,#est';
+function lockSync(){const on=!!document.querySelector(LOCKQ)&&!$('#lx2');document.documentElement.classList.toggle('lock',on)}
+new MutationObserver(lockSync).observe(document.body,{childList:true});
+function lockOk(t){if(!t||!t.closest)return true;
+ if($('#tour')){if(t.closest('#tour .tcard'))return true;if(typeof TEL!=='undefined'&&TEL&&TEL.isConnected&&TEL.contains(t))return true;if(t.closest('#sheet,#wn,#req,#mw,#imp'))return true;return false}
+ return true}
+const scrollable=t=>{for(let n=t;n&&n!==document.body;n=n.parentElement){if(n.matches&&n.matches('.mwc,.tcard,.rowx,.chips,.cw7,textarea'))return true;const cs=getComputedStyle(n);if(/(auto|scroll)/.test(cs.overflowY+cs.overflowX)&&(n.scrollHeight>n.clientHeight+1||n.scrollWidth>n.clientWidth+1))return true}return false};
+document.addEventListener('touchmove',e=>{if(!document.documentElement.classList.contains('lock'))return;if(!scrollable(e.target))e.preventDefault()},{passive:false});
+document.addEventListener('wheel',e=>{if(!document.documentElement.classList.contains('lock'))return;if(!scrollable(e.target))e.preventDefault()},{passive:false});
+['pointerdown','click','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{if(!$('#tour'))return;if(!lockOk(e.target)){e.stopImmediatePropagation();if(ev!=='touchstart')e.preventDefault()}},true));
+RELEASES.push({v:'2026.10.25',date:'25 Oct',items:[
+ {i:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>',h:'Simpler Customise look',p:'Pick your colours, where the light comes from, how strong it glows and your background from a neat bar at the bottom. Scroll Home to preview before you tap Done.'},
+ {i:'<rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h4"/>',h:'Steadier tour and pop-ups',p:'While the tour or a pop-up is open, the screen behind stays put, so you can only tap what the tour points to.'}],
+ tour:[{t:'home',q:'[data-a=settings]',h:'New: Customise look',p:'Open Settings, then Customise look. Everything now sits in one bar at the bottom of the screen.'}]});
 render();periodic();reqShow();
 </script></body></html>
