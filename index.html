@@ -160,6 +160,20 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%}
 #req .mwb{position:absolute;inset:0;background:rgba(4,6,12,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 #req .mwc{position:relative;width:100%;max-width:480px;background:rgba(22,26,40,.97);animation:up .32s cubic-bezier(.3,1.2,.5,1)}
 .est4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 6px;text-align:center}.est4 div{background:rgba(255,255,255,.07);border:1px solid var(--edge);border-radius:14px;padding:10px 4px}.est4 b{display:block;font-size:19px;font-variant-numeric:tabular-nums}.est4 span{font-size:11px;color:var(--dim)}
+.setb{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;font-size:14px;margin:0 0 6px}.setb svg{width:17px;height:17px}
+.setl{display:flex;flex-direction:column;gap:2px;margin-top:6px}.setl button{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-radius:14px;color:#fff;font:inherit;font-size:16px;text-align:left;padding:13px 10px;cursor:pointer}.setl button:active{background:rgba(255,255,255,.08)}.setl svg{width:22px;height:22px;opacity:.85;flex:none}.setl small{display:block;color:var(--dim);font-size:13px}
+#lx{position:fixed;inset:0;z-index:70;touch-action:none;-webkit-user-select:none;user-select:none}body.lxon #app,body.lxon .nav{opacity:.18;filter:blur(2px);transition:opacity .3s,filter .3s;pointer-events:none}
+#lx .lh{z-index:3}#lx .lxp{z-index:2;transition:opacity .25s}#lx.dragging .lxp,#lx.dragging .hint{opacity:.1}
+#lx .lxtop{z-index:4}
+#lx .lxtop{position:absolute;left:16px;right:16px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center}
+#lx .lxtop b{font-size:17px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+#lx .lh{position:absolute;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:rgba(255,255,255,.12);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .2s cubic-bezier(.3,1.5,.5,1)}
+#lx .lh i{width:22px;height:22px;border-radius:50%;display:block;box-shadow:0 0 14px currentColor}
+#lx .lh.sel{transform:scale(1.18);border-color:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.25),0 8px 24px rgba(0,0,0,.45)}
+#lx .lh.drag{transform:scale(1.3);transition:none}
+#lx .lxp{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:528px;margin:0 auto;padding:14px 16px;background:rgba(18,22,34,.9);touch-action:auto;max-height:52vh;overflow:auto}
+#lx .lxp .chips{padding:2px 0 8px}#lx .sw2{width:22px;height:22px;border-radius:50%;display:inline-block;vertical-align:-6px;margin-right:6px;border:1px solid rgba(255,255,255,.5)}
+#lx .hint{position:absolute;left:0;right:0;top:calc(58px + env(safe-area-inset-top,0px));text-align:center;font-size:13px;color:rgba(255,255,255,.75);text-shadow:0 1px 6px rgba(0,0,0,.7);pointer-events:none}
 #splash{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:radial-gradient(60% 40% at 50% 46%,color-mix(in srgb,var(--g1) 38%,transparent),transparent 70%),#07080d}
 .sp-box{position:relative;width:280px;height:84px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 24px 70px rgba(0,0,0,.55);display:grid;place-items:center;overflow:hidden;opacity:0}
 .sp-t{font-size:34px;font-weight:800;letter-spacing:.32em;padding-left:.32em;background:linear-gradient(100deg,rgba(255,255,255,.55) 30%,#fff 50%,rgba(255,255,255,.55) 70%);background-size:250% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -203,7 +217,7 @@ const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice
 const realToday=()=>iso(new Date());let VD=null;const today=()=>VD||realToday();
 const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return iso(d)};
 const BG=[['#ff7a59','#7b4dff','#00c2ff'],['#11998e','#38ef7d','#0f4c81'],['#f093fb','#f5576c','#4facfe'],['#fc4a1a','#f7b733','#8e2de2'],['#0f2027','#2c5364','#7f5af0']];
-const applyBg=()=>{const r=document.documentElement.style;r.setProperty('--g1',S.p||'#2f6bff');r.setProperty('--g2',S.s||'#4a4e69');const a=Number(S.gi??75),p=S.p||'#2f6bff',s=S.s||'#4a4e69';document.body.style.background=`radial-gradient(120% 70% at 0% 0%,color-mix(in srgb,${p} ${a}%,transparent),transparent 60%),radial-gradient(120% 70% at 100% 100%,color-mix(in srgb,${s} ${Math.min(100,a+4)}%,transparent),transparent 60%),#080b13`;document.body.style.backgroundAttachment='fixed'};
+const applyBg=()=>{if(window.applyLights&&applyLights())return;const r=document.documentElement.style;r.setProperty('--g1',S.p||'#2f6bff');r.setProperty('--g2',S.s||'#4a4e69');const a=Number(S.gi??75),p=S.p||'#2f6bff',s=S.s||'#4a4e69';document.body.style.background=`radial-gradient(120% 70% at 0% 0%,color-mix(in srgb,${p} ${a}%,transparent),transparent 60%),radial-gradient(120% 70% at 100% 100%,color-mix(in srgb,${s} ${Math.min(100,a+4)}%,transparent),transparent 60%),#080b13`;document.body.style.backgroundAttachment='fixed'};
 let tab='home',ob=S.seenA2HS?'who':'a2hs',st=0,D=null,X={eq:'Bar',t:'Target Reps',bar:20},gx=false;
 const SZ=['k','p','f','c'];
 
@@ -665,7 +679,7 @@ function nudge(){const n=new Date(),hm=String(n.getHours()).padStart(2,'0')+':'+
  const past=(S.eat||[]).filter(x=>x.t<=hm).sort((a,b)=>a.t<b.t?-1:1),logged=((S.meals||{})[t]||[]).length;
  if(past.length>logged){const x=past[past.length-1];return bnr(`Time for ${esc(x.n)}`,`Scheduled for ${x.t}.`,'Log it','godiet')}return''}
 function home(){S.lay=(S.lay||[{id:'next',w:2,h:1},{id:'bring',w:1,h:1},{id:'macros',w:1,h:1},{id:'work',w:2,h:2},{id:'goal',w:2,h:1}]).filter(l=>l.id!=='cal');
- return nudge()+cal2()+`<button class="btn big on" data-a="wsel">Start workout</button>${ED?'<button class="btn on" data-a="edone" style="position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:16px;z-index:20">Done</button>':''}<div class="grid ${ED?'edit':''}" style="margin-top:14px">${S.lay.map(l=>`<div class="card wd" data-id="${l.id}" style="grid-column:span ${l.w};grid-row:span ${l.h}"><div class="c">${wd(l)}</div><div class="hd"></div><div class="mn" data-a="rmw" data-i="${l.id}"></div></div>`).join('')}</div>${ED?hidden():''}<button class="btn big" data-a="cs">Change colour scheme?</button>${CS?`<div style="margin-top:14px">${csPanel()}</div>`:''}<button class="btn big" data-a="tour">Replay the guided tour</button><p class="sm" style="text-align:center">Hold a widget to rearrange or resize.</p>`}
+ return nudge()+cal2()+`<button class="btn big on" data-a="wsel">Start workout</button>${ED?'<button class="btn on" data-a="edone" style="position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:16px;z-index:20">Done</button>':''}<div class="grid ${ED?'edit':''}" style="margin-top:14px">${S.lay.map(l=>`<div class="card wd" data-id="${l.id}" style="grid-column:span ${l.w};grid-row:span ${l.h}"><div class="c">${wd(l)}</div><div class="hd"></div><div class="mn" data-a="rmw" data-i="${l.id}"></div></div>`).join('')}</div>${ED?hidden():''}<p class="sm" style="text-align:center;margin:18px 0 8px">Hold a widget to rearrange or resize.</p><div style="display:flex;justify-content:center"><button class="btn setb" data-a="settings">${ico('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>')} Settings</button></div>`}
 function mwr(){let o=$('#mw');if(!MW){o&&o.remove();return}if(!o){o=document.createElement('div');o.id='mw';document.body.appendChild(o)}
  const op=S.plans.flatMap(p=>p.days.map((d,i)=>[p.id+'|'+i,`${p.name}: ${d.name}`]));if(!W.k)W.k=defK();
  o.innerHTML=`<div class="mwb" data-a="mwx"></div><div class="card mwc" role="dialog" aria-label="Start workout"><h2>Start workout</h2>${op.length?`<label>Which workout and day?<select data-b="W.k">${op.map(x=>`<option value="${x[0]}" ${x[0]===W.k?'selected':''}>${esc(x[1])}</option>`).join('')}</select></label><button class="mopt" data-a="awgo"><b>Guided workout</b><span>Step by step: where to go, what to load, every set and every rest, timed for you.</span></button><button class="mopt" data-a="solo"><b>Solo workout</b><span>Your exercise checklist and timers. You run the session your way.</span></button>`:'<p>You need a plan first. Build one in the Workout tab.</p>'}<button class="btn big" data-a="mwx">Cancel</button></div>`}
@@ -684,7 +698,7 @@ TOUR.length=0;TOUR.push(
  {t:'home',q:'.cal .chipw',h:'Your turn',p:'Hold a workout and drag it onto another day. The dashed outline shows where it will land.',base:()=>JSON.stringify(S.sch),ok:b=>JSON.stringify(S.sch)!==b},
  {t:'home',q:'[data-a=wsel]',h:'Start workout',p:'Choose Guided to be walked through every set and rest, or Solo to run it yourself with the checklist and timers.'},
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. That’s edit mode: drag to move, use the corner handle to resize, tap the minus to remove.',ok:()=>ED,after:()=>{ED=false}},
- {t:'home',q:'[data-a=cs]',h:'Your turn',p:'Tap Change colour scheme to see your colour options.',ok:()=>CS,after:()=>{CS=false}},
+ {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals, and you can type into a total to correct it. The lights follow your green, amber and red rules.'},
  {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals added with it switched on become one-tap buttons next time.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
@@ -1025,7 +1039,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  {t:'home',q:'.wd[data-id=goal]',h:'Your goal',p:'Tap to set a goal: lose, maintain or gain weight, gain muscle, or develop a body part. It charts your progress and suggests updates as you log your weight, body metrics and workouts. For a Develop goal, tap Record a session after each one.'},
  {t:'home',q:'.wd[data-id=macros]',h:'Macros',p:'Each ring fills as you eat and turns green, amber or red against your goal.'},
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. Drag to move, use the corner handle to resize, tap the minus to remove. Widgets show more as they get bigger.',ok:()=>ED,after:()=>{ED=false}},
- {t:'home',q:'[data-a=cs]',h:'Your turn',p:'Tap Change colour scheme to see your colour options.',ok:()=>CS,after:()=>{CS=false}},
+ {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.hdr',h:'Your day bar',p:'Tap a day to look back at what you hit, or ahead at what’s planned. Ticks mark winning days, and the bolt counts them in a row.'},
  {t:'diet',q:'.hdr .wd2:not(.on)',pick:a=>a.find(x=>x.dataset.i>realToday())||a[0],h:'Your turn',p:'Tap another day. We’ll bring you back to today straight after.',ok:()=>VD!=null,after:()=>{VD=null}},
  {t:'diet',q:'.dp',h:'Today so far',p:'Shows how much of your calories and macros you’ve had. On a past day it becomes a summary of whether you hit your goals.'},
@@ -1083,5 +1097,44 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  if(a==='estuse'){const r=calcEst(EST);if(!r)return;Object.assign(S.setup,{k:r.k,p:r.p,f:r.f,c:r.c,age:+EST.age,sex:EST.sex,act:+EST.act});EST=null;sheet(null);save();render();toast('Goals updated.');return}
  if(a==='shx'&&EST)EST=null},true);
 document.addEventListener('click',()=>setTimeout(reqShow,0));
+/* ---------- v18: settings menu, light editor ---------- */
+const TONES=[['Midnight','#080b13'],['Black','#000000'],['Navy','#0a1024'],['Plum','#130a1c'],['Forest','#06130e'],['Slate','#14171f']];
+let LS=0;
+function defLights(){const a=+S.gi||75;return[{x:0,y:0,c:'p',r:120,a},{x:100,y:100,c:'s',r:120,a:Math.min(100,a+4)}]}
+const lcol=c=>c==='p'?(S.p||'#7f0000'):c==='s'?(S.s||'#000000'):c;
+function applyLights(){if(!S.lights||!S.lights.length)return false;const g=S.lights.map(l=>`radial-gradient(${l.r}% ${Math.round(l.r*.7)}% at ${l.x}% ${l.y}%,color-mix(in srgb,${lcol(l.c)} ${l.a}%,transparent),transparent 62%)`).join(',');
+ const r=document.documentElement.style;r.setProperty('--g1',S.p||'#7f0000');r.setProperty('--g2',S.s||'#000000');document.body.style.background=g+','+(S.tone||'#080b13');document.body.style.backgroundAttachment='fixed';return true}
+function settingsSheet(){const I=p=>ico(p),u=U();sheet(`<h2>Settings</h2><div class="setl">
+ <button data-a="lxopen">${I('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>')}<span>Customise look<small>Colours, light sources and background</small></span></button>
+ <button data-a="estopen">${I('<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>')}<span>Work out my food goals<small>Daily calories and macros</small></span></button>
+ <button data-a="setunit">${I('<path d="M6 7h12l-2 13H8z"/><path d="M9 7a3 3 0 0 1 6 0"/>')}<span>Weight units<small>Currently ${u==='lb'?'pounds (lb)':'kilograms (kg)'}. Tap to switch.</small></span></button>
+ <button data-a="tour">${I('<circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3z"/>')}<span>Replay the guided tour<small>A quick walk through every screen</small></span></button>
+ </div><button class="btn big" data-a="shx" style="margin-top:10px">Close</button>`)}
+function lxr(){let o=$('#lx');if(!o){o=document.createElement('div');o.id='lx';document.body.appendChild(o)}const L=S.lights,sel=L[LS];
+ o.innerHTML=`<div class="lxtop"><b>Customise look</b><button class="btn on" data-a="lxdone" style="margin:0">Done</button></div><p class="hint">Drag the lights to move them. Tap one to change it.</p>${L.map((l,i)=>`<div class="lh ${i===LS?'sel':''}" data-li="${i}" style="left:clamp(30px,${l.x}%,calc(100% - 30px));top:clamp(104px,${l.y}%,calc(100% - 34px));color:${lcol(l.c)}"><i style="background:${lcol(l.c)}"></i></div>`).join('')}
+ <div class="card lxp"><p class="sm" style="margin:0 0 4px">Colour scheme</p><div class="chips">${PRE.map((p,i)=>`<button class="chip ${S.p===p[1]&&S.s===p[2]?'on':''}" data-a="pre" data-i="${i}"><span class="sw2" style="background:linear-gradient(135deg,${p[1]},${p[2]})"></span>${p[0]}</button>`).join('')}</div>
+ ${sel?`<p class="sm" style="margin:4px 0 4px">Selected light</p><div class="chips">${[['p','Primary'],['s','Secondary']].map(x=>`<button class="chip ${sel.c===x[0]?'on':''}" data-a="lxc" data-i="${x[0]}"><span class="sw2" style="background:${lcol(x[0])}"></span>${x[1]}</button>`).join('')}<label class="chip" style="display:inline-flex;align-items:center;gap:6px;margin:0;color:#fff">Custom<input type="color" data-lxcol value="${/^#/.test(sel.c)?sel.c:lcol(sel.c)}" style="width:28px;height:24px;padding:0;margin:0;border:0;background:none"></label></div>
+ <div class="row"><label>Size<input type="range" min="30" max="180" data-lxk="r" value="${sel.r}"></label><label>Strength<input type="range" min="0" max="100" data-lxk="a" value="${sel.a}"></label></div>`:''}
+ <div class="row" style="margin-top:4px">${L.length<5?'<button class="btn" data-a="lxadd" style="margin:0">Add light</button>':''}${sel&&L.length>1?'<button class="btn" data-a="lxrm" style="margin:0">Remove light</button>':''}<button class="btn" data-a="lxreset" style="margin:0">Reset</button></div>
+ <p class="sm" style="margin:12px 0 4px">Background</p><div class="chips">${TONES.map(t=>`<button class="chip ${(S.tone||'#080b13')===t[1]?'on':''}" data-a="lxtone" data-i="${t[1]}"><span class="sw2" style="background:${t[1]}"></span>${t[0]}</button>`).join('')}</div></div>`;applyBg()}
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('#lx .lh');if(!h)return;e.preventDefault();const i=+h.dataset.li;if(LS!==i){LS=i;lxr()}const el=$(`#lx .lh[data-li="${i}"]`);el.classList.add('drag');$('#lx').classList.add('dragging');navigator.vibrate&&navigator.vibrate(8);
+ const m=ev=>{const l=S.lights[i];l.x=Math.round(Math.max(-10,Math.min(110,ev.clientX/innerWidth*100)));l.y=Math.round(Math.max(-10,Math.min(110,ev.clientY/innerHeight*100)));el.style.left=`clamp(30px,${l.x}%,calc(100% - 30px))`;el.style.top=`clamp(104px,${l.y}%,calc(100% - 34px))`;applyLights()};
+ const u=()=>{document.removeEventListener('pointermove',m);document.removeEventListener('pointerup',u);document.removeEventListener('pointercancel',u);el.classList.remove('drag');const lx=$('#lx');lx&&lx.classList.remove('dragging');save()};
+ document.addEventListener('pointermove',m);document.addEventListener('pointerup',u);document.addEventListener('pointercancel',u)});
+document.addEventListener('input',e=>{const el=e.target;if(!el.closest('#lx'))return;const l=S.lights[LS];if(!l)return;if(el.dataset.lxk){l[el.dataset.lxk]=+el.value;applyLights()}if(el.dataset.lxcol!==undefined){l.c=el.value;applyLights();const d=$(`#lx .lh[data-li="${LS}"]`);if(d){d.style.color=l.c;d.firstChild.style.background=l.c}}});
+document.addEventListener('change',e=>{if(e.target.closest('#lx'))save()});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='settings'){settingsSheet();return}
+ if(a==='setunit'){S.setup.u=U()==='lb'?'kg':'lb';save();render();settingsSheet();return}
+ if(a==='lxopen'){sheet(null);document.body.classList.add('lxon');if(!S.lights||!S.lights.length)S.lights=defLights();LS=0;lxr();return}
+ if(a==='lxdone'){$('#lx').remove();document.body.classList.remove('lxon');save();render();return}
+ if(!$('#lx'))return;
+ if(a==='pre'){setTimeout(lxr,0);return}
+ if(a==='lxc'){S.lights[LS].c=el.dataset.i}
+ else if(a==='lxadd'){S.lights.push({x:50,y:40,c:S.lights.length%2?'s':'p',r:90,a:70});LS=S.lights.length-1}
+ else if(a==='lxrm'){S.lights.splice(LS,1);LS=Math.max(0,LS-1)}
+ else if(a==='lxreset'){S.lights=defLights();S.tone='#080b13';LS=0}
+ else if(a==='lxtone'){S.tone=el.dataset.i}
+ else return;save();lxr()});
 render();periodic();reqShow();
 </script></body></html>
