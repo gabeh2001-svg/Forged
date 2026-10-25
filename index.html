@@ -1170,7 +1170,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.10.26';
+const APP_VER='2026.10.27';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -1507,5 +1507,10 @@ function pookie(){if($('#pk'))return;const o=document.createElement('div');o.id=
  const t=o.firstChild;if(!o.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){setTimeout(()=>o.remove(),2200);return}
  t.animate([{opacity:0,transform:'translateY(14px) scale(.96)',filter:'blur(8px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:800,easing:'cubic-bezier(.2,.8,.2,1)',fill:'both'});
  const out=o.animate([{opacity:1},{opacity:0}],{duration:900,delay:2600,easing:'ease',fill:'forwards'});out.onfinish=()=>o.remove();o.addEventListener('click',()=>out.finish())}
+
+/* ===== v28: offline support, protected storage ===== */
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}
+RELEASES.push({v:'2026.10.27',date:'27 Oct',items:[{i:'<path d="M2 9a15 15 0 0 1 20 0"/><path d="M5.5 12.5a10 10 0 0 1 13 0"/><path d="M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1"/>',h:'Works with no signal',p:'Swell now keeps a copy of itself on your phone, so it opens instantly even with bad gym WiFi or no signal at all. Updates download quietly in the background and appear the next time you open it.'}]});
 render();periodic();reqShow();
 </script></body></html>
