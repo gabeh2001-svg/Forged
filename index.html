@@ -1880,5 +1880,60 @@ navGlide=function(){const n=document.querySelector('#app .nav'),b=n&&n.querySele
  if(!from||(Math.abs(from.x-to.x)<1&&Math.abs(from.w-to.w)<1)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const a=hl.animate([{transform:`translate(${from.x}px,${from.y}px)`,width:from.w+'px'},{transform:`translate(${to.x}px,${to.y}px)`,width:to.w+'px'}],{duration:380,easing:'cubic-bezier(.22,1,.36,1)'});
  const t0=performance.now();hl.__live=()=>{const k=Math.min(1,(performance.now()-t0)/380),e=1-Math.pow(1-k,4);return{x:from.x+(to.x-from.x)*e,y:to.y,w:from.w+(to.w-from.w)*e,h:to.h}}};
+/* ===== v36: calmer opening: the word folds into the horizon, the ring draws up from it, the sun rises (no swirl) ===== */
+spRun=function(d,finish){
+ const q=s=>d.querySelector(s),cl=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,seg=(t,a,b)=>cl((t-a)/(b-a));
+ const eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,eout=k=>1-Math.pow(1-k,4),ein=k=>k*k*k,eback=k=>{const c=1.35;return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2)};
+ const CX=180,CY=320,SC=.7,ns='http://www.w3.org/2000/svg',mk=(tag,at,par)=>{const e=document.createElementNS(ns,tag);for(const k in at)e.setAttribute(k,at[k]);par.appendChild(e);return e};
+ const fs=74,tc=q('#qtc');tc.setAttribute('font-size',fs);tc.setAttribute('x',CX);const base=CY+fs*.3;tc.setAttribute('y',base);
+ const bb=tc.getBBox(),G={x0:bb.x,x1:bb.x+bb.width,top:bb.y+bb.height*.14,bot:base+4};
+ const svg=q('svg'),logo=q('#qlogo'),word=q('#qword');
+ const HY=CY+SC*(165.7-120),HX0=CX+SC*(20-120),HX1=CX+SC*(220-120);
+ const ln=mk('line',{stroke:'#eef2f8','stroke-width':2.4*SC,'stroke-linecap':'round',opacity:0},svg);
+ q('#qring').setAttribute('opacity',0);
+ const arcs=mk('g',{fill:'none',stroke:'#eef2f8','stroke-width':2.6,'stroke-linecap':'round'},logo);
+ const AR=['M47.1 165.7 A86 86 0 0 1 120 34','M192.9 165.7 A86 86 0 0 0 120 34','M47.1 165.7 A86 86 0 0 0 120 206','M192.9 165.7 A86 86 0 0 1 120 206'].map(x=>mk('path',{d:x,pathLength:1,'stroke-dasharray':'0 2',visibility:'hidden'},arcs));
+ const sc=q('[clip-path="url(#qsunc)"]'),sm=document.createElementNS(ns,'g');while(sc.firstChild)sm.appendChild(sc.firstChild);sc.appendChild(sm);
+ q('#qsunlv').setAttribute('d','M0 0H240V165.7H0Z');
+ const draw=e=>{e.setAttribute('pathLength',1);e.setAttribute('stroke-dasharray','0 2')},dr=(e,k)=>{e.setAttribute('stroke-dasharray',`${k.toFixed(4)} 2`);e.setAttribute('visibility',k>0?'visible':'hidden')};
+ const wl=q('#qwvLine'),fc=[...q('#qface').children];draw(wl);fc.forEach(draw);dr(wl,0);fc.forEach(f=>dr(f,0));
+ q('#qwv').setAttribute('opacity',1);q('#qsea').setAttribute('stroke','#7fd6e6');
+ const surf=(level,A,ph,off,x0,x1)=>{let s='';for(let x=x0;x<=x1+6;x+=5){const y=level+A*Math.sin(x*.05+ph+off)+A*.45*Math.sin(x*.11-ph*1.4+off);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
+ const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false,swapped=false;
+ const X0=5900,t0=performance.now();
+ const frame=now=>{if(!d.isConnected)return;const t=now-t0,ph=t/1000*3.2;
+  // 1. water fills the word, then keeps rippling gently while it waits (a moving hold)
+  const pf=seg(t,300,2200),level=lerp(G.bot+6,G.top-8,eio(pf)),A=t<2200?lerp(6,1.4,pf):lerp(1.4,.9,seg(t,2200,2600));
+  const x0=G.x0-14,x1=G.x1+14,b=G.bot+40;q('#qwFront').setAttribute('d',surf(level,A,ph,0,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);q('#qwBack').setAttribute('d',surf(level-3,A*1.1,ph*.8,2.1,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);
+  // 2. anticipation: a small lift and stretch, then 3. the word folds down into a single line
+  const k1=eio(seg(t,2450,2750)),k2=ein(seg(t,2750,3150)),sy=t<2750?1+.05*k1:lerp(1.05,.03,k2),sx=1+.04*k2,ty=t<2750?-5*k1:lerp(-5,0,k2);
+  word.setAttribute('transform',`translate(${CX} ${(G.bot+ty).toFixed(2)}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${-CX} ${-G.bot})`);
+  word.setAttribute('opacity',(1-seg(t,3100,3180)).toFixed(3));
+  // 4. the line settles into the horizon with a little follow-through
+  const k3=eback(seg(t,3150,3700)),lx0=lerp(G.x0,HX0,k3),lx1=lerp(G.x1,HX1,k3),ly=lerp(G.bot,HY,eout(seg(t,3150,3700)));
+  ln.setAttribute('x1',lx0.toFixed(2));ln.setAttribute('x2',lx1.toFixed(2));ln.setAttribute('y1',ly.toFixed(2));ln.setAttribute('y2',ly.toFixed(2));
+  if(t>=3700&&!swapped){swapped=true;ln.setAttribute('opacity',0);q('#qhz').setAttribute('opacity',1)}else if(!swapped)ln.setAttribute('opacity',seg(t,3080,3160).toFixed(3));
+  // 5. the ring draws up and round from the ends of the horizon
+  const ka=eio(seg(t,3450,4150)),kb=eio(seg(t,3650,4300));AR.forEach((a,i)=>dr(a,i<2?ka:kb));
+  q('#qseaF').setAttribute('opacity',eio(seg(t,3700,4200)).toFixed(3));
+  // 6. the sun rises, the wave draws in behind it
+  sm.setAttribute('transform',`translate(0 ${lerp(135,0,eout(seg(t,3950,5000))).toFixed(2)})`);
+  q('#qwvFill').setAttribute('opacity',eio(seg(t,4300,5000)).toFixed(3));
+  dr(wl,eio(seg(t,4100,4850)));
+  fc.forEach((f,i)=>dr(f,eio(seg(t,4450+i*120,4900+i*120))));
+  q('#qsea').setAttribute('opacity',(eio(seg(t,4500,5000))*.9).toFixed(3));
+  const so=lerp(1,.78,seg(t,4800,5400));[wl,q('#qhz'),arcs].forEach(e=>e.setAttribute('stroke-opacity',so));q('#qface').setAttribute('stroke-opacity',lerp(1,.55,seg(t,4800,5400)));
+  q('#qglow').setAttribute('opacity',(seg(t,4700,5500)*.9).toFixed(3));
+  // 7. a soft settle once it is complete, then hand over to the app
+  const bump=Math.sin(Math.PI*eout(seg(t,4950,5400)))*.03;
+  q('.qbg').style.opacity=(1-eio(seg(t,5500,6700))).toFixed(3);
+  const xe=eio(seg(t,X0,X0+900)),s2=SC*(1+bump)*lerp(1,.62,xe),yy=lerp(CY,CY-70,xe),lo=1-seg(t,X0+150,X0+800);
+  logo.setAttribute('transform',`translate(${CX} ${yy.toFixed(2)}) scale(${s2.toFixed(4)}) translate(-120 -120)`);logo.setAttribute('opacity',lo.toFixed(3));
+  if(t>X0+300&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(34px) scale(.97)'},{opacity:1,transform:'none'}],{duration:850,delay:i*80,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
+  if(t>X0+950){d.dataset.done=1;d.remove();return}
+  requestAnimationFrame(frame)};
+ requestAnimationFrame(frame);
+};
+RELEASES.push({v:'2026.10.27',date:'27 Oct',items:[{i:'<circle cx="12" cy="12" r="8"/><path d="M4 14h16"/>',h:'A calmer opening',p:'When Swell opens, the name now folds into the horizon and the sun rises into the logo.'}]});
 render();periodic();reqShow();
 </script></body></html>
