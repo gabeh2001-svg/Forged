@@ -1175,7 +1175,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.11.22';
+const APP_VER='2026.11.23';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -2466,6 +2466,30 @@ glStop=function(){if(!GL.on)return;GL.on=false;removeEventListener('deviceorient
 {const _r=render;render=function(){_r.apply(this,arguments);try{glRefresh()}catch(_){}}}
 if(typeof applyLights==='function'){const _al=applyLights;applyLights=function(){const r=_al.apply(this,arguments);try{glRefresh()}catch(_){}return r}}
 try{glRefresh()}catch(_){}
+/* ===== v44: swipe in from the screen edge to change tab. Only from the very edge, and only a deliberate swipe ===== */
+(function(){const st=document.createElement('style');st.textContent=`#app.eswipe>*:not(.nav):not(.sbar){transition:none!important}`;document.head.appendChild(st)})();
+{const EDGE=22;let g=null;
+ const order=()=>[...document.querySelectorAll('#app .nav button[data-i]')].map(b=>b.dataset.i);
+ const kids=()=>[...document.querySelectorAll('#app > *')].filter(c=>!c.classList.contains('nav')&&getComputedStyle(c).position!=='fixed');
+ const free=t=>!ED&&TU==null&&!AW&&!$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#splash,#imp,#tour')&&!(t&&t.closest('input,textarea,select,.chipw,#lx2'));
+ const paint=dx=>{const L=kids(),o=order(),i=o.indexOf(tab),end=(dx>0&&i===0)||(dx<0&&i===o.length-1),k=end?.12:.32,x=Math.max(-90,Math.min(90,dx*k));L.forEach(c=>{c.style.transform=x?`translateX(${x.toFixed(1)}px)`:'';c.style.opacity=x?String(1-Math.min(.35,Math.abs(x)/260)):''})};
+ const settle=()=>{kids().forEach(c=>{const tf=c.style.transform;if(!tf)return;c.style.transform='';c.style.opacity='';if(!MRM())c.animate([{transform:tf,opacity:.75},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.16,1,.3,1)'})})};
+ addEventListener('touchstart',e=>{g=null;if(e.touches.length!==1||!S.user||!S.setup||!S.setup.done)return;const t=e.touches[0],W=innerWidth;
+  if(t.clientX>EDGE&&t.clientX<W-EDGE)return;if(!free(e.target))return;g={x0:t.clientX,y0:t.clientY,t0:performance.now(),side:t.clientX<=EDGE?'l':'r',on:false,dx:0}},{passive:true});
+ addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=t.clientX-g.x0,dy=t.clientY-g.y0;
+  if(!g.on){if(Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)){g=null;return}
+   // the swipe has to head inwards, away from the edge it started on
+   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.6&&((g.side==='l'&&dx>0)||(g.side==='r'&&dx<0))){g.on=true;document.getElementById('app').classList.add('eswipe')}else return}
+  g.dx=dx;if(e.cancelable)e.preventDefault();paint(dx)},{passive:false});
+ const done=()=>{if(!g)return;const G=g;g=null;document.getElementById('app').classList.remove('eswipe');if(!G.on)return;
+  const W=innerWidth,v=Math.abs(G.dx)/Math.max(1,performance.now()-G.t0),o=order(),i=o.indexOf(tab),j=G.dx>0?i-1:i+1;
+  const go=(Math.abs(G.dx)>W*.32||(v>.55&&Math.abs(G.dx)>70))&&j>=0&&j<o.length;
+  if(!go){settle();return}
+  kids().forEach(c=>{c.style.transform='';c.style.opacity=''});navigator.vibrate&&navigator.vibrate(6);
+  const b=document.querySelector(`#app .nav button[data-i="${o[j]}"]`);if(b)b.click();
+  if(!MRM()){const dir=G.dx>0?-1:1;requestAnimationFrame(()=>kids().forEach((c,k)=>c.animate([{transform:`translateX(${dir*22}px)`,opacity:0},{transform:'none',opacity:1}],{duration:320,delay:Math.min(k,6)*22,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})))}};
+ addEventListener('touchend',done,{passive:true});addEventListener('touchcancel',()=>{if(g&&g.on){g=null;document.getElementById('app').classList.remove('eswipe');settle()}else g=null},{passive:true})}
+RELEASES.push({v:'2026.11.23',date:'Next update',items:[]});RELEASES.find(r=>r.v==='2026.11.23').items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/><path d="M4 4v16"/>',h:'Swipe between tabs',p:'Swipe in from the very edge of the screen to move to the next tab. Swipes anywhere else work as normal, so it only happens when you mean it.'});
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
