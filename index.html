@@ -1566,7 +1566,7 @@ function mrep(ym){const t=realToday(),first=ym+'-01';let days=[];for(let d=first
  days.forEach(d=>{const m=M[d]||{},lg=SZ.some(k=>+m[k]>0)||(ML[d]||[]).length>0;if(lg){logged++;sk+=+m.k||0;sp+=+m.p||0;if(g.p&&+m.p>=+g.p)pHit++}
   const ok=lg&&SZ.every(k=>!+g[k]||RULES[k](+m[k]||0,+g[k])===0);if(ok)onT++;cl=lg?cl+1:0;co=ok?co+1:0;bestLog=Math.max(bestLog,cl);bestOn=Math.max(bestOn,co);
   if(FD[d]){done++;const w=new Date(d+'T12:00'),mon=addDays(d,-((w.getDay()+6)%7));wk[mon]=(wk[mon]||0)+1}if(W[d])wins++});
- const p=typeof activePlan==='function'&&activePlan(),per=p?+p.perWeek||0:+g.freq||0,planned=Math.max(done,Math.round(per*days.length/7));
+ const p=typeof activePlan==='function'&&activePlan(),per=p?+p.perWeek||0:+g.freq||0,sd=Object.keys(S.sch||{}).filter(d=>ymOf(d)===ym&&d<=t),planned=Math.max(done,sd.length?sd.length:Math.round(per*days.length/7));
  const bm=Object.keys(S.bm||{}).filter(d=>ymOf(d)===ym).sort(),fv=k=>{for(const d of bm){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null},lv=k=>{for(const d of [...bm].reverse()){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null};
  let gl=null;try{if(S.goal2){const c=gCalc(S.goal2);gl={n:S.goal2.name,pct:Math.round((c.pct||0)*100)}}}catch(_){}
  const r={ym,label:ymLabel(ym),n:days.length,logged,onT,avgK:logged?Math.round(sk/logged):0,avgP:logged?Math.round(sp/logged):0,gK:+g.k||0,gP:+g.p||0,pHit,done,planned,wins,bestLog,bestOn,busy:Math.max(0,...Object.values(wk)),w0:fv('w'),w1:lv('w'),bf0:fv('bf'),bf1:lv('bf'),sm0:fv('smm'),sm1:lv('smm'),goal:gl,u:U()};
