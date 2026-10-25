@@ -1,6 +1,6 @@
 # Swell (formerly Forged) – working notes
 
-Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStorage only). Netlify publishes the `main` branch to forgedtest.netlify.app.
+Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStorage only). Netlify publishes the `main` branch to everythings-swell.netlify.app (renamed from forgedtest; users added the app from the new address). Push notifications run through OneSignal (App ID in the v31 block), sharing sw.js with the offline cache.
 
 ## How updates are handled
 - Build and test every change on the `pending` branch. Push `pending` freely.

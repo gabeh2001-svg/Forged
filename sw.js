@@ -1,5 +1,7 @@
-/* Swell offline support: keeps a copy of the app on the phone so it opens instantly with no signal. */
-const CACHE='swell-v1';
+/* Swell offline support: keeps a copy of the app on the phone so it opens instantly with no signal.
+   Also hosts OneSignal push notifications (both share this one worker at the root). */
+try{importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js')}catch(e){}
+const CACHE='swell-v2';
 const CORE=['./','index.html','manifest.json','swell-icon-180.png','swell-icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
