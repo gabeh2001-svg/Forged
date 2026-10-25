@@ -1170,7 +1170,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.10.25';
+const APP_VER='2026.10.26';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -1409,5 +1409,56 @@ function spRun(d,finish){
 }
 RELEASES.push({v:'2026.10.25',date:'25 Oct',items:[
  {i:'<circle cx="12" cy="12" r="8"/><path d="M5 14c3-1 5-4 7-7 1 3 3 4 7 5"/>',h:'Forged is now Swell',p:'New name, new icon and a new opening. To get the new icon on your Home Screen, press and hold the old one, tap Remove App, then add it again from Safari with Share, then Add to Home Screen. Your progress stays saved.'}]});
+
+/* ===== v24: more accurate food goals (exact workout days with a one-day swing), recomposition goal ===== */
+const RECOMP='Lose fat, build muscle';
+GT.splice(2,0,RECOMP);
+// activity multiplier by workouts a week (midpoints of the standard Mifflin-St Jeor activity bands)
+const DAYM=[1.2,1.3,1.375,1.45,1.55,1.6,1.675,1.725];
+const LIFE=[['sit','Mostly sitting',0],['feet','On my feet a fair bit',.075],['phys','Physical job',.15]];
+function actMult(d,life){const m=x=>DAYM[Math.max(0,Math.min(7,x))]+((LIFE.find(l=>l[0]===life)||LIFE[0])[2]);
+ // real weeks vary, so blend in one day fewer and one day more
+ return{m:m(d-1)*.25+m(d)*.5+m(d+1)*.25,lo:m(d-1),hi:m(d+1)}}
+const PROT={lose:2.2,maintain:1.8,recomp:2.2,gain:2.0};
+function calcEst(E){const u=U(),wkg=u==='lb'?+E.w*0.4536:+E.w,h=+S.setup.h,age=+E.age,d=E.days===''||E.days==null?NaN:+E.days;if(!(wkg>0&&h>0&&age>0&&E.sex&&d>=0))return null;
+ const bmr=10*wkg+6.25*h-5*age+(E.sex==='Male'?5:-161),A=actMult(d,E.life||'sit'),tdee=bmr*A.m;
+ let adj=E.goal==='lose'?-(+E.rate||.5)*1100:E.goal==='gain'?(+E.rate||.25)*1100:0;
+ if(E.goal==='lose')adj=Math.max(adj,-tdee*.25);let k=Math.round((tdee+adj)/10)*10;const floor=E.sex==='Male'?1500:1200,floored=k<floor;if(floored)k=floor;
+ let pf=PROT[E.goal]||1.8;if(E.goal==='maintain'&&d<3)pf=1.4;
+ const p=Math.round(wkg*pf),f=Math.max(Math.round(k*.28/9),Math.round(wkg*.8)),c=Math.max(0,Math.round((k-p*4-f*9)/4));
+ return{bmr:Math.round(bmr),mult:A.m,tdee:Math.round(tdee/10)*10,lo:Math.round(bmr*A.lo/10)*10,hi:Math.round(bmr*A.hi/10)*10,k,p,f,c,floored,pf,d}}
+function estForm(){const E=EST,u=U(),r=calcEst(E),opt=(a,v)=>a.map(x=>`<option value="${x[0]}" ${String(x[0])===String(v)?'selected':''}>${x[1]}</option>`).join(''),rl=x=>u==='lb'?`${r1(x/0.4536)} lb`:`${x} kg`;
+ const rates=E.goal==='lose'?[.25,.5,.75]:[.25,.5];
+ return`<h2>Work out my food goals</h2><p class="sm">A daily target from your weight, height, age, training and goal, worked out on your phone with the Mifflin-St Jeor formula.</p>
+ <div class="row"><label>Weight (${u})<input type="number" step="0.1" data-b="EST.w" data-est value="${esc(E.w)}"></label><label>Age<input type="number" data-b="EST.age" data-est value="${esc(E.age)}"></label></div>
+ <p class="sm" style="margin:8px 0 4px">Height: <b style="color:#fff">${hTxt()}</b>${+S.setup.h?'':' (add it below)'}</p>${+S.setup.h?'':`<div id="hbox">${hField()}</div>`}
+ <p class="sm" style="margin:10px 0 4px">Sex (the formula differs slightly)</p><div class="chips" style="padding:0 0 4px">${['Male','Female'].map(x=>`<button class="chip ${E.sex===x?'on':''}" data-a="estset" data-k="sex" data-i="${x}">${x}</button>`).join('')}</div>
+ <p class="sm" style="margin:10px 0 4px">Workouts a week</p><div class="chips" style="padding:0 0 4px;flex-wrap:wrap;gap:6px">${[0,1,2,3,4,5,6,7].map(n=>`<button class="chip ${String(E.days)===String(n)?'on':''}" data-a="estset" data-k="days" data-i="${n}" style="min-width:40px;justify-content:center;margin:0">${n}</button>`).join('')}</div>
+ ${E.days!==''&&E.days!=null?`<p class="sm" style="margin:2px 0 0">Swell allows for weeks of ${Math.max(0,+E.days-1)} to ${Math.min(7,+E.days+1)} workouts, as most weeks aren’t exactly the same.</p>`:''}
+ <p class="sm" style="margin:10px 0 4px">Outside the gym</p><div class="chips" style="padding:0 0 4px;flex-wrap:wrap">${LIFE.map(l=>`<button class="chip ${(E.life||'sit')===l[0]?'on':''}" data-a="estset" data-k="life" data-i="${l[0]}">${l[1]}</button>`).join('')}</div>
+ <p class="sm" style="margin:10px 0 4px">Goal</p><div class="chips" style="padding:0 0 4px;flex-wrap:wrap">${[['lose','Lose weight'],['maintain','Maintain'],['recomp','Lose fat, build muscle'],['gain','Gain / build']].map(x=>`<button class="chip ${E.goal===x[0]?'on':''}" data-a="estset" data-k="goal" data-i="${x[0]}">${x[1]}</button>`).join('')}</div>
+ ${E.goal==='recomp'?'<p class="sm" style="margin:2px 0 0">Keeps your weight steady while you swap fat for muscle: you eat at maintenance with high protein, and train hard.</p>':''}
+ ${E.goal==='lose'||E.goal==='gain'?`<label>How fast?<select data-b="EST.rate" data-est>${opt(rates.map(x=>[x,`About ${rl(x)} a week${x===rates[rates.length-1]&&E.goal==='lose'?' (fastest)':x===.25?' (steady)':''}`]),E.rate)}</select></label>`:''}
+ <div id="estres">${estRes(r)}</div><button class="btn big" data-a="shx">${E.req?'Skip for now':'Cancel'}</button>`}
+function estRes(r){if(EST&&!EST.goal)return`<p class="sm" style="margin-top:12px">Choose your goal to see your estimate.</p>`;
+ if(!r){const m=[];if(!(+EST.w>0))m.push('weight');if(!(+S.setup.h>0))m.push('height');if(!(+EST.age>0))m.push('age');if(!EST.sex)m.push('sex');if(EST.days===''||EST.days==null)m.push('workouts a week');return`<p class="sm" style="margin-top:12px">Add your ${m.join(', ').replace(/, ([^,]*)$/,' and $1')} to see your estimate.</p>`}
+ const G={lose:'a gentle deficit to lose weight',maintain:'maintenance',recomp:'maintenance, so your weight holds while body fat drops and muscle builds',gain:'a small surplus to build'}[EST.goal];
+ return`<div class="est4"><div><b>${r.k}</b><span>kcal</span></div><div><b>${r.p}g</b><span>Protein</span></div><div><b>${r.f}g</b><span>Fat</span></div><div><b>${r.c}g</b><span>Carbs</span></div></div>
+ <p class="sm">Resting burn ${r.bmr.toLocaleString('en-GB')} kcal × ${r.mult.toFixed(2)} for your activity = about ${r.tdee.toLocaleString('en-GB')} kcal a day to stay the same weight (${r.lo.toLocaleString('en-GB')} to ${r.hi.toLocaleString('en-GB')} across lighter and busier weeks). Your target is ${G}.</p>
+ <p class="sm">Protein is ${r.pf} g per kg of body weight, fat is about 28% of your calories, and carbs make up the rest.${r.floored?' This is the lowest daily target Swell will suggest, so aim for a slower pace or more activity instead.':''} Check your weight and measurements after 2 to 3 weeks and adjust.</p><button class="btn big on" data-a="estuse">Use these goals</button>`}
+function estOpen(){const L=bmL(),g2=S.goal2,g=g2?g2.type:'',f=S.setup.days??S.setup.freq;EST={w:L.w?L.w.v:(S.setup.w||''),age:S.setup.age||'',sex:S.setup.sex||'',days:f===undefined||f===''?'':Math.min(7,+f),life:S.setup.life||'sit',goal:g2&&g2.recomp?'recomp':/Lose/.test(g)?'lose':/Gain/.test(g)?'gain':'maintain',rate:/Lose/.test(g)?.5:.25};sheet(estForm())}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=estset]');if(!el||!EST)return;const k=el.dataset.k;if(k==='days')S.setup.days=+el.dataset.i;if(k==='life')S.setup.life=el.dataset.i},true);
+// goals: "Lose fat, build muscle" holds your weight like Maintain weight
+{const _gF=gForm;gForm=function(){const rc=GF&&GF.type===RECOMP;if(GF&&GF.edit&&!GF._t&&S.goal2&&S.goal2.recomp&&GF.type==='Maintain weight'){GF.type=RECOMP;return gForm()}
+  if(!rc)return _gF.apply(this,arguments);GF.type='Maintain weight';let h=_gF.apply(this,arguments);GF.type=RECOMP;
+  h=h.replace('class="chip on" data-a="gtype" data-i="Maintain weight"','class="chip " data-a="gtype" data-i="Maintain weight"').replace(`class="chip " data-a="gtype" data-i="${RECOMP}"`,`class="chip on" data-a="gtype" data-i="${RECOMP}"`).replace('Weight to hold','Weight to stay at');
+  return h.replace('<label>Name (optional)','<p class="sm">Your weight stays steady while body fat drops and muscle builds. Log body fat and skeletal muscle in Body metrics on the Diet tab to see the swap.</p><label>Name (optional)')}}
+{const _gS=gSave;gSave=function(){const rc=GF&&GF.type===RECOMP;if(!rc){const r=_gS.apply(this,arguments);if(!r&&S.goal2)delete S.goal2.recomp;return r}
+  GF.type='Maintain weight';const nm=GF.name;const r=_gS.apply(this,arguments);GF.type=RECOMP;if(!r&&S.goal2){S.goal2.recomp=1;if(!nm)S.goal2.name=`Lose fat, build muscle at ${S.goal2.sv}${U()}`}return r}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=gtype]');if(el&&GF)GF._t=1},true);
+RELEASES.push({v:'2026.10.26',date:'26 Oct',items:[
+ {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'More accurate food goals',p:'Tell Swell exactly how many workouts you do a week and how active you are outside the gym. It allows for a lighter or busier week either side, and shows how it worked out your numbers.'},
+ {i:'<path d="M4 17l5-5 4 4 7-8"/>',h:'New goal: lose fat, build muscle',p:'Keep your weight steady while swapping fat for muscle. Food goals set you at maintenance with high protein.'}],
+ tour:[{t:'diet',q:'[data-a=estopen]',h:'New: more accurate goals',p:'Tap here and pick your exact workouts a week, plus the new Lose fat, build muscle goal.'}]});
 render();periodic();reqShow();
 </script></body></html>
