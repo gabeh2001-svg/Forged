@@ -5,7 +5,7 @@ self.onmessage=async e=>{const m=e.data;
  try{
   if(m.t==='init'){
    if(!api){importScripts(simd()?'tesseract-core-simd-lstm.wasm.js':'tesseract-core-lstm.wasm.js');
-    M=await TesseractCore({});const r=await fetch('eng.traineddata');if(!r.ok)throw Error('data '+r.status);
+    M=await TesseractCore({});let r=await fetch('eng.traineddata').catch(()=>null);if(!r||!r.ok)r=await fetch('eng-traineddata.wasm');/* the Claude preview can only host the model under this name */if(!r.ok)throw Error('data '+r.status);
     M.FS.writeFile('/eng.traineddata',new Uint8Array(await r.arrayBuffer()));
     api=new M.TessBaseAPI();if(api.Init(null,'eng',1)===-1)throw Error('init');
     api.SetVariable('user_defined_dpi','300')}
