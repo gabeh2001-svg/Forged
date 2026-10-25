@@ -273,7 +273,7 @@ function onb(){
   `<h2>Your baseline</h2><p class="sm">Weight units</p><div class="chips">${['kg','lb'].map(u=>`<button class="chip ${(s.u||'kg')===u?'on':''}" data-a="unit" data-i="${u}">${u}</button>`).join('')}</div><div class="row"><label>Weight (${s.u||'kg'})<input type="number" data-b="setup.w" value="${esc(s.w)}"></label><label>Workouts per week<input type="number" min="1" max="7" data-b="setup.freq" value="${esc(s.freq)}"></label></div>`,
   `<h2>Daily macro goals</h2><div class="row"><label>Calories<input type="number" data-b="setup.k" value="${esc(s.k)}"></label><label>Protein (g)<input type="number" data-b="setup.p" value="${esc(s.p)}"></label></div><div class="row"><label>Fat (g)<input type="number" data-b="setup.f" value="${esc(s.f)}"></label><label>Carbs (g)<input type="number" data-b="setup.c" value="${esc(s.c)}"></label></div>`,
   `<h2>Reward threshold</h2><p>What percentage of days must you win to earn a weekly or monthly celebration?</p><label>Success rate (%)<input type="number" min="1" max="100" data-b="setup.thr" value="${esc(s.thr??80)}"></label><p class="sm">A winning day is all four macros green and your workout checked off.</p>`];
- return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 3</small>${steps[st]}<button class="btn big on" data-a="st">${st<2?'Next':'Start forging'}</button></div>`}
+ return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 3</small>${steps[st]}<button class="btn big on" data-a="st">${st<2?'Next':'Get started'}</button></div>`}
 
 function home(){
  const p=activePlan(),t=today(),h=new Date().getHours(),g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
@@ -546,7 +546,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
 const U=()=>S.setup.u||'kg',BAR=()=>U()==='lb'?45:20;
 const USERS=['Gabriel Read','Sarah Cavaciocchi','Jack Preston','Anna Evsen','Dixen Patel'];
 let NS={v:''},CO=false,TU=(S.user&&S.setup.done&&!S.tourDone)?0:null;
-PRE.length=0;PRE.push(['Batman','#7f0000','#000000'],['Purple Gyal','#3b0764','#a78bfa'],['Kitten','#1f3aa8','#7cc6ff'],['Neon pink','#ff2d95','#ff8fc7'],['Emerald','#10b981','#0e7490']);
+PRE.length=0;PRE.push(['Batman','#7f0000','#000000'],['Purple Gyal','#3b0764','#a78bfa'],['Kitten','#1f3aa8','#7cc6ff'],['Neon pink','#ff2d95','#ff8fc7'],['Emerald','#10b981','#0e7490'],['Spider-Man','#e8101c','#1450e6']);
 if(!S.p){S.p='#7f0000';S.s='#000000'}if(S.gi==null)S.gi=75;X.bar=BAR();
 const nrm=s=>String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
 function lev(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i]);for(let j=1;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
@@ -560,8 +560,8 @@ function onb(){
   `<h2>Your baseline</h2><p class="sm">Which units do you use for weight?</p><div class="chips">${[['kg','Kilograms (kg)'],['lb','Pounds (lb)']].map(x=>`<button class="chip ${u===x[0]?'on':''}" data-a="unit" data-i="${x[0]}">${x[1]}</button>`).join('')}</div><div class="row"><label>Your weight (${u})<input type="number" step="0.1" data-b="setup.w" value="${esc(s.w)}"></label><label>Workouts per week<input type="number" min="1" max="7" data-b="setup.freq" value="${esc(s.freq)}"></label></div><div id="hbox">${hField()}</div>`,
   `<h2>Daily macro goals</h2><div class="row"><label>Calories<input type="number" data-b="setup.k" value="${esc(s.k)}"></label><label>Protein (g)<input type="number" data-b="setup.p" value="${esc(s.p)}"></label></div><div class="row"><label>Fat (g)<input type="number" data-b="setup.f" value="${esc(s.f)}"></label><label>Carbs (g)<input type="number" data-b="setup.c" value="${esc(s.c)}"></label></div><button class="btn" data-a="estopen" style="margin-top:12px">Not sure? Work it out for me</button>`,
   `<h2>Reward threshold</h2><p>What percentage of days must you win to earn a weekly or monthly celebration?</p><label>Success rate (%)<input type="number" min="1" max="100" data-b="setup.thr" value="${esc(s.thr??80)}"></label><p class="sm">A winning day is all four macros green and your workout done.</p>`,
-  `<h2>Pick your colours</h2><p class="sm">Choose a preset or make your own. You can change this later from Home.</p><div class="pset">${PRE.map((p,i)=>`<button class="pc ${S.p===p[1]&&S.s===p[2]?'on':''}" data-a="pre" data-i="${i}"><i style="background:linear-gradient(135deg,${p[1]},${p[2]})"></i>${p[0]}</button>`).join('')}</div><button class="btn ${CO?'on':''}" data-a="cown">Create my own</button>${CO?`<div class="row"><label>Primary<input type="color" data-b="S.p" data-r value="${S.p}"></label><label>Secondary<input type="color" data-b="S.s" data-r value="${S.s}"></label></div><label>Glow intensity<input type="range" min="0" max="100" data-b="S.gi" data-r value="${S.gi}"></label>`:''}`];
- return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 4</small>${steps[st]}<button class="btn big on" data-a="st">${st<3?'Next':'Start forging'}</button></div>`}
+  `<h2>Pick your colours</h2><p class="sm">Choose a preset or make your own. You can change this later from Home.</p><div class="pset">${PRE.map((p,i)=>`<button class="pc ${S.p===p[1]&&S.s===p[2]?'on':''}" data-a="pre" data-i="${i}"><i style="background:linear-gradient(135deg,${p[1]},${p[2]})"></i>${p[0]}</button>`).join('')}</div><button class="btn big ${CO?'on':''}" data-a="cown" style="margin:6px 0 0">Create my own</button>${CO?`<div class="row"><label>Primary<input type="color" data-b="S.p" data-r value="${S.p}"></label><label>Secondary<input type="color" data-b="S.s" data-r value="${S.s}"></label></div><label>Glow intensity<input type="range" min="0" max="100" data-b="S.gi" data-r value="${S.gi}"></label>`:''}`];
+ return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 4</small>${steps[st]}<button class="btn big on" data-a="st">${st<3?'Next':'Get started'}</button></div>`}
 function plates(w){const u=U(),P=u==='lb'?[45,35,25,10,5,2.5]:[20,15,10,5,2.5,1.25],o=[];let r=w;for(const p of P){const n=Math.floor(r/p+1e-9);if(n){o.push(n+' × '+p+u);r-=n*p}}return o.join(' + ')}
 function load(e){const w=+e.w,u=U();if(!w)return'';if(e.eq==='Bar'){const bar=+e.bar||BAR(),side=(w-bar)/2;return side<0?'Total is below the bar weight':side===0?'Just the bar':`${plates(side)} on each side`}if(e.eq==='Free Weights')return`${w/2}${u} in each hand`;if(e.eq==='Body Weight')return`Add ${w}${u}`;return`Set the machine to ${w}${u}`}
 const repTxt=e=>e.t==='Until Failure'?'until failure':e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?`${e.v||'?'} second hold`:`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
@@ -1460,5 +1460,20 @@ RELEASES.push({v:'2026.10.26',date:'26 Oct',items:[
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'More accurate food goals',p:'Tell Swell exactly how many workouts you do a week and how active you are outside the gym. It allows for a lighter or busier week either side, and shows how it worked out your numbers.'},
  {i:'<path d="M4 17l5-5 4 4 7-8"/>',h:'New goal: lose fat, build muscle',p:'Keep your weight steady while swapping fat for muscle. Food goals set you at maintenance with high protein.'}],
  tour:[{t:'diet',q:'[data-a=estopen]',h:'New: more accurate goals',p:'Tap here and pick your exact workouts a week, plus the new Lose fat, build muscle goal.'}]});
+
+/* ===== v25: tidy 1:1 Macros widget, Spider-Man preset ===== */
+{const _mw=macroW;macroW=function(l){if(l.w!==1)return _mw.apply(this,arguments);const m=S.macros[today()]||{},rs=ragState();
+ const it=SZ.map((k,i)=>{const v=+m[k]||0,g=+S.setup[k]||0,p=g?Math.min(1,v/g):0,col=v?(rs[i]>=0?C3[cls(rs[i])]:'#fff'):'rgba(255,255,255,.25)';
+  return`<div class="mr" title="${LBL[k][0]}: ${Math.round(v)} of ${g}${k==='k'?' kcal':'g'}">${ring(p,col,`<text x="25" y="25.5" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff" font-family="system-ui">${Math.round(p*100)}%</text><text x="25" y="35" text-anchor="middle" font-size="7.5" font-weight="600" fill="rgba(255,255,255,.7)" font-family="system-ui">${['Cal','Prot','Fat','Carb'][i]}</text>`)}</div>`}).join('');
+ return`<h2 style="margin:0 0 3px;font-size:16px;line-height:1.2">Macros</h2><div class="mg two">${it}</div>`}}
+(function(){const st=document.createElement('style');st.textContent=`
+.mg.two{height:auto;align-content:center;grid-template-columns:1fr 1fr;gap:5px 6px;margin-top:0}
+.mg.two .mr .ring2{width:42px;height:42px}
+.wd:has(.mg.two),.card:has(>.mg.two){overflow:hidden!important}
+.pset+.btn.big{width:100%}`;document.head.appendChild(st)})();
+{const r=RELEASES.find(x=>x.v==='2026.10.26');r&&r.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>',h:'New colours: Spider-Man',p:'Red and blue lights at full brightness. Find it in Settings, then Customise look.'})}
+// Spider-Man: red and blue lights at full strength
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=pre],[data-a=lx2pre]');if(!el)return;const pr=PRE[+el.dataset.i];if(!pr||pr[0]!=='Spider-Man')return;
+ setTimeout(()=>{S.gi=100;S.lxs='bold';if(S.lights&&S.lights.length){lx2Lights();S.lights.forEach(l=>l.a=100)}save();applyBg();if($('#lx2'))lx2r()},0)},true);
 render();periodic();reqShow();
 </script></body></html>
