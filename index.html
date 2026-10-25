@@ -1665,5 +1665,31 @@ RELEASES.find(r=>r.v==='2026.10.27').items.push(
  {i:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/>',h:'Back up and restore',p:'Save a backup file to iCloud Drive or Files from Settings, and bring everything back on a new phone.'},
  {i:'<path d="M4 7h16M7 7v12h10V7M10 4h4"/>',h:'Tidier storage',p:'Day-by-day logs are kept for two months, then wrapped into a monthly report that stays for good. Meal photos are stored more roomily, and Swell warns you if storage gets full.'});
 (RELEASES.find(r=>r.v==='2026.10.27').tour=[]).push({t:'home',q:'[data-a=reports]',h:'New: Reports',p:'Every month gets its own Swell Wrapped here. Your diet and workout reports are also at the bottom of those tabs.'},{t:'home',q:'[data-a=settings]',h:'New: back up your data',p:'In Settings you can now back up your data to a file and restore it on a new phone.'});
+/* ===== v30: Home Screen steps for whichever browser you're using ===== */
+function whichBrowser(){const u=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(u)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),and=/Android/.test(u);
+ const b=/OPX\//.test(u)?'Opera GX':/OPT\/|OPiOS/.test(u)?'Opera':/OPR\//.test(u)?(/OPX|GX/.test(u)?'Opera GX':'Opera'):/EdgiOS|EdgA/.test(u)?'Edge':/FxiOS|Firefox/.test(u)?'Firefox':/SamsungBrowser/.test(u)?'Samsung Internet':/GSA\//.test(u)?'the Google app':/DuckDuckGo/.test(u)?'DuckDuckGo':/CriOS|Chrome/.test(u)?'Chrome':/Safari/.test(u)?'Safari':'your browser';
+ return{ios,and,b}}
+function a2Steps(){const {ios,and,b}=whichBrowser(),SH='<path d="M12 15V4M8 8l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/>',ADD='<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',MENU='<circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/>',OK='<path d="M5 12l4.5 4.5L19 7"/>',SAF='<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>';
+ let s=[],ok=true;
+ if(ios){
+  if(b==='Safari')s=[[SH,'Tap the Share button','The square with an arrow, at the bottom of Safari (top right on iPad). On newer iPhones it may be inside the ⋯ button.'],[ADD,'Choose Add to Home Screen','Scroll down the list if you can’t see it, then tap Add.']];
+  else if(b==='Chrome')s=[[SH,'Tap the Share button','It’s at the top right, in the address bar.'],[ADD,'Choose Add to Home Screen','Scroll down the list if you can’t see it, then tap Add.']];
+  else if(b==='Edge'||b==='Firefox')s=[[MENU,'Open the menu',b==='Edge'?'The ⋯ button at the bottom of the screen.':'The ☰ button at the bottom right.'],[SH,'Tap Share','Then choose Add to Home Screen and tap Add.']];
+  else{ok=false;s=[[SAF,'Open this link in Safari',`${b} on iPhone can’t always add apps to your Home Screen. Copy the link below and paste it into Safari.`],[SH,'In Safari, tap Share','Then choose Add to Home Screen and tap Add.']]}}
+ else if(and){
+  if(b==='Samsung Internet')s=[[MENU,'Open the menu','The ☰ button at the bottom right.'],[ADD,'Tap Add page to, then Home screen','Then tap Add.']];
+  else if(b==='Firefox')s=[[MENU,'Open the menu','The ⋮ button next to the address bar.'],[ADD,'Tap Install, or Add to Home screen','Then tap Add.']];
+  else if(b==='Opera'||b==='Opera GX')s=[[MENU,'Open the menu','The ⋮ or O button.'],[ADD,'Tap Add to, then Home screen','Then tap Add.']];
+  else if(b==='Edge')s=[[MENU,'Open the menu','The ⋯ button at the bottom.'],[ADD,'Tap Add to phone','Then tap Install.']];
+  else s=[[MENU,'Open the menu','The ⋮ button at the top right.'],[ADD,'Tap Install app, or Add to Home screen','Then tap Install.']]}
+ else s=[[MENU,'Open your browser’s menu','Look for Install Swell, or Add to Home Screen.'],[ADD,'Install it','Then open Swell from your apps.']];
+ s.push([OK,'Open Swell from your Home Screen','It opens full screen like a normal app, and you’ll go straight to sign up.']);
+ return{ios,and,b,ok,s}}
+{const _a2=a2hsCard;a2hsCard=function(){const A=a2Steps(),st=(n,ic,h,p)=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid rgba(255,255,255,.12)"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.12);display:grid;place-items:center">${ico(ic)}</span><div><b>${n}. ${h}</b><div class="sm">${p}</div></div></div>`;
+ const dev=A.ios?'iPhone':A.and?'Android':'computer';
+ return`<div class="card" style="margin-top:8vh"><h1 style="margin-bottom:6px">Swell</h1><p class="hero" style="margin-top:0">First, add Swell to your Home Screen</p><p class="sm">It opens full screen like a normal app, and works even with no signal. It looks like you’re using ${esc(A.b)} on ${dev}.</p>
+ ${BIP?'<button class="btn big on" data-a="inst">Install Swell</button>':A.s.map((x,i)=>st(i+1,...x)).join('')}
+ ${!A.ok||!BIP?`<button class="btn" data-a="a2copy" style="margin-top:10px">Copy the link</button>`:''}<button class="btn" data-a="a2" style="margin-top:10px">Continue in the browser instead</button></div>`}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=a2copy]');if(!el)return;const u=location.origin+location.pathname;const ok=()=>toast('Link copied. Paste it into Safari’s address bar.'),no=()=>toast('Copy this link: '+u);try{navigator.clipboard.writeText(u).then(ok,no)}catch(_){no()}});
 render();periodic();reqShow();
 </script></body></html>
