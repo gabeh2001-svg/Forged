@@ -1512,5 +1512,158 @@ function pookie(){if($('#pk'))return;const o=document.createElement('div');o.id=
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})});
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}
 RELEASES.push({v:'2026.10.27',date:'27 Oct',items:[{i:'<path d="M2 9a15 15 0 0 1 20 0"/><path d="M5.5 12.5a10 10 0 0 1 13 0"/><path d="M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1"/>',h:'Works with no signal',p:'Swell now keeps a copy of itself on your phone, so it opens instantly even with bad gym WiFi or no signal at all. Updates download quietly in the background and appear the next time you open it.'}]});
+/* ===== v29: backup and restore, photos in roomy storage, storage warnings, 2-month tidy-up, monthly and yearly Wrapped reports ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.pills2{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.rpl{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.rpr{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:#fff;border-radius:18px;padding:12px 14px;font:inherit;cursor:pointer}
+.rpr b{display:block;font-size:15px}.rpr small{display:block;color:var(--dim);font-size:13px;margin-top:2px}.rpr>span:last-child{margin-left:auto;color:var(--dim);flex:none}
+.rpr i{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,color-mix(in srgb,var(--g1) 70%,#000),color-mix(in srgb,var(--g2) 70%,#000));font-style:normal;font-weight:700;font-size:13px}
+#wr{position:fixed;inset:0;z-index:150;color:#fff;overflow:hidden;background:radial-gradient(90% 60% at 0% 0%,color-mix(in srgb,var(--g1) 45%,transparent),transparent 65%),radial-gradient(90% 60% at 100% 100%,color-mix(in srgb,var(--g2) 50%,transparent),transparent 65%),#06080f;-webkit-user-select:none;user-select:none;touch-action:none}
+#wr .bars{position:absolute;left:14px;right:14px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;gap:4px;z-index:3}
+#wr .bars span{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.22);overflow:hidden}#wr .bars span i{display:block;height:100%;width:0;background:#fff;border-radius:inherit}
+#wr .wx{position:absolute;top:calc(26px + env(safe-area-inset-top,0px));right:12px;z-index:4;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font:600 20px/1 inherit;display:grid;place-items:center}
+#wr .stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(80px + env(safe-area-inset-top,0px)) 28px calc(60px + env(safe-area-inset-bottom,0px))}
+#wr .sl{width:100%;max-width:460px;display:flex;flex-direction:column;gap:14px}
+#wr .k{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+#wr .ttl{font-family:Fraunces,Georgia,serif;font-style:italic;font-weight:700;font-variation-settings:'SOFT' 100,'WONK' 1,'opsz' 144;font-size:64px;line-height:1;letter-spacing:-.01em}
+#wr .big{font-size:84px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#wr .h{font-size:28px;font-weight:700;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+#wr .p{font-size:17px;line-height:1.45;color:rgba(255,255,255,.82)}
+#wr .stat{display:flex;align-items:baseline;gap:10px;padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#wr .stat b{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;min-width:2ch}#wr .stat span{color:rgba(255,255,255,.82);font-size:15px}
+#wr .bar2{height:10px;border-radius:10px;background:rgba(255,255,255,.14);overflow:hidden}#wr .bar2 i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--g1) 50%,#fff),#fff);transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+#wr .ms{display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.08);font-size:15px}
+#wr .ms svg{flex:none;width:22px;height:22px}
+#wr .wbtn{border:0;border-radius:999px;padding:14px 18px;font:700 16px/1 inherit;font-family:inherit;background:#fff;color:#10121a}#wr .wbtn.g{background:rgba(255,255,255,.14);color:#fff}
+#wr .wi{opacity:0}
+@media (prefers-reduced-motion:reduce){#wr .wi{opacity:1!important}}`;document.head.appendChild(st)})();
+/* --- photos live in IndexedDB, not the small main storage --- */
+const IMGS={};let IDB=null;
+function idb(){return IDB||(IDB=new Promise((res,rej)=>{try{const r=indexedDB.open('swell',1);r.onupgradeneeded=()=>r.result.createObjectStore('img');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}))}
+function idbDo(mode,fn){return idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction('img',mode),st=tx.objectStore('img'),q=fn(st);tx.oncomplete=()=>res(q&&q.result);tx.onerror=()=>rej(tx.error)}))}
+const idbPut=(k,v)=>idbDo('readwrite',s=>s.put(v,k)),idbGet=k=>idbDo('readonly',s=>s.get(k)),idbAll=()=>idbDo('readonly',s=>s.getAllKeys());
+function imgProp(x){if(!x||Object.getOwnPropertyDescriptor(x,'img')?.get)return;const v=x.img;delete x.img;
+ Object.defineProperty(x,'img',{configurable:true,enumerable:false,get(){return this.iid?IMGS[this.iid]:undefined},set(u){if(!u){delete IMGS[this.iid];this.iid=undefined;return}const id=this.iid||('i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));this.iid=id;IMGS[id]=u;idbPut(id,u).catch(()=>{storeWarn('photo')})}});
+ if(v)x.img=v}
+function imgSync(){(S.saved||[]).forEach(imgProp)}
+(async()=>{try{await idb();const ks=(S.saved||[]).map(x=>x.iid).filter(Boolean);for(const k of ks){const v=await idbGet(k);if(v)IMGS[k]=v}}catch(_){}const had=(S.saved||[]).some(x=>x.img&&!Object.getOwnPropertyDescriptor(x,'img')?.get);imgSync();if(had)save();render()})();
+setInterval(()=>{if((S.saved||[]).some(x=>!Object.getOwnPropertyDescriptor(x,'img')?.get)){imgSync();save()}},1500);
+/* --- warnings when storage is getting full or a save fails --- */
+function storeWarn(kind){const t=realToday();if(S.swarn===t+kind)return;S.swarn=t+kind;
+ toast(kind==='full'?'Swell couldn’t save your latest changes because this phone’s storage for the app is full. Back up your data from Settings, then delete old saved meals.':kind==='near'?'Swell’s storage on this phone is nearly full. Back up your data from Settings to stay safe.':'A meal photo couldn’t be saved because storage is full.')}
+let NOSAVE=false;
+function storeCheck(){if(NOSAVE)return;try{const j=JSON.stringify(S),cur=localStorage.getItem(KEY);if(cur!==j){try{localStorage.setItem(KEY,j)}catch(e){storeWarn('full');return}}if(j.length>1.8e6)storeWarn('near')}catch(_){}
+ try{navigator.storage&&navigator.storage.estimate&&navigator.storage.estimate().then(e=>{if(e.quota&&e.usage/e.quota>.85)storeWarn('near')})}catch(_){}}
+setInterval(storeCheck,20000);document.addEventListener('visibilitychange',()=>{if(document.hidden)storeCheck()});
+/* --- reports --- */
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const ymOf=d=>d.slice(0,7),ymLabel=ym=>MON[+ym.slice(5)-1]+' '+ym.slice(0,4),monName=ym=>MON[+ym.slice(5)-1];
+const DAYKEYS=['macros','meals','checks','fd','wins','tal'];
+function mrep(ym){const t=realToday(),first=ym+'-01';let days=[];for(let d=first;ymOf(d)===ym&&d<=t;d=addDays(d,1))days.push(d);
+ const g=S.setup,M=S.macros||{},ML=S.meals||{},FD=S.fd||{},W=S.wins||{};let logged=0,onT=0,sk=0,sp=0,pHit=0,done=0,wins=0,bestLog=0,bestOn=0,cl=0,co=0;const wk={};
+ days.forEach(d=>{const m=M[d]||{},lg=SZ.some(k=>+m[k]>0)||(ML[d]||[]).length>0;if(lg){logged++;sk+=+m.k||0;sp+=+m.p||0;if(g.p&&+m.p>=+g.p)pHit++}
+  const ok=lg&&SZ.every(k=>!+g[k]||RULES[k](+m[k]||0,+g[k])===0);if(ok)onT++;cl=lg?cl+1:0;co=ok?co+1:0;bestLog=Math.max(bestLog,cl);bestOn=Math.max(bestOn,co);
+  if(FD[d]){done++;const w=new Date(d+'T12:00'),mon=addDays(d,-((w.getDay()+6)%7));wk[mon]=(wk[mon]||0)+1}if(W[d])wins++});
+ const p=typeof activePlan==='function'&&activePlan(),per=p?+p.perWeek||0:+g.freq||0,planned=Math.max(done,Math.round(per*days.length/7));
+ const bm=Object.keys(S.bm||{}).filter(d=>ymOf(d)===ym).sort(),fv=k=>{for(const d of bm){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null},lv=k=>{for(const d of [...bm].reverse()){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null};
+ let gl=null;try{if(S.goal2){const c=gCalc(S.goal2);gl={n:S.goal2.name,pct:Math.round((c.pct||0)*100)}}}catch(_){}
+ const r={ym,label:ymLabel(ym),n:days.length,logged,onT,avgK:logged?Math.round(sk/logged):0,avgP:logged?Math.round(sp/logged):0,gK:+g.k||0,gP:+g.p||0,pHit,done,planned,wins,bestLog,bestOn,busy:Math.max(0,...Object.values(wk)),w0:fv('w'),w1:lv('w'),bf0:fv('bf'),bf1:lv('bf'),sm0:fv('smm'),sm1:lv('smm'),goal:gl,u:U()};
+ const ms=[];if(r.bestLog>=7)ms.push(`Logged your food ${r.bestLog} days in a row`);if(r.onT>=5)ms.push(`${r.onT} days with every macro on target`);if(r.done>=8)ms.push(`${r.done} workouts finished`);if(r.planned&&r.done>=r.planned)ms.push('Hit every planned workout');if(r.pHit>=10)ms.push(`Protein goal hit on ${r.pHit} days`);if(r.wins>=1)ms.push(`${r.wins} winning day${r.wins>1?'s':''}`);if(r.busy>=4)ms.push(`${r.busy} sessions in your busiest week`);if(gl&&gl.pct>=100)ms.push('Goal reached');
+ r.ms=ms;return r}
+const hasData=ym=>DAYKEYS.some(k=>Object.keys(S[k]||{}).some(d=>ymOf(d)===ym));
+function reportsTick(){S.reports=S.reports||{};const t=realToday(),cur=ymOf(t);let ch=false;
+ const yms=new Set();DAYKEYS.forEach(k=>Object.keys(S[k]||{}).forEach(d=>{if(/^\d{4}-\d\d-\d\d$/.test(d))yms.add(ymOf(d))}));
+ yms.forEach(ym=>{if(ym<cur&&!S.reports[ym]&&hasData(ym)){S.reports[ym]=mrep(ym);ch=true}});
+ // keep at most two months of day-by-day logs; the monthly report stays forever
+ const cut=addDays(t,-62);DAYKEYS.forEach(k=>{const o=S[k];if(!o)return;Object.keys(o).forEach(d=>{if(/^\d{4}-\d\d-\d\d$/.test(d)&&d<cut&&S.reports[ymOf(d)]){delete o[d];ch=true}})});
+ if(ch)save()}
+reportsTick();setInterval(reportsTick,60*60e3);
+function yrep(y){const R=Object.values(S.reports||{}).filter(r=>r.ym.startsWith(y)).sort((a,b)=>a.ym<b.ym?-1:1);const cur=ymOf(realToday());if(cur.startsWith(y)&&hasData(cur))R.push(mrep(cur));if(!R.length)return null;
+ const sum=k=>R.reduce((a,r)=>a+(+r[k]||0),0),best=[...R].sort((a,b)=>b.done-a.done||b.onT-a.onT)[0],fw=R.find(r=>r.w0!=null),lw=[...R].reverse().find(r=>r.w1!=null);
+ const y2={y,months:R.length,logged:sum('logged'),onT:sum('onT'),done:sum('done'),planned:sum('planned'),wins:sum('wins'),best:best.label.split(' ')[0],bestDone:best.done,bestLog:Math.max(...R.map(r=>r.bestLog)),w0:fw?fw.w0:null,w1:lw?lw.w1:null,u:U(),ms:[]};
+ if(y2.done>=50)y2.ms.push(`${y2.done} workouts this year`);if(y2.logged>=100)y2.ms.push(`${y2.logged} days of food logged`);if(y2.onT>=30)y2.ms.push(`${y2.onT} days with every macro on target`);if(y2.bestLog>=14)y2.ms.push(`Longest logging streak: ${y2.bestLog} days`);
+ return y2}
+/* --- story player --- */
+const ck='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-opacity=".35"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
+const fmtN=n=>Number(n).toLocaleString('en-GB');
+function wrSlides(r,yr){const nm=esc(S.user||'you'),L=[],chg=(a,b,u,dp=1)=>{const d=Math.round((b-a)*10**dp)/10**dp;return(d>0?'+':d<0?'−':'')+Math.abs(d)+u};
+ if(yr){L.push(`<div class="sl"><span class="k wi">Swell Wrapped</span><div class="ttl wi">${r.y}</div><p class="p wi">Your year in Swell, ${nm}. ${r.months} month${r.months>1?'s':''} of showing up.</p></div>`);
+  L.push(`<div class="sl"><span class="k wi">You showed up</span><div class="big wi" data-n="${r.done}">0</div><p class="h wi">workouts this year</p><div class="stat wi"><b data-n="${r.logged}">0</b><span>days of food logged</span></div><div class="stat wi"><b data-n="${r.onT}">0</b><span>days with every macro on target</span></div></div>`);
+  L.push(`<div class="sl"><span class="k wi">Your best month</span><div class="ttl wi">${r.best}</div><p class="p wi">${r.bestDone} workouts, your strongest month of the year.</p>${r.planned?`<div class="stat wi"><b>${Math.min(100,Math.round(r.done/r.planned*100))}%</b><span>of all your planned workouts done</span></div>`:''}</div>`);
+  if(r.w0!=null&&r.w1!=null&&r.w0!==r.w1)L.push(`<div class="sl"><span class="k wi">Your body</span><div class="big wi">${chg(r.w0,r.w1,r.u)}</div><p class="p wi">From ${r.w0}${r.u} to ${r.w1}${r.u} across the year.</p></div>`);
+ }else{
+  L.push(`<div class="sl"><span class="k wi">Swell Wrapped</span><div class="ttl wi">${monName(r.ym)}</div><p class="p wi">Here’s how your month went, ${nm}.</p></div>`);
+  L.push(`<div class="sl"><span class="k wi">You showed up</span><div class="stat wi"><b data-n="${r.logged}">0</b><span>days of food logged</span></div><div class="stat wi"><b data-n="${r.done}">0</b><span>workouts finished</span></div>${r.wins?`<div class="stat wi"><b data-n="${r.wins}">0</b><span>winning day${r.wins>1?'s':''}</span></div>`:''}</div>`);
+  if(r.logged)L.push(`<div class="sl"><span class="k wi">Fuel</span><div class="big wi"><span data-n="${r.onT}">0</span><span style="font-size:32px;color:rgba(255,255,255,.6)"> / ${r.logged}</span></div><p class="h wi">days with every macro on target</p><div class="bar2 wi"><i data-w="${Math.round(r.onT/Math.max(1,r.logged)*100)}"></i></div><p class="p wi">You averaged ${fmtN(r.avgK)} kcal a day${r.gK?` against a goal of ${fmtN(r.gK)}`:''}${r.gP?`, and hit your protein goal on ${r.pHit} day${r.pHit===1?'':'s'}`:''}.</p></div>`);
+  if(r.done||r.planned)L.push(`<div class="sl"><span class="k wi">Training</span><div class="big wi" data-n="${r.done}">0</div><p class="h wi">workouts${r.planned?` of ${r.planned} planned`:''}</p>${r.planned?`<div class="bar2 wi"><i data-w="${Math.min(100,Math.round(r.done/r.planned*100))}"></i></div>`:''}${r.busy?`<p class="p wi">Your busiest week had ${r.busy} session${r.busy>1?'s':''}.</p>`:''}</div>`);
+  if(r.bestLog>1)L.push(`<div class="sl"><span class="k wi">Consistency</span><div class="big wi" data-n="${r.bestLog}">0</div><p class="h wi">days logging in a row, your longest streak</p>${r.bestOn>1?`<p class="p wi">And ${r.bestOn} days in a row with every macro on target.</p>`:''}</div>`);
+  if(r.w0!=null&&r.w1!=null&&r.w0!==r.w1)L.push(`<div class="sl"><span class="k wi">Your body</span><div class="big wi">${chg(r.w0,r.w1,r.u)}</div><p class="p wi">From ${r.w0}${r.u} to ${r.w1}${r.u} this month.</p>${r.bf0!=null&&r.bf1!=null&&r.bf0!==r.bf1?`<div class="stat wi"><b>${chg(r.bf0,r.bf1,'%')}</b><span>body fat</span></div>`:''}${r.sm0!=null&&r.sm1!=null&&r.sm0!==r.sm1?`<div class="stat wi"><b>${chg(r.sm0,r.sm1,r.u)}</b><span>skeletal muscle</span></div>`:''}</div>`);
+  if(r.goal)L.push(`<div class="sl"><span class="k wi">Your goal</span><p class="h wi">${esc(r.goal.n)}</p><div class="big wi"><span data-n="${r.goal.pct}">0</span>%</div><div class="bar2 wi"><i data-w="${Math.min(100,r.goal.pct)}"></i></div><p class="p wi">${r.goal.pct>=100?'Goal reached. Brilliant work.':'of the way there. Keep going.'}</p></div>`)}
+ if(r.ms&&r.ms.length)L.push(`<div class="sl"><span class="k wi">Milestones</span>${r.ms.map(m=>`<div class="ms wi">${ck}<span>${esc(m)}</span></div>`).join('')}</div>`);
+ const big=yr?r.done>=40:r.done>=8||r.onT>=10;
+ L.push(`<div class="sl"><span class="k wi">${yr?r.y:monName(r.ym)}, wrapped</span><p class="h wi">${big?`You put serious work in, ${nm}. Be proud of that.`:`Every day you showed up counts, ${nm}. Keep building.`}</p><button class="wbtn wi" data-a="wrshare">Share my ${yr?'year':'month'}</button><button class="wbtn g wi" data-a="bkup">Back up my data</button><button class="wbtn g wi" data-a="wrx">Done</button></div>`);
+ return L}
+let WR=null;
+function wrPlay(r,yr,start){const sl=wrSlides(r,yr);let o=$('#wr');if(o)o.remove();o=document.createElement('div');o.id='wr';o.setAttribute('role','dialog');o.setAttribute('aria-label','Swell Wrapped');
+ o.innerHTML=`<div class="bars">${sl.map(()=>'<span><i></i></span>').join('')}</div><button class="wx" data-a="wrx" aria-label="Close">×</button><div class="stage"></div>`;document.body.appendChild(o);document.documentElement.classList.add('lock');
+ WR={r,yr,sl,i:-1,t0:0,el:o,paused:false,acc:0,dur:5600,txt:wrText(r,yr)};wrGo(Math.min(start||0,sl.length-1));requestAnimationFrame(wrTick)}
+function wrText(r,yr){return yr?`My ${r.y} in Swell: ${r.done} workouts, ${r.logged} days of food logged and ${r.onT} days on target.`:`My ${monName(r.ym)} in Swell: ${r.done} workouts, ${r.logged} days of food logged and ${r.onT} days with every macro on target.`}
+function wrGo(i){const W=WR;if(!W)return;if(i<0)i=0;if(i>=W.sl.length){wrClose();return}const st=W.el.querySelector('.stage'),old=st.firstElementChild,rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(old&&old.animate&&!rm){old.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-18px)'}],{duration:260,easing:'ease-in',fill:'forwards'}).onfinish=()=>old.remove()}else if(old)old.remove();
+ const box=document.createElement('div');box.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:inherit';box.innerHTML=W.sl[i];st.appendChild(box);
+ W.i=i;W.acc=0;W.t0=performance.now();W.el.querySelectorAll('.bars i').forEach((b,j)=>b.style.width=j<i?'100%':'0%');
+ box.querySelectorAll('.wi').forEach((e,j)=>{if(rm||!e.animate){e.style.opacity=1;return}e.animate([{opacity:0,transform:'translateY(22px)',filter:'blur(6px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:700,delay:200+j*130,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'})});
+ box.querySelectorAll('[data-n]').forEach(e=>{const n=+e.dataset.n,t0=performance.now()+350;if(rm){e.textContent=fmtN(n);return}const f=now=>{const k=Math.min(1,Math.max(0,(now-t0)/1100)),v=Math.round(n*(1-Math.pow(1-k,3)));e.textContent=fmtN(v);if(k<1&&e.isConnected)requestAnimationFrame(f)};requestAnimationFrame(f)});
+ setTimeout(()=>box.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w+'%'),450)}
+function wrTick(now){const W=WR;if(!W||!W.el.isConnected)return;if(!W.paused){const last=W.i===W.sl.length-1,k=Math.min(1,(W.acc+(now-W.t0))/W.dur);const b=W.el.querySelectorAll('.bars i')[W.i];if(b)b.style.width=(k*100)+'%';if(k>=1&&!last){wrGo(W.i+1)}}requestAnimationFrame(wrTick)}
+function wrClose(){const W=WR;if(!W)return;WR=null;const o=W.el;document.documentElement.classList.remove('lock');if(o.animate){o.animate([{opacity:1},{opacity:0}],{duration:300,fill:'forwards'}).onfinish=()=>o.remove()}else o.remove()}
+document.addEventListener('pointerdown',e=>{if(!WR||!e.target.closest('#wr')||e.target.closest('button'))return;WR.paused=true;WR.acc+=performance.now()-WR.t0;WR.pd={x:e.clientX,t:Date.now()}},true);
+document.addEventListener('pointerup',e=>{const W=WR;if(!W||!W.pd)return;const held=Date.now()-W.pd.t>350,x=W.pd.x;W.pd=null;W.paused=false;W.t0=performance.now();if(held)return;if(e.target.closest('button'))return;x<innerWidth*.3?wrGo(W.i-1):wrGo(W.i+1)},true);
+/* --- backup and restore --- */
+async function backupNow(){const imgs={};for(const x of S.saved||[])if(x.iid&&IMGS[x.iid])imgs[x.iid]=IMGS[x.iid];
+ const data={app:'swell',v:APP_VER,at:new Date().toISOString(),S,imgs},name=`Swell backup ${realToday()}.json`,blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+ try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Swell backup'});S.lastBk=realToday();save();toast('Backup saved. Keep it somewhere safe, like iCloud Drive.');return}}catch(e){if(e&&e.name==='AbortError')return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);S.lastBk=realToday();save();toast('Backup downloaded. It’s in your Downloads folder in Files.')}
+let RST=null;
+function restorePick(){let i=$('#rsfi');if(!i){i=document.createElement('input');i.type='file';i.id='rsfi';i.accept='application/json,.json';i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(i)}i.value='';i.click()}
+document.addEventListener('change',e=>{if(e.target.id!=='rsfi'||!e.target.files||!e.target.files[0])return;const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);if(d.app!=='swell'||!d.S||!d.S.user)throw 0;RST=d;
+  const dt=new Date(d.at);sheet(`<h2>Restore this backup?</h2><p class="sm">Backup of ${esc(d.S.full||d.S.user)} from ${dt.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}. This replaces everything Swell has saved on this phone.</p><button class="btn big on" data-a="rsgo">Restore backup</button><button class="btn big" data-a="shx">Cancel</button>`)}catch(_){toast('That file isn’t a Swell backup. Choose a file named “Swell backup”.')}};fr.readAsText(e.target.files[0])});
+async function restoreGo(){const d=RST;if(!d)return;NOSAVE=true;try{for(const k in d.imgs||{})await idbPut(k,d.imgs[k])}catch(_){}try{localStorage.setItem(KEY,JSON.stringify(d.S))}catch(_){NOSAVE=false;toast('There isn’t enough room on this phone to restore. Free up some space and try again.');return}Object.keys(S).forEach(k=>delete S[k]);Object.assign(S,JSON.parse(JSON.stringify(d.S)));try{sessionStorage.setItem('ptr','1')}catch(_){}location.reload()}
+/* --- where reports live: a Reports pill beside Settings, plus report lists at the bottom of Diet and Workout --- */
+const agoTxt=d=>{if(!d)return'Never backed up';const n=Math.round((new Date(realToday())-new Date(d))/864e5);return n<=0?'Backed up today':n===1?'Backed up yesterday':`Last backed up ${n} days ago`};
+{const _ss=settingsSheet;settingsSheet=function(){_ss.apply(this,arguments);const L=$('#sheet .setl');if(!L)return;const I=p=>ico(p);
+ L.insertAdjacentHTML('beforeend',`<button data-a="bkup">${I('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/>')}<span>Back up my data<small>${agoTxt(S.lastBk)}. Saves a file you can keep in iCloud Drive or Files.</small></span></button><button data-a="rspick">${I('<path d="M12 21V9M7 14l5-5 5 5"/><path d="M5 5h14"/>')}<span>Restore from a backup<small>Bring your data back on a new phone</small></span></button>`)}}
+const RPI='<path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/>';
+{const _h=home;home=function(){return _h.apply(this,arguments).replace('<div style="display:flex;justify-content:center"><button class="btn setb" data-a="settings">',`<div class="pills2"><button class="btn setb" data-a="reports">${ico(RPI)}Reports</button><button class="btn setb" data-a="settings">`)}}
+function repList(kind){const R=Object.values(S.reports||{}).sort((a,b)=>a.ym<b.ym?1:-1),cur=ymOf(realToday()),live=mrep(cur);
+ const sub=r=>kind==='diet'?`${r.logged} days logged, ${r.onT} on target${r.avgK?`, ${fmtN(r.avgK)} kcal a day`:''}`:kind==='work'?`${r.done} workout${r.done===1?'':'s'}${r.planned?` of ${r.planned} planned`:''}`:`${r.done} workouts, ${r.onT} days on target`;
+ const row=(r,lab,act)=>`<button class="rpr" data-a="${act}" data-i="${r.ym||r.y}" data-k="${kind}"><i>${r.ym?monName(r.ym).slice(0,3):'’'+String(r.y).slice(2)}</i><span><b>${lab}</b><small>${sub(r)}</small></span><span>›</span></button>`;
+ const yrs=[...new Set(R.map(r=>r.ym.slice(0,4)))];
+ return`<div class="rpl">${row(live,monName(cur)+' so far','wrm')}${R.map(r=>row(r,r.label,'wrm')).join('')}${kind==='all'?yrs.map(y=>{const Y=yrep(y);return Y&&Y.months>=2?row(Y,`Your ${y}`+(y===cur.slice(0,4)?' so far':''),'wry'):''}).join(''):''}</div>`}
+function reportsSheet(){sheet(`<h2>Reports</h2><p class="sm">A Swell Wrapped for every month, plus your year once you’ve had two months. Day-by-day logs are kept for two months, and these reports are kept for good.</p>${repList('all')}<button class="btn big" data-a="shx" style="margin-top:12px">Close</button>`)}
+{const _d=diet;diet=function(){return _d.apply(this,arguments)+`<div class="card"><h2>Diet reports</h2><p class="sm">Your food each month, with your Wrapped.</p>${repList('diet')}</div>`}}
+{const _p=planner;planner=function(){const h=_p.apply(this,arguments);return D?h:h+`<div class="card"><h2>Workout reports</h2><p class="sm">Your training each month, with your Wrapped.</p>${repList('work')}</div>`}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='reports'){reportsSheet();return}
+ if(a==='wrm'){const ym=el.dataset.i,r=(S.reports||{})[ym]||mrep(ym),k=el.dataset.k;sheet(null);const sl=wrSlides(r,false);let st=0;if(k==='diet')st=sl.findIndex(s=>s.includes('>Fuel<'));if(k==='work')st=sl.findIndex(s=>s.includes('>Training<'));wrPlay(r,false,Math.max(0,st));return}
+ if(a==='wry'){const Y=yrep(el.dataset.i);sheet(null);if(Y)wrPlay(Y,true,0);return}
+ if(a==='wrx'){wrClose();return}
+ if(a==='wrshare'){const W=WR;if(!W)return;if(navigator.share)navigator.share({text:W.txt}).catch(()=>{});else{try{navigator.clipboard.writeText(W.txt);toast('Copied, ready to paste.')}catch(_){}}return}
+ if(a==='bkup'){backupNow();return}
+ if(a==='rspick'){sheet(null);restorePick();return}
+ if(a==='rsgo'){restoreGo();return}
+ if(a==='wrlater'){S.wrSeen=S.wrSeen||{};S.wrSeen[el.dataset.i]=1;save();sheet(null);return}
+ if(a==='wrnow'){S.wrSeen=S.wrSeen||{};const id=el.dataset.i;S.wrSeen[id]=1;save();sheet(null);if(id.length===4){const Y=yrep(id);Y&&wrPlay(Y,true,0)}else{const r=S.reports[id];r&&wrPlay(r,false,0)}return}});
+/* --- tell people when their Wrapped is ready --- */
+setInterval(()=>{if(!S.user||!S.setup.done||$('#splash')||$('#sheet')||$('#wn')||$('#req')||$('#lx2')||$('#wr')||$('#pk')||AW||TU!=null)return;S.wrSeen=S.wrSeen||{};
+ const cur=ymOf(realToday()),prev=ymOf(addDays(cur+'-01',-1)),r=(S.reports||{})[prev],py=String(+cur.slice(0,4)-1);
+ if(cur.endsWith('-01')&&!S.wrSeen[py]){const Y=yrep(py);if(Y&&Y.months>=2){sheet(`<h2>Your ${py} is ready</h2><p class="sm">Your year in Swell, wrapped up. Workouts, streaks, milestones and how far you’ve come.</p><button class="btn big on" data-a="wrnow" data-i="${py}">Watch it now</button><button class="btn big" data-a="wrlater" data-i="${py}">Later</button>`);return}}
+ if(r&&!S.wrSeen[prev]&&(r.logged||r.done))sheet(`<h2>Your ${monName(prev)} is ready</h2><p class="sm">A quick look back at your month: workouts, food, streaks and milestones.</p><button class="btn big on" data-a="wrnow" data-i="${prev}">Watch it now</button><button class="btn big" data-a="wrlater" data-i="${prev}">Later</button>`)},2500);
+RELEASES.find(r=>r.v==='2026.10.27').items.push(
+ {i:'<path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/>',h:'Reports and your monthly Wrapped',p:'Tap Reports beside Settings on Home to see each month wrapped up: workouts, food, streaks and milestones. Your year arrives once you’ve had two months.'},
+ {i:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/>',h:'Back up and restore',p:'Save a backup file to iCloud Drive or Files from Settings, and bring everything back on a new phone.'},
+ {i:'<path d="M4 7h16M7 7v12h10V7M10 4h4"/>',h:'Tidier storage',p:'Day-by-day logs are kept for two months, then wrapped into a monthly report that stays for good. Meal photos are stored more roomily, and Swell warns you if storage gets full.'});
+(RELEASES.find(r=>r.v==='2026.10.27').tour=[]).push({t:'home',q:'[data-a=reports]',h:'New: Reports',p:'Every month gets its own Swell Wrapped here. Your diet and workout reports are also at the bottom of those tabs.'},{t:'home',q:'[data-a=settings]',h:'New: back up your data',p:'In Settings you can now back up your data to a file and restore it on a new phone.'});
 render();periodic();reqShow();
 </script></body></html>
