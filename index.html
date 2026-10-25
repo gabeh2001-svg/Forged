@@ -2441,7 +2441,31 @@ window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=gli
  if(on){S.glint=false;glStop();save();toast('Light on widgets is off.')}
  else{if(MRM()){toast('Reduce Motion is on in your phone’s settings, so Swell keeps things still.');return}const ok=await glAsk();if(ok){S.glint=true;save();toast('On. Tilt your phone and watch the widget edges.')}else toast('Swell needs motion access for this. Tap again to allow it.')}
  const sm=el.querySelector('small');if(sm)sm.textContent=`${(GL.need?S.glint===true:S.glint!==false)?'On':'Off'}: widget edges catch the light as you tilt your phone`},true);
-RELEASES.find(r=>r.v==='2026.11.22').items.push({i:'<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>',h:'Light on widgets',p:'Like the glass clock on your lock screen, widget edges now catch the light as you tilt your phone. Very subtle, nothing moves. Turn it on or off in Settings.'});
+RELEASES.find(r=>r.v==='2026.11.22').items.push({i:'<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>',h:'Light on widgets',p:'Like the glass clock on your lock screen, widget edges now catch the light as you tilt your phone, from the direction of your own lights and with a hint of their colour. Very subtle, nothing moves. Turn it on or off in Settings.'});
+/* ===== v43: the glint takes its direction from your lights, with a white core and a faint tint of their colour ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.grid .wd::before{background:conic-gradient(from calc(var(--la,315deg) - 45deg) at 50% 50%,transparent 0deg,var(--gf,rgba(255,255,255,.08)) 20deg,var(--gp,rgba(255,255,255,.22)) 45deg,var(--gf,rgba(255,255,255,.08)) 70deg,transparent 92deg,transparent 203deg,var(--go,rgba(255,255,255,.06)) 225deg,transparent 247deg)}`;document.head.appendChild(st)})();
+const GLC={};
+const glRGB=c=>{if(GLC[c])return GLC[c];const d=document.createElement('i');d.style.cssText='position:absolute;opacity:0;pointer-events:none';d.style.color=c;document.body.appendChild(d);const m=getComputedStyle(d).color.match(/[\d.]+/g)||[255,255,255];d.remove();return GLC[c]=m.slice(0,3).map(Number)};
+const glLum=([r,g,b])=>(.2126*r+.7152*g+.0722*b)/255;
+// the light that shows most on screen decides where the glint rests and what colour its edges pick up
+function glSource(){let L=[];
+ if(S.lights&&S.lights.length)L=S.lights.map(l=>({x:+l.x,y:+l.y,c:lcol(l.c),w:(+l.r||50)/100*(+l.a||50)/100}));
+ else L=[{x:0,y:0,c:S.p||'#2f6bff',w:(+(S.gi??75))/100},{x:100,y:100,c:S.s||'#4a4e69',w:(+(S.gi??75))/100}];
+ let best=null,bw=-1;L.forEach(l=>{const rgb=glRGB(l.c),w=l.w*(glLum(rgb)+.15);if(w>bw){bw=w;best={...l,rgb}}});
+ if(!best)return{a:315,rgb:[255,255,255]};const dx=best.x-50,dy=best.y-50,a=(Math.hypot(dx,dy)<6?315:(Math.atan2(dx,-dy)*180/Math.PI+360)%360);return{a,rgb:best.rgb}}
+let GLS={a:315,rgb:[255,255,255]},GLSIG='';
+function glPaint(la,lo){const [r,g,b]=GLS.rgb,t=.25,mix=v=>Math.round(255*(1-t)+v*t),tr=mix(r),tg=mix(g),tb=mix(b),R=document.documentElement.style;
+ R.setProperty('--la',la.toFixed(1)+'deg');R.setProperty('--gp',`rgba(255,255,255,${lo.toFixed(3)})`);R.setProperty('--gf',`rgba(${tr},${tg},${tb},${(lo*.4).toFixed(3)})`);R.setProperty('--go',`rgba(${tr},${tg},${tb},${(lo*.3).toFixed(3)})`)}
+function glRefresh(){const sig=JSON.stringify([S.lights,S.p,S.s,S.gi]);if(sig===GLSIG)return;GLSIG=sig;GLS=glSource();if(!GL.raf)glPaint(GLS.a-GL.x*2.2+GL.y*1.1,.22+.3*Math.min(1,Math.hypot(GL.x,GL.y)/26))}
+glTick=function(){GL.raf=0;GL.x+=(GL.tx-GL.x)*.12;GL.y+=(GL.ty-GL.y)*.12;
+ const la=GLS.a-GL.x*2.2+GL.y*1.1,lo=.22+.3*Math.min(1,Math.hypot(GL.x,GL.y)/26),v=la.toFixed(1)+'|'+lo.toFixed(3);
+ if(v!==GL.last){GL.last=v;glPaint(la,lo)}
+ if(Math.abs(GL.tx-GL.x)>.2||Math.abs(GL.ty-GL.y)>.2)GL.raf=requestAnimationFrame(glTick)};
+glStop=function(){if(!GL.on)return;GL.on=false;removeEventListener('deviceorientation',glOrient);cancelAnimationFrame(GL.raf);GL.raf=0;GL.x=GL.y=GL.tx=GL.ty=0;GL.last='';glPaint(GLS.a,.22)};
+{const _r=render;render=function(){_r.apply(this,arguments);try{glRefresh()}catch(_){}}}
+if(typeof applyLights==='function'){const _al=applyLights;applyLights=function(){const r=_al.apply(this,arguments);try{glRefresh()}catch(_){}return r}}
+try{glRefresh()}catch(_){}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
