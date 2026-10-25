@@ -544,7 +544,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  else return;save();render()});
 /* ---------- v6: onboarding, presets, tour, TUT, plans ---------- */
 const U=()=>S.setup.u||'kg',BAR=()=>U()==='lb'?45:20;
-const USERS=['Gabriel Read','Sarah Cavaciocchi','Jack Preston','Anna Evsen','Dixen Patel','Rudi Stassen'];
+const USERS=['Gabriel Read','Sarah Cavaciocchi','Jack Preston','Anna Evsen','Dixen Patel','Rudi Stassen','Oscar Smith'];
 let NS={v:''},CO=false,TU=(S.user&&S.setup.done&&!S.tourDone)?0:null;
 PRE.length=0;PRE.push(['Batman','#7f0000','#000000'],['Purple Gyal','#3b0764','#a78bfa'],['Kitten','#1f3aa8','#7cc6ff'],['Neon pink','#ff2d95','#ff8fc7'],['Emerald','#10b981','#0e7490'],['Spider-Man','#e8101c','#1450e6']);
 if(!S.p){S.p='#7f0000';S.s='#000000'}if(S.gi==null)S.gi=75;X.bar=BAR();
@@ -1498,5 +1498,14 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  const f=tcase(NS.f||''),l=tcase(NS.l||''),full=(f+' '+l).trim();
  if(a==='sgo'){if(!f){NS.err='Enter your first name to carry on.';return render()}const m=l?matchName(full):null;if(m&&m.exact){login(m.u);return render()}if(m&&!m.exact){NS.sug=m.u;NS.err='';return render()}}
  NS.sug=null;login(full);S.full=full;save();render()},true);
+
+/* ===== v27: a one-time hello for Oscar ===== */
+{const _li=login;login=function(u){const r=_li.apply(this,arguments);if(nrm(u)===nrm('Oscar Smith')&&!S.pookie){S.pookie=1;save();setTimeout(pookie,60)}return r}}
+function pookie(){if($('#pk'))return;const o=document.createElement('div');o.id='pk';o.setAttribute('role','status');
+ o.style.cssText='position:fixed;inset:0;z-index:210;display:grid;place-items:center;background:#080b13;padding:24px';
+ o.innerHTML='<p style="margin:0;font-size:40px;font-weight:700;letter-spacing:-.01em;text-align:center;color:#fff">Hey Pookie 🙈</p>';document.body.appendChild(o);
+ const t=o.firstChild;if(!o.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){setTimeout(()=>o.remove(),2200);return}
+ t.animate([{opacity:0,transform:'translateY(14px) scale(.96)',filter:'blur(8px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{duration:800,easing:'cubic-bezier(.2,.8,.2,1)',fill:'both'});
+ const out=o.animate([{opacity:1},{opacity:0}],{duration:900,delay:2600,easing:'ease',fill:'forwards'});out.onfinish=()=>o.remove();o.addEventListener('click',()=>out.finish())}
 render();periodic();reqShow();
 </script></body></html>
