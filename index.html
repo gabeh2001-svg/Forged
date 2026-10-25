@@ -1697,7 +1697,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a=a2copy]
 const OS_APP='77fd5321-a090-4c4e-93c4-2568f5524442',OS_ON=location.hostname==='everythings-swell.netlify.app';
 window.OneSignalDeferred=window.OneSignalDeferred||[];
 function osWho(OS){if(!S.user)return;S.uid=S.uid||('u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8));save();try{OS.login(S.uid);OS.User.addTags({name:S.full||S.user})}catch(_){}}
-if(OS_ON)OneSignalDeferred.push(async OS=>{try{await OS.init({appId:OS_APP,serviceWorkerPath:'sw.js',serviceWorkerParam:{scope:'/'},autoResubscribe:true,notifyButton:{enable:false}});osWho(OS);OS.Notifications.addEventListener('permissionChange',()=>{if($('#sheet .setl'))settingsSheet()})}catch(_){}});
+if(OS_ON)OneSignalDeferred.push(async OS=>{try{await OS.init({appId:OS_APP,serviceWorkerPath:'sw.js',serviceWorkerParam:{scope:'/'},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{title:'You’re all set',message:'Swell will only send the reminders you choose. Change them any time in Settings.'}});osWho(OS);OS.Notifications.addEventListener('permissionChange',()=>{if($('#sheet .setl'))settingsSheet()})}catch(_){}});
 {const _li=login;login=function(){const r=_li.apply(this,arguments);if(OS_ON)OneSignalDeferred.push(OS=>osWho(OS));return r}}
 function pushState(){if(!('Notification' in window))return isStandalone()?'none':'home';const p=Notification.permission;return p==='granted'?'on':p==='denied'?'blocked':'off'}
 function pushAsk(){const st=pushState();
