@@ -1173,7 +1173,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.10.27';
+const APP_VER='2026.11.22';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -2166,7 +2166,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
 RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',h:'Label scanning that reads the label',p:'Take a photo of a nutrition label and Swell reads the calories, protein, fat and carbs, right on your phone. Anything it isn’t sure of is highlighted for you to check. You can also tap a logged meal to edit it.'});
 RELEASES.find(r=>r.v==='2026.10.27').tour=(RELEASES.find(r=>r.v==='2026.10.27').tour||[]).concat([{t:'diet',q:'.scanb',h:'Scan a label',p:'Take a photo of the nutrition table. Swell reads it on your phone, highlights anything it isn’t sure of, and lets you pick per 100g or per serving.'}]);
 /* ===== v38: saver mode. Swell keeps an estimate of its Netlify credits and eases off before the monthly limit ===== */
-const BUD_URL='/.netlify/functions/budget',BUD_SITE=/netlify\.app$/.test(location.hostname),monthNow=()=>new Date().toISOString().slice(0,7);
+const BUD_URL='/.netlify/functions/budget',BUD_SITE=/netlify\.app$/.test(location.hostname),RESET_DAY=22,monthNow=(d=new Date())=>new Date(Date.UTC(d.getUTCFullYear(),d.getUTCDate()>=RESET_DAY?d.getUTCMonth():d.getUTCMonth()-1,RESET_DAY)).toISOString().slice(0,10);
 function budLv(){const b=S.bud;return b&&b.m===monthNow()?b.lv|0:0}
 S.budOpens=(S.budOpens||0)+1;save();
 {const _f=window.fetch;window.fetch=function(u){try{if(String(u&&u.url||u).includes('/.netlify/functions/'))S.budFn=(S.budFn||0)+1}catch(_){}return _f.apply(this,arguments)}}
@@ -2189,9 +2189,103 @@ if(typeof remSync==='function'){const _rs=remSync;remSync=function(){if(budLv()>
 if(typeof restPush==='function'){const _rp=restPush;restPush=function(){if(budLv()>=1)return Promise.resolve();return _rp.apply(this,arguments)}}
 {const _sf=scanFx;scanFx=function(src){if(budLv()<2)return _sf.apply(this,arguments);
  Promise.resolve(window.caches?caches.match(new URL('ocr/eng.traineddata',location.href).href):null).then(hit=>{if(hit||OCRW)return _sf.call(this,src);toast('Label scanning is resting until the new month to keep Swell online. You can type the numbers in for now.')}).catch(()=>_sf.call(this,src))}}
-const NEXT1=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,1).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
+const NEXT1=()=>{const st=new Date(monthNow()+'T12:00:00Z');return new Date(Date.UTC(st.getUTCFullYear(),st.getUTCMonth()+1,RESET_DAY,12)).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
 const budNote=()=>{const lv=budLv();if(!lv)return'';const what=['','rest-timer alerts are off and updates arrive a little slower','new reminders are paused and updates arrive a little slower','reminders and updates are paused'][lv];
  return`<div class="npst budn"><i style="background:var(--A)"></i><span>Saver mode is on until ${NEXT1()}: ${what}, so Swell stays online. Everything else works as normal.</span></div>`};
 {const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{if(!h||!budLv())return;const o=$('#sheet .mwc'),t=o&&o.querySelector('h2');if(t&&/^(Settings|Notifications)$/.test(t.textContent.trim())&&!o.querySelector('.budn'))t.insertAdjacentHTML('afterend',budNote())}catch(_){}}}
+/* ===== v39: clearer widget moving and resizing, a bar behind the status bar, tidier totals, delete anything with undo ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.sbar{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);z-index:48;pointer-events:none;background:linear-gradient(rgba(7,8,13,.82),rgba(7,8,13,.62));backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4)}
+.sbar.on::after{content:'';position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(rgba(7,8,13,.45),transparent)}
+body.spon .sbar{opacity:0}
+.rag>div:nth-child(2){display:flex;flex-direction:column;align-items:flex-start;gap:1px;flex:1;min-width:0;line-height:1.25}
+.rag>div:nth-child(2) .glink{font-size:13px;padding:3px 0;color:var(--dim)}
+.edit .wd,.edit .wd:has(.mg.two){overflow:visible!important}
+.edit .wd{touch-action:none;-webkit-user-select:none;user-select:none}
+.wd.lift{z-index:70;box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 0 1.5px rgba(255,255,255,.35);transition:box-shadow .2s;cursor:grabbing}
+.wdph{border-radius:22px;border:2px dashed rgba(255,255,255,.32);background:rgba(255,255,255,.05);min-height:100px}
+.wdsnap{position:fixed;z-index:69;border-radius:22px;border:2px solid rgba(255,255,255,.55);background:rgba(255,255,255,.08);pointer-events:none;transition:left .18s var(--e-out),top .18s var(--e-out),width .18s var(--e-out),height .18s var(--e-out)}
+.wdsnap b{position:absolute;right:10px;top:8px;font-size:12px;font-weight:700;color:#fff;background:rgba(0,0,0,.4);padding:3px 8px;border-radius:999px}
+.sr .in{touch-action:pan-y}
+.btn.dng{color:#ff8a8a;border-color:rgba(255,120,120,.35)}
+.glink.dng{color:#ff8a8a}
+.toast.tu2{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px 6px 16px}
+.tu2 button{background:none;border:0;color:#fff;font:inherit;font-weight:700;padding:10px 12px;min-height:44px;cursor:pointer}`;document.head.appendChild(st);
+ const b=document.createElement('div');b.className='sbar';b.setAttribute('aria-hidden','true');document.body.appendChild(b);
+ requestAnimationFrame(()=>{if(b.getBoundingClientRect().height>0)b.classList.add('on')})})();
+/* widgets: lift, a dashed slot shows where it will land, the others glide out of the way */
+const wdRects=g=>{const m=new Map();g&&[...g.children].forEach(c=>m.set(c,c.getBoundingClientRect()));return m};
+const wdFlip=(g,fn,skip)=>{const a=wdRects(g);fn();[...g.children].forEach(c=>{if(c===skip)return;const r0=a.get(c);if(!r0)return;const r=c.getBoundingClientRect(),dx=r0.left-r.left,dy=r0.top-r.top;if(Math.abs(dx)<1&&Math.abs(dy)<1)return;c.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:260,easing:'cubic-bezier(.16,1,.3,1)'})})};
+const wdById=()=>{const m={};document.querySelectorAll('#app .grid .wd').forEach(w=>m[w.dataset.id]=w.getBoundingClientRect());return m};
+const wdSettle=(before,lifted)=>{document.querySelectorAll('#app .grid .wd').forEach(w=>{const r0=before[w.dataset.id];if(!r0)return;const r=w.getBoundingClientRect();if(!r.width)return;const dx=r0.left-r.left,dy=r0.top-r.top,sx=r0.width/r.width,sy=r0.height/r.height;
+ if(Math.abs(dx)<1&&Math.abs(dy)<1&&Math.abs(sx-1)<.01&&Math.abs(sy-1)<.01)return;w.style.transformOrigin='0 0';const a=w.animate([{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`},{transform:'none'}],{duration:w.dataset.id===lifted?300:260,easing:'cubic-bezier(.16,1,.3,1)'});a.onfinish=()=>{w.style.transformOrigin=''}})};
+let WDDRAG=null;
+function wdDrag(e,w){const g=w.parentNode,r=w.getBoundingClientRect(),ox=e.clientX-r.left,oy=e.clientY-r.top,x0=e.clientX,y0=e.clientY;let on=false,ph=null,last={x:x0,y:y0},want=null,wantT=0,raf=0;
+ const begin=()=>{on=true;ph=document.createElement('div');ph.className='wdph';ph.style.gridColumn=w.style.gridColumn;ph.style.gridRow=w.style.gridRow;g.insertBefore(ph,w);
+  Object.assign(w.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',margin:'0'});w.classList.add('lift');navigator.vibrate&&navigator.vibrate(10);
+  w.animate([{transform:'none'},{transform:'scale(1.05)'}],{duration:180,easing:'cubic-bezier(.34,1.4,.64,1)',fill:'forwards'});loop()};
+ const place=()=>{w.style.translate=`${last.x-ox-r.left}px ${last.y-oy-r.top}px`};
+ const decide=()=>{const kids=[...g.children].filter(c=>c!==w&&c!==ph);let tgt=null;
+  for(const c of kids){const q=c.getBoundingClientRect();if(last.x>=q.left-6&&last.x<=q.right+6&&last.y>=q.top-6&&last.y<=q.bottom+6){tgt=c;break}}
+  if(!tgt){const lastK=kids[kids.length-1];if(lastK&&last.y>lastK.getBoundingClientRect().bottom)return{ref:null};return null}
+  const q=tgt.getBoundingClientRect(),wide=q.width>g.getBoundingClientRect().width*.75,before=wide?last.y<q.top+q.height/2:last.x<q.left+q.width/2;
+  return{ref:before?tgt:tgt.nextElementSibling===w?w.nextElementSibling:tgt.nextElementSibling}};
+ const loop=()=>{raf=requestAnimationFrame(loop);place();
+  const H=innerHeight;if(last.y<90)scrollBy(0,-Math.ceil((90-last.y)/6));else if(last.y>H-120)scrollBy(0,Math.ceil((last.y-(H-120))/6));
+  const d=decide();if(!d)return;const ref=d.ref===ph?ph.nextElementSibling:d.ref,same=ref===ph.nextElementSibling||ref===ph;if(same){want=null;return}
+  if(!want||want.ref!==ref){want={ref};wantT=performance.now();return}
+  if(performance.now()-wantT>110){wdFlip(g,()=>g.insertBefore(ph,ref),w);navigator.vibrate&&navigator.vibrate(6);want=null}};
+ const mv=ev=>{last={x:ev.clientX,y:ev.clientY};if(!on&&Math.hypot(ev.clientX-x0,ev.clientY-y0)>6)begin()};
+ const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);cancelAnimationFrame(raf);WDDRAG=null;if(!on)return;
+  const pr=ph.getBoundingClientRect(),cur=w.getBoundingClientRect();
+  const order=[...g.children].filter(c=>c!==w).map(c=>c===ph?w.dataset.id:c.dataset.id);S.lay=order.map(id=>S.lay.find(l=>l.id===id)).filter(Boolean);save();
+  const before=wdById();before[w.dataset.id]=cur;render();wdSettle(before,w.dataset.id)};
+ WDDRAG=1;document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up)}
+/* resize from the handle in any direction: the outline follows your finger and shows the size it will snap to */
+function wdResize(e,w){const L=S.lay.find(l=>l.id===w.dataset.id);if(!L)return;const g=w.parentNode,gr=g.getBoundingClientRect(),gap=parseFloat(getComputedStyle(g).columnGap)||14,colW=(gr.width-gap)/2,r0=w.getBoundingClientRect(),h1=L.h===2?(r0.height-gap)/2:r0.height;
+ const right=e.clientX>r0.left+r0.width/2,ax=right?r0.left:r0.right;let nw=L.w,nh=L.h,on=false;
+ const sn=document.createElement('div');sn.className='wdsnap';sn.innerHTML='<b></b>';
+ const show=(x,y)=>{const wd=Math.abs(x-ax)+18,ht=Math.max(h1*.6,y-r0.top+18);nw=wd>colW*1.45?2:1;nh=nw===2&&ht>h1*1.5?2:1;
+  const W=nw===2?gr.width:colW,Hh=nh===2?h1*2+gap:h1,left=nw===2?gr.left:(x<ax?ax-W:ax);
+  Object.assign(sn.style,{left:Math.max(gr.left,Math.min(gr.right-W,left))+'px',top:r0.top+'px',width:W+'px',height:Hh+'px'});sn.firstChild.textContent=nw===2?(nh===2?'Large':'Wide'):'Small';
+  const lw=Math.max(colW*.7,Math.min(gr.width,wd)),lh=Math.max(h1*.7,Math.min(h1*2+gap,ht)),ll=x<ax?ax-lw:ax;Object.assign(w.style,{left:Math.max(gr.left-4,ll)+'px',width:lw+'px',height:lh+'px'})};
+ const mv=ev=>{if(!on){if(Math.hypot(ev.clientX-e.clientX,ev.clientY-e.clientY)<4)return;on=true;const ph=document.createElement('div');ph.className='wdph';ph.style.gridColumn=w.style.gridColumn;ph.style.gridRow=w.style.gridRow;g.insertBefore(ph,w);
+   Object.assign(w.style,{position:'fixed',left:r0.left+'px',top:r0.top+'px',width:r0.width+'px',height:r0.height+'px',margin:'0'});w.classList.add('lift');document.body.appendChild(sn);navigator.vibrate&&navigator.vibrate(10)}
+  show(ev.clientX,ev.clientY)};
+ const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);sn.remove();if(!on)return;
+  const cur=w.getBoundingClientRect(),before=wdById();before[w.dataset.id]=cur;if(nw!==L.w||nh!==L.h){L.w=nw;L.h=nh;save();navigator.vibrate&&navigator.vibrate(8)}render();wdSettle(before,w.dataset.id)};
+ document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up)}
+window.addEventListener('pointerdown',e=>{if(!ED||tab!=='home'||WDDRAG)return;const w=e.target.closest('#app .grid.edit .wd');if(!w||e.target.closest('.mn,[data-a=mn],button:not(.hd)'))return;
+ e.stopImmediatePropagation();e.preventDefault();if(e.target.closest('.hd'))wdResize(e,w);else wdDrag(e,w)},true);
+/* delete anything, with an undo */
+function toastUndo(msg,fn){document.querySelectorAll('.toast.tu2').forEach(t=>t.remove());const t=document.createElement('div');t.className='toast tu2';t.innerHTML=`<span>${esc(msg)}</span><button type="button">Undo</button>`;
+ t.querySelector('button').onclick=()=>{t.remove();try{fn();save();render();toast('Put back.')}catch(_){}};document.body.appendChild(t);setTimeout(()=>t.isConnected&&t.remove(),5500)}
+const UNDO={
+ delp:i=>{const k=S.plans.findIndex(p=>p.id===i),p=S.plans[k],act=S.active;return p&&[`${p.name} deleted.`,()=>{S.plans.splice(k,0,p);S.active=act}]},
+ delt:i=>{const k=+i,x=(S.timers||[])[k];return x&&[`${x.n||'Timer'} deleted.`,()=>{S.timers.splice(k,0,x)}]},
+ dels:i=>{const k=+i,x=(S.saved||[])[k];return x&&[`${x.n} removed from saved meals.`,()=>{S.saved.splice(k,0,x)}]},
+ delm:i=>{const d=today(),k=+i,x=((S.meals||{})[d]||[])[k];return x&&[`${x.n} removed from ${d===realToday()?'today':'this day'}.`,()=>{(S.meals[d]=S.meals[d]||[]).splice(k,0,x);if(today()===d)addTot(x,1)}]},
+ dele:i=>{const k=+i,x=(S.eat||[])[k];return x&&['Meal time deleted.',()=>{S.eat.splice(k,0,x)}]},
+ medel:()=>{if(!ME)return null;const d=today(),k=ME.i,x=((S.meals||{})[d]||[])[k];return x&&[`${x.n} removed.`,()=>{(S.meals[d]=S.meals[d]||[]).splice(k,0,x);if(today()===d)addTot(x,1)}]}};
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;let a=el.dataset.a,i=el.dataset.i;
+ if(a==='xdelp'){if(!D||!D.eid)return;i=D.eid;a='delp'}else if(a==='xdelt'){if(N.ei==null)return;i=String(N.ei);a='delt'}else if(a==='xdels'){a='dels'}
+ const f=UNDO[a];if(!f)return;let u=null;try{u=f(i)}catch(_){}if(!u)return;
+ if(el.dataset.a.startsWith('x')){e.stopImmediatePropagation();e.preventDefault();
+  if(a==='delp'){S.plans=S.plans.filter(p=>p.id!==i);if(S.active===i)S.active=S.plans[0]?.id;D=null}
+  else if(a==='delt'){S.timers.splice(+i,1);N={}}
+  else if(a==='dels'){S.saved.splice(+i,1);sheet(null)}
+  save();render()}
+ setTimeout(()=>toastUndo(u[0],u[1]),0)},true);
+// visible delete buttons where you edit things
+{const _r=render;render=function(){_r.apply(this,arguments);try{
+ if(tab==='plan'&&D&&D.eid){const c=$('#app [data-a=cancel]');if(c&&!$('#app [data-a=xdelp]'))c.insertAdjacentHTML('afterend','<button class="btn big dng" data-a="xdelp">Delete this plan</button>')}
+ if(tab==='timer'&&N&&N.ei!=null){const s2=$('#app [data-a=savt]');if(s2&&!$('#app [data-a=xdelt]'))s2.insertAdjacentHTML('afterend','<button class="btn dng" data-a="xdelt" style="margin-left:8px">Delete timer</button>')}
+ document.querySelectorAll('#app p.sm').forEach(p=>{if(/Swipe left to delete\.$/.test(p.textContent)&&!p.dataset.dl){p.dataset.dl=1;p.textContent=p.textContent.replace('Swipe left to delete.','Swipe left, or open it, to delete.')}})}catch(_){}}}
+{const _sh=sheet;sheet=function(h){if(h&&/data-a="smyes" data-i="(\d+)"/.test(h)){const i=h.match(/data-a="smyes" data-i="(\d+)"/)[1];h+=`<button class="glink dng" data-a="xdels" data-i="${i}" style="margin-top:10px">Delete this saved meal</button>`}return _sh.call(this,h)}}
+RELEASES.push({v:'2026.11.22',date:'22 Nov',items:[
+ {i:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M13 7h6M7 13v6"/>',h:'Moving widgets, made clearer',p:'Hold a widget to edit. As you drag one, a dashed space shows exactly where it will land, and the others slide out of the way. Drag the corner handle in any direction to resize.'},
+ {i:'<path d="M5 7h14M9 7V5h6v2M7 7l1 12h8l1-12"/>',h:'Delete anything',p:'Plans, saved meals, logged food and timers each have a Delete button when you open them, and you can still swipe left. Changed your mind? Tap Undo.'},
+ {i:'<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 3h8"/>',h:'Tidier top of the screen',p:'A soft bar now sits behind the time and battery, so nothing scrolls underneath them, and your goals sit neatly under each total.'}],
+ tour:[{t:'home',q:'.grid .wd',h:'Move and resize',p:'Hold any widget to start editing. Drag it and watch the dashed space show where it will go. Drag the round handle to resize.'}]});
 render();periodic();reqShow();
 </script></body></html>
