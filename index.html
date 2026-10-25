@@ -2165,5 +2165,33 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  ME=null;save();sheet(null);render();try{evalDay()}catch(_){}},true);
 RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',h:'Label scanning that reads the label',p:'Take a photo of a nutrition label and Swell reads the calories, protein, fat and carbs, right on your phone. Anything it isn’t sure of is highlighted for you to check. You can also tap a logged meal to edit it.'});
 RELEASES.find(r=>r.v==='2026.10.27').tour=(RELEASES.find(r=>r.v==='2026.10.27').tour||[]).concat([{t:'diet',q:'.scanb',h:'Scan a label',p:'Take a photo of the nutrition table. Swell reads it on your phone, highlights anything it isn’t sure of, and lets you pick per 100g or per serving.'}]);
+/* ===== v38: saver mode. Swell keeps an estimate of its Netlify credits and eases off before the monthly limit ===== */
+const BUD_URL='/.netlify/functions/budget',BUD_SITE=/netlify\.app$/.test(location.hostname),monthNow=()=>new Date().toISOString().slice(0,7);
+function budLv(){const b=S.bud;return b&&b.m===monthNow()?b.lv|0:0}
+S.budOpens=(S.budOpens||0)+1;save();
+{const _f=window.fetch;window.fetch=function(u){try{if(String(u&&u.url||u).includes('/.netlify/functions/'))S.budFn=(S.budFn||0)+1}catch(_){}return _f.apply(this,arguments)}}
+const swAsk=m=>new Promise(ok=>{const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(!c)return ok(null);const ch=new MessageChannel();const to=setTimeout(()=>ok(null),1500);ch.port1.onmessage=e=>{clearTimeout(to);ok(e.data)};try{c.postMessage(m,[ch.port2])}catch(_){ok(null)}});
+const swTell=m=>{try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller;c&&c.postMessage(m)}catch(_){}};
+let BUDBUSY=false;
+async function budCheck(force){if(!BUD_SITE||BUDBUSY||!navigator.onLine)return;const lv=budLv(),gap=(lv>=2?72:20)*36e5,b=S.bud;
+ if(!force&&b&&b.m===monthNow()&&Date.now()-b.t<gap)return;BUDBUSY=true;
+ try{const met=(await swAsk({t:'meter'}))||{b:0,r:0},body={uid:S.uid||'',b:met.b,r:met.r,f:S.budFn||0,o:S.budOpens||0};
+  const r=await fetch(BUD_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw 0;const j=await r.json();
+  swTell({t:'metered',b:met.b,r:met.r});S.budFn=0;S.budOpens=0;const before=lv;
+  S.bud={lv:Math.max(0,Math.min(3,j.lv|0)),t:Date.now(),m:j.month||monthNow(),left:j.left,err:j.err?1:0};save();swTell({t:'lv',lv:S.bud.lv});
+  if(S.bud.lv>before&&S.bud.lv>=1&&!S.budSeen)S.budSeen=S.bud.m+':'+S.bud.lv;
+  if(S.bud.lv<2&&S.remHold){S.remHold=0;save();try{remSync(true)}catch(_){}}}
+ catch(_){}finally{BUDBUSY=false}}
+setTimeout(()=>budCheck(),4000);setInterval(()=>budCheck(),6*36e5);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)budCheck()});
+// the brakes
+if(typeof remSync==='function'){const _rs=remSync;remSync=function(){if(budLv()>=2){S.remHold=1;save();return Promise.resolve()}return _rs.apply(this,arguments)}}
+if(typeof restPush==='function'){const _rp=restPush;restPush=function(){if(budLv()>=1)return Promise.resolve();return _rp.apply(this,arguments)}}
+{const _sf=scanFx;scanFx=function(src){if(budLv()<2)return _sf.apply(this,arguments);
+ Promise.resolve(window.caches?caches.match(new URL('ocr/eng.traineddata',location.href).href):null).then(hit=>{if(hit||OCRW)return _sf.call(this,src);toast('Label scanning is resting until the new month to keep Swell online. You can type the numbers in for now.')}).catch(()=>_sf.call(this,src))}}
+const NEXT1=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,1).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
+const budNote=()=>{const lv=budLv();if(!lv)return'';const what=['','rest-timer alerts are off and updates arrive a little slower','new reminders are paused and updates arrive a little slower','reminders and updates are paused'][lv];
+ return`<div class="npst budn"><i style="background:var(--A)"></i><span>Saver mode is on until ${NEXT1()}: ${what}, so Swell stays online. Everything else works as normal.</span></div>`};
+{const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{if(!h||!budLv())return;const o=$('#sheet .mwc'),t=o&&o.querySelector('h2');if(t&&/^(Settings|Notifications)$/.test(t.textContent.trim())&&!o.querySelector('.budn'))t.insertAdjacentHTML('afterend',budNote())}catch(_){}}}
 render();periodic();reqShow();
 </script></body></html>

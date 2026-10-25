@@ -1,5 +1,6 @@
 // Swell reminders: schedules and cancels a person's own push notifications through OneSignal.
 // The OneSignal REST API key lives in the Netlify environment variable ONESIGNAL_REST_API_KEY, never in the app.
+import { currentLevel } from '../lib/meter.mjs';
 const APP = '77fd5321-a090-4c4e-93c4-2568f5524442';
 const SITE = 'https://everythings-swell.netlify.app/';
 const ICON = SITE + 'swell-icon-512.png';
@@ -16,7 +17,7 @@ const MSG = {
   test: () => ['Notifications are working', 'This is how Swell reminders will look.']
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });
-export default async req => {
+export default async (req, context) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   const KEY = process.env.ONESIGNAL_REST_API_KEY;
   if (!KEY) return json({ error: 'not set up' }, 503);
@@ -26,9 +27,13 @@ export default async req => {
   const cancel = (Array.isArray(b.cancel) ? b.cancel : []).filter(x => /^[0-9a-f-]{36}$/.test(x)).slice(0, 60);
   const add = (Array.isArray(b.add) ? b.add : []).slice(0, 40);
   const H = { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' };
+  // saving credits: rest-timer pushes stop first, then new reminders pause (cancelling still works)
+  const L = await currentLevel(context && context.deploy && context.deploy.id);
+  const paused = L.lv >= 2, noRest = L.lv >= 1;
   await Promise.all(cancel.map(id => fetch(`https://api.onesignal.com/notifications/${id}?app_id=${APP}`, { method: 'DELETE', headers: H }).catch(() => null)));
   const now = Date.now(), ids = [];
   for (const it of add) {
+    if ((paused && !(it && it.t === 'test' && L.lv < 3)) || (noRest && it && it.t === 'rest')) { ids.push(null); continue }
     const f = MSG[it && it.t]; const at = Date.parse(it && it.at);
     if (!f || !(at > now - 60e3 && at < now + 35 * 864e5)) { ids.push(null); continue }
     const [h, c] = f(it.p || {});
@@ -37,5 +42,5 @@ export default async req => {
     if (at > now + 30e3) body.send_after = new Date(at).toISOString();
     try { const r = await fetch('https://api.onesignal.com/notifications?c=push', { method: 'POST', headers: H, body: JSON.stringify(body) }); const j = await r.json(); ids.push(j && j.id || null) } catch { ids.push(null) }
   }
-  return json({ ids });
+  return json({ ids, lv: L.lv });
 };
