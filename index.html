@@ -2438,7 +2438,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnim
  h=h.replace('<button data-a="estopen">',`<button data-a="glint">${ico('<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>')}<span>Light on widgets<small>${on?'On':'Off'}: widget edges catch the light as you tilt your phone</small></span></button><button data-a="estopen">`)}return _sh.call(this,h)}}
 window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;e.stopImmediatePropagation();
  const on=GL.need?S.glint===true:S.glint!==false;
- if(on){S.glint=false;glStop();save();toast('Light on widgets is off.')}
+ if(on&&GL.need&&!GL.seen&&!MRM()){const ok=await glAsk();toast(ok?'Motion allowed. Tilt your phone and watch the widget edges.':'Your phone didn’t allow motion access. Close Swell fully and open it again to be asked once more.')}else if(on){S.glint=false;glStop();save();toast('Light on widgets is off.')}
  else{if(MRM()){toast('Reduce Motion is on in your phone’s settings, so Swell keeps things still.');return}const ok=await glAsk();if(ok){S.glint=true;save();toast('On. Tilt your phone and watch the widget edges.')}else toast('Swell needs motion access for this. Tap again to allow it.')}
  const sm=el.querySelector('small');if(sm)sm.textContent=`${(GL.need?S.glint===true:S.glint!==false)?'On':'Off'}: widget edges catch the light as you tilt your phone`},true);
 RELEASES.find(r=>r.v==='2026.11.22').items.push({i:'<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>',h:'Light on widgets',p:'Like the glass clock on your lock screen, widget edges now catch the light as you tilt your phone, from the direction of your own lights and with a hint of their colour. Very subtle, nothing moves. Turn it on or off in Settings.'});
@@ -2535,6 +2535,39 @@ function tipCheck(){if(!S.user||!S.setup||!S.setup.done||!S.tourDone||TU!=null||
   d.querySelector('button').onclick=off;document.body.appendChild(d);setTimeout(off,14000)},1200)}
 // people who already use Swell have seen these screens, so don't tip them about things they already know
 if(S.tourDone&&!S.tipsInit){S.tipsInit=1;S.tips=S.tips||{};TIPS.forEach(x=>S.tips[x.id]=1);save()}
+/* ===== v46: stronger light on widget glass (rim glint plus a faint sheen across the surface), a clear status for it in Settings,
+   and text on your colour turns dark when the colour is light ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.grid .wd{background-image:radial-gradient(130% 90% at var(--sx,18%) var(--sy,0%),rgba(255,255,255,var(--sh,.045)),transparent 62%)}
+.edit .wd,.wd.lift{background-image:none}
+.wnbadge,.chipw,#lx2 .dn,.fx-float{color:var(--on1,#fff)!important}
+.fx-burst .ck svg,.fx-burst .ck path{stroke:var(--on1,#fff)!important}`;document.head.appendChild(st)})();
+/* contrast: pick dark or white text for anything filled with your main colour */
+function inkFor(c){const [r,g,b]=glRGB(c).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}),L=.2126*r+.7152*g+.0722*b;return (L+.05)/(.0118+.05)>(1.05)/(L+.05)?'#10131c':'#fff'}
+let INKSIG='';function inkSet(){const c=S.p||'#2f6bff';if(c===INKSIG)return;INKSIG=c;document.documentElement.style.setProperty('--on1',inkFor(c))}
+{const _r=render;render=function(){_r.apply(this,arguments);try{inkSet()}catch(_){}}}
+if(typeof applyLights==='function'){const _al2=applyLights;applyLights=function(){const r=_al2.apply(this,arguments);try{inkSet()}catch(_){}return r}}
+try{inkSet()}catch(_){}
+/* glint: brighter peak, wider swing, and a soft sheen that drifts across the glass. Content still never moves */
+GL.seen=0;
+const glOrient0=glOrient;glOrient=function(e){if(e&&e.gamma!=null)GL.seen++;return glOrient0.apply(this,arguments)};
+glPaint=function(la,lo){const [r,g,b]=GLS.rgb,t=.28,mix=v=>Math.round(255*(1-t)+v*t),tr=mix(r),tg=mix(g),tb=mix(b),R=document.documentElement.style;
+ R.setProperty('--la',la.toFixed(1)+'deg');R.setProperty('--gp',`rgba(255,255,255,${lo.toFixed(3)})`);R.setProperty('--gf',`rgba(${tr},${tg},${tb},${(lo*.48).toFixed(3)})`);R.setProperty('--go',`rgba(${tr},${tg},${tb},${(lo*.36).toFixed(3)})`);
+ const rad=(la-90)*Math.PI/180;R.setProperty('--sx',(50+Math.cos(rad)*42).toFixed(1)+'%');R.setProperty('--sy',(50+Math.sin(rad)*55).toFixed(1)+'%');R.setProperty('--sh',(.03+.07*Math.max(0,(lo-.34)/.56)).toFixed(3))};
+const glL=()=>{const m=Math.min(1,Math.hypot(GL.x,GL.y)/24);return{la:GLS.a-GL.x*3.2+GL.y*1.6,lo:.34+.56*m}};
+glTick=function(){GL.raf=0;GL.x+=(GL.tx-GL.x)*.14;GL.y+=(GL.ty-GL.y)*.14;const {la,lo}=glL(),v=la.toFixed(1)+'|'+lo.toFixed(3);
+ if(v!==GL.last){GL.last=v;glPaint(la,lo)}if(Math.abs(GL.tx-GL.x)>.15||Math.abs(GL.ty-GL.y)>.15)GL.raf=requestAnimationFrame(glTick)};
+glStop=function(){if(!GL.on)return;GL.on=false;removeEventListener('deviceorientation',glOrient);cancelAnimationFrame(GL.raf);GL.raf=0;GL.x=GL.y=GL.tx=GL.ty=0;GL.last='';glPaint(GLS.a,.34)};
+glStart=function(){if(GL.on||!glOn())return;GL.on=true;addEventListener('deviceorientation',glOrient,{passive:true})};
+if(GL.on){removeEventListener('deviceorientation',glOrient0);addEventListener('deviceorientation',glOrient,{passive:true})}
+GLSIG='';try{glRefresh()}catch(_){}glPaint(GLS.a,.34);
+// iPhone only hands over motion after a tap; ask on the first tap of each visit if it's switched on
+if(GL.need){const once=()=>{removeEventListener('touchend',once,true);removeEventListener('click',once,true);if(S.glint===true&&glOn()&&!GL.seen)glAsk()};addEventListener('touchend',once,true);addEventListener('click',once,true)}
+const glStatus=()=>{const on=GL.need?S.glint===true:S.glint!==false;if(!on)return'Off: widget edges catch the light as you tilt your phone';if(MRM())return'Paused, because Reduce Motion is on in your phone’s settings';
+ if(!GL.seen)return GL.need?'On, but motion access isn’t allowed yet. Tap to allow it':'On, waiting for your phone’s motion sensor';return'On: tilt your phone and watch the widget edges'};
+{const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{const sm=document.querySelector('#sheet [data-a=glint] small');if(sm)sm.textContent=glStatus()}catch(_){}}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;
+ [80,700].forEach(t=>setTimeout(()=>{const sm=el.querySelector('small');if(sm)sm.textContent=glStatus()},t))},true);
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
