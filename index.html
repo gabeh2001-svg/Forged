@@ -2413,6 +2413,35 @@ if(typeof fxApply==='function'){const _fa=fxApply;fxApply=function(root){if(root
   const kids=[...o.children].filter(c=>getComputedStyle(c).position!=='fixed'&&getComputedStyle(c).position!=='absolute');
   const outs=kids.map(c=>c.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-4px)'}],{duration:150,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}));
   Promise.all(outs.map(a=>a.finished.catch(()=>{}))).then(()=>{busy=false;_w.apply(self,args);const n=$('#aw');if(n){n.style.pointerEvents='';n.dataset.k=key();enter(n)}if(again){again=false;awr()}})}}
+/* ===== v42: light on widgets. Only the rims catch the light as the phone tilts; content never moves ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.grid .wd::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;z-index:2;
+ padding:1.5px;background:conic-gradient(from calc(var(--la,315deg) - 45deg) at 50% 50%,transparent 0deg,rgba(255,255,255,calc(var(--lo,.22)*.35)) 22deg,rgba(255,255,255,var(--lo,.22)) 45deg,rgba(255,255,255,calc(var(--lo,.22)*.35)) 68deg,transparent 90deg,transparent 205deg,rgba(255,255,255,calc(var(--lo,.22)*.28)) 225deg,transparent 245deg);
+ -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.edit .wd::before,.wd.lift::before{display:none}
+@media (prefers-reduced-motion:reduce){.grid .wd::before{background:linear-gradient(135deg,rgba(255,255,255,.16),transparent 40%)}}`;document.head.appendChild(st)})();
+const GL={on:false,tx:0,ty:0,x:0,y:0,raf:0,last:'',need:typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'};
+const glOn=()=>S.glint!==false&&!MRM();
+function glOrient(e){if(e.gamma==null)return;GL.tx=Math.max(-35,Math.min(35,e.gamma));GL.ty=Math.max(-35,Math.min(35,(e.beta||0)-45));if(!GL.raf&&!document.hidden)GL.raf=requestAnimationFrame(glTick)}
+function glTick(){GL.raf=0;GL.x+=(GL.tx-GL.x)*.12;GL.y+=(GL.ty-GL.y)*.12;
+ // light sits up and to the left (like a window); tilting the phone swings the glint round the rim the way real glass would, and a stronger tilt catches a touch more light
+ const la=315-GL.x*2.2+GL.y*1.1,mag=Math.min(1,Math.hypot(GL.x,GL.y)/26),lo=.22+.3*mag,v=la.toFixed(1)+'|'+lo.toFixed(3);
+ if(v!==GL.last){GL.last=v;const r=document.documentElement.style;r.setProperty('--la',la.toFixed(1)+'deg');r.setProperty('--lo',lo.toFixed(3))}
+ if(Math.abs(GL.tx-GL.x)>.2||Math.abs(GL.ty-GL.y)>.2)GL.raf=requestAnimationFrame(glTick)}
+function glStart(){if(GL.on||!glOn())return;GL.on=true;addEventListener('deviceorientation',glOrient,{passive:true})}
+function glStop(){if(!GL.on)return;GL.on=false;removeEventListener('deviceorientation',glOrient);cancelAnimationFrame(GL.raf);GL.raf=0;const r=document.documentElement.style;r.removeProperty('--la');r.removeProperty('--lo')}
+async function glAsk(){if(!GL.need){glStart();return true}try{const r=await DeviceOrientationEvent.requestPermission();if(r==='granted'){glStart();return true}}catch(_){}return false}
+// iPhone needs a tap before it shares tilt; once you've said yes, the first tap of each visit quietly picks it back up
+if(GL.need){const once=()=>{removeEventListener('pointerup',once,true);if(S.glint===true&&glOn())glAsk()};addEventListener('pointerup',once,true)}else if(glOn())glStart();
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(GL.raf);GL.raf=0}});
+{const _sh=sheet;sheet=function(h){if(h&&h.startsWith('<h2>Settings</h2>')&&h.includes('<button data-a="estopen">')){const on=GL.need?S.glint===true:S.glint!==false;
+ h=h.replace('<button data-a="estopen">',`<button data-a="glint">${ico('<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>')}<span>Light on widgets<small>${on?'On':'Off'}: widget edges catch the light as you tilt your phone</small></span></button><button data-a="estopen">`)}return _sh.call(this,h)}}
+window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;e.stopImmediatePropagation();
+ const on=GL.need?S.glint===true:S.glint!==false;
+ if(on){S.glint=false;glStop();save();toast('Light on widgets is off.')}
+ else{if(MRM()){toast('Reduce Motion is on in your phone’s settings, so Swell keeps things still.');return}const ok=await glAsk();if(ok){S.glint=true;save();toast('On. Tilt your phone and watch the widget edges.')}else toast('Swell needs motion access for this. Tap again to allow it.')}
+ const sm=el.querySelector('small');if(sm)sm.textContent=`${(GL.need?S.glint===true:S.glint!==false)?'On':'Off'}: widget edges catch the light as you tilt your phone`},true);
+RELEASES.find(r=>r.v==='2026.11.22').items.push({i:'<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>',h:'Light on widgets',p:'Like the glass clock on your lock screen, widget edges now catch the light as you tilt your phone. Very subtle, nothing moves. Turn it on or off in Settings.'});
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
