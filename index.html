@@ -1643,8 +1643,8 @@ function repList(kind){const R=Object.values(S.reports||{}).sort((a,b)=>a.ym<b.y
  const yrs=[...new Set(R.map(r=>r.ym.slice(0,4)))];
  return`<div class="rpl">${row(live,monName(cur)+' so far','wrm')}${R.map(r=>row(r,r.label,'wrm')).join('')}${kind==='all'?yrs.map(y=>{const Y=yrep(y);return Y&&Y.months>=2?row(Y,`Your ${y}`+(y===cur.slice(0,4)?' so far':''),'wry'):''}).join(''):''}</div>`}
 function reportsSheet(){sheet(`<h2>Reports</h2><p class="sm">A Swell Wrapped for every month, plus your year once you’ve had two months. Day-by-day logs are kept for two months, and these reports are kept for good.</p>${repList('all')}<button class="btn big" data-a="shx" style="margin-top:12px">Close</button>`)}
-{const _d=diet;diet=function(){return _d.apply(this,arguments)+`<div class="card"><h2>Diet reports</h2><p class="sm">Your food each month, with your Wrapped.</p>${repList('diet')}</div>`}}
-{const _p=planner;planner=function(){const h=_p.apply(this,arguments);return D?h:h+`<div class="card"><h2>Workout reports</h2><p class="sm">Your training each month, with your Wrapped.</p>${repList('work')}</div>`}}
+{const _d=diet;diet=function(){return _d.apply(this,arguments)+`<div class="card" style="margin-top:14px"><h2>Diet reports</h2><p class="sm">Your food each month, with your Wrapped.</p>${repList('diet')}</div>`}}
+{const _p=planner;planner=function(){const h=_p.apply(this,arguments);return D?h:h+`<div class="card" style="margin-top:14px"><h2>Workout reports</h2><p class="sm">Your training each month, with your Wrapped.</p>${repList('work')}</div>`}}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
  if(a==='reports'){reportsSheet();return}
  if(a==='wrm'){const ym=el.dataset.i,r=(S.reports||{})[ym]||mrep(ym),k=el.dataset.k;sheet(null);const sl=wrSlides(r,false);let st=0;if(k==='diet')st=sl.findIndex(s=>s.includes('>Fuel<'));if(k==='work')st=sl.findIndex(s=>s.includes('>Training<'));wrPlay(r,false,Math.max(0,st));return}
