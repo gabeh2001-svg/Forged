@@ -1338,6 +1338,7 @@ body.spon #app{opacity:0}
  if(w)w.innerHTML=`<svg class="swl" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3"/><g class="orb"><circle cx="50" cy="50" r="44" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="46 230"/></g><g class="orb2"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="14 40"/></g><circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.8"/><g transform="translate(50 50) scale(.35) translate(-120 -120)"><path class="wl" pathLength="150" d="M-4 156 C40 154 80 144 106 120 C124 102 136 80 160 70 C184 60 208 70 212 92 C214 104 206 112 198 108 C204 100 200 90 190 90 C177 92 170 106 170 122 C170 138 176 150 192 158" transform="translate(-62 -16) scale(1.15)" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#swlc)"/><clipPath id="swlc"><circle cx="120" cy="120" r="84"/></clipPath><path d="M30 165.7 H210" stroke="#fff" stroke-opacity=".7" stroke-width="4.5" stroke-linecap="round"/></g></svg>`;
 })();
 function splash(){if(document.getElementById('splash'))return;
+ if(performance.now()>8000)return; // only on a fresh launch, not when coming back to an open app
  const d=document.createElement('div');d.id='splash';d.className='sw';d.setAttribute('aria-label','Swell');d.setAttribute('role','img');
  const tone=(window.S&&S.tone)||'#080b13';
  d.innerHTML=`<div class="qbg" style="background:${tone}"></div><svg viewBox="0 0 360 640" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
@@ -1369,7 +1370,7 @@ function splash(){if(document.getElementById('splash'))return;
 function spRun(d,finish){
  const q=s=>d.querySelector(s),clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,esin=k=>-(Math.cos(Math.PI*k)-1)/2,eoutx=k=>k>=1?1:1-Math.pow(2,-10*k);
  const CX=180,CY=320,S=.7,R=S*86;
- const F0=300,F1=2400,D0=2700,D1=3500,SW1=4800,WV0=4300,WV1=5400,CR0=5300,C0=5950,L0=7000,X0=8000;
+ const F0=300,F1=2400,D0=2700,D1=3500,SW1=4500,WV0=4000,WV1=4800,CR0=4250,C0=5100,L0=6100,X0=7000;
  const cv=q('canvas'),ctx=cv.getContext('2d');let DPR=1,K=1,OX=0,OY=0;
  const size=()=>{const W=innerWidth,H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);K=Math.max(W/360,H/640);OX=(W-360*K)/2;OY=(H-640*K)/2;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR)};size();addEventListener('resize',size);
  const fs=74,tc=q('#qtc');tc.setAttribute('font-size',fs);tc.setAttribute('x',CX);const base=CY+fs*.3;tc.setAttribute('y',base);
@@ -1382,15 +1383,15 @@ function spRun(d,finish){
  for(let k=0;k<30;k++){const sx=CX+S*(lerp(20,220,k/29)-120),sy=CY+S*(165.7-120);if(Math.hypot(sx-CX,sy-CY)<R-2)W.push([sx,sy])}
  P.forEach(p=>{let a=D0,b=D1;for(let n=0;n<18;n++){const m=(a+b)/2;drainLv(m)>=p.y0?b=m:a=m}p.rel=b+Math.random()*80;const s0=sq(p.rel),dx=p.x0-CX,dy=(p.y0-CY)/s0;p.r0=Math.hypot(dx,dy);p.t0=Math.atan2(dy,dx);p.om=Math.PI*2*(1.4+Math.random()*1.6);p.n=(Math.random()-.5)*5;p.j=Math.random()*300;p.w=1.1+Math.random()*1.2;p.wt=null});
  const wp=P.filter((_,i)=>i%3===0),ang=p=>{const e=spin(WV0)-spin(p.rel);return((p.t0+p.om*e)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)};
- if(W.length){const Wi=W.map((w,k)=>({w,k,a:(Math.atan2(w[1]-CY,w[0]-CX)+2*Math.PI)%(2*Math.PI)})).sort((a,b)=>a.a-b.a);wp.sort((a,b)=>ang(a)-ang(b));wp.forEach((p,i)=>{const m=Wi[Math.floor(i/wp.length*Wi.length)];p.wt=m.w;p.wd=m.k/W.length*520})}
- const pos=(p,t)=>{if(t<p.rel)return null;const e=spin(t)-spin(p.rel),th=p.t0+p.om*e,f=eio(clamp((t-p.rel)/(SW1-p.rel+p.j))),r=lerp(p.r0,R+p.n*(1-f*.6),f);let x=CX+Math.cos(th)*r,y=CY+Math.sin(th)*r*sq(t);if(p.wt){const g=eio(clamp((t-WV0-p.wd)/(WV1-WV0-520)));x=lerp(x,p.wt[0],g);y=lerp(y,p.wt[1],g)}return[x,y]};
+ if(W.length){const Wi=W.map((w,k)=>({w,k,a:(Math.atan2(w[1]-CY,w[0]-CX)+2*Math.PI)%(2*Math.PI)})).sort((a,b)=>a.a-b.a);wp.sort((a,b)=>ang(a)-ang(b));wp.forEach((p,i)=>{const m=Wi[Math.floor(i/wp.length*Wi.length)];p.wt=m.w;p.wd=m.k/W.length*300})}
+ const pos=(p,t)=>{if(t<p.rel)return null;const e=spin(t)-spin(p.rel),th=p.t0+p.om*e,f=eio(clamp((t-p.rel)/(SW1-p.rel+p.j))),r=lerp(p.r0,R+p.n*(1-f*.6),f);let x=CX+Math.cos(th)*r,y=CY+Math.sin(th)*r*sq(t);if(p.wt){const g=eio(clamp((t-WV0-p.wd)/(WV1-WV0-300)));x=lerp(x,p.wt[0],g);y=lerp(y,p.wt[1],g)}return[x,y]};
  const surf=(level,A,ph,off,x0,x1)=>{let s='';for(let x=x0;x<=x1+6;x+=5){const y=level+A*Math.sin(x*.05+ph+off)+A*.45*Math.sin(x*.11-ph*1.4+off);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
  const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false;
  const t0=performance.now();
  const frame=now=>{if(!d.isConnected)return;const t=now-t0,ph=t/1000*3.2;
   const p=clamp((t-F0)/(F1-F0));let level=lerp(G.bot+6,G.top-8,eio(p)),A=t<F1?lerp(6,1.4,p):lerp(1.4,0,clamp((t-F1)/400));if(t>D0){level=drainLv(t);A=lerp(0,4,clamp((t-D0)/300))}
   const x0=G.x0-14,x1=G.x1+14,b=G.bot+40;q('#qwFront').setAttribute('d',surf(level,A,ph,0,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);q('#qwBack').setAttribute('d',surf(level-3,A*1.1,ph*.8,2.1,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);q('#qword').setAttribute('opacity',t>D1+100?0:1);
-  const cr=eio(clamp((t-CR0)/600));['#qring','#qwv','#qhz'].forEach(s=>q(s).setAttribute('opacity',cr.toFixed(3)));
+  const cr=eio(clamp((t-CR0)/550));['#qring','#qwv','#qhz'].forEach(s=>q(s).setAttribute('opacity',cr.toFixed(3)));
   const ck=clamp((t-C0)/1100);q('#qsunlv').setAttribute('d',surf(lerp(214,26,eio(ck)),ck>0&&ck<1?4:0,ph,0,20,224)+'L224 240L20 240Z');
   q('#qwvFill').setAttribute('opacity',eio(clamp((t-C0-250)/800)).toFixed(3));q('#qseaF').setAttribute('opacity',eio(clamp((t-C0-100)/700)).toFixed(3));
   q('#qsea').setAttribute('opacity',(cr*lerp(.7,.9,clamp((t-C0-500)/500))).toFixed(3));q('#qsea').setAttribute('stroke',t<C0?'#eef2f8':'#7fd6e6');
@@ -1401,7 +1402,7 @@ function spRun(d,finish){
   q('#qlogo').setAttribute('transform',`translate(${CX} ${yy.toFixed(2)}) scale(${sc.toFixed(4)}) translate(-120 -120)`);q('#qlogo').setAttribute('opacity',lo.toFixed(3));
   if(t>X0+300&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(34px) scale(.97)'},{opacity:1,transform:'none'}],{duration:850,delay:i*80,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
   ctx.setTransform(DPR*K,0,0,DPR*K,DPR*OX,DPR*OY);ctx.clearRect(-OX/K,-OY/K,innerWidth/K,innerHeight/K);
-  if(t>=D0&&t<CR0+700){const fade=1-clamp((t-CR0-100)/550);ctx.lineCap='round';ctx.strokeStyle='#eef2f8';ctx.globalAlpha=fade*.85;
+  if(t>=D0&&t<CR0+700){const fade=1-clamp((t-CR0)/450);ctx.lineCap='round';ctx.strokeStyle='#eef2f8';ctx.globalAlpha=fade*.85;
    for(const p2 of P){const a=pos(p2,t);if(!a)continue;const pb=pos(p2,t-(t>WV0?18:34))||[p2.x0,p2.y0];ctx.lineWidth=p2.w*(1-.35*clamp((t-SW1)/500));ctx.beginPath();ctx.moveTo(pb[0],pb[1]);ctx.lineTo(a[0]+.01,a[1]);ctx.stroke()}ctx.globalAlpha=1}
   if(t>X0+950){removeEventListener('resize',size);d.dataset.done=1;d.remove();return}
   requestAnimationFrame(frame)};
