@@ -1246,14 +1246,14 @@ function fxBurst(el,x,y){if(FXRM.matches)return;if(el&&el.isConnected){const r=e
 {const _s=sheet;sheet=function(h){const o=$('#sheet'),pre=o&&h?fxSnap(o):null;_s.apply(this,arguments);if(pre)try{fxApply($('#sheet'),pre,true)}catch(_){}}}
 if(typeof awr==='function'){const _w=awr;awr=function(){const o=$('#aw'),pre=o?fxSnap(o):null;_w.apply(this,arguments);if(pre)try{fxApply($('#aw'),pre,true)}catch(_){}}}
 /* moments: a tick burst where you tapped whenever something is added or recorded */
-const FXADD=/^(addm|smyes|usem|adde|addx2?|addw|savt|gsave|grec|gyes2|awsave|egsave|estuse|estset|conf2?|lxadd|reqsave|fin|edone|nyes)$/;
+const FXADD=/^(addm|smyes|usem|adde|addx2?|addw|savt|gsave|grec|gyes2|awsave|egsave|estuse|conf2?|lxadd|reqsave|fin|edone|nyes)$/;
 let FXTAP=null;
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('.btn,.pill');if(!b||FXRM.matches)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2.2,o=document.createElement('span');o.className='fx-rip';o.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;if(getComputedStyle(b).position==='static')b.style.position='relative';b.style.overflow='hidden';b.appendChild(o);setTimeout(()=>o.remove(),600)},true);
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
  /* deletes slide out first, then the list closes the gap */
  if(/^del[a-z]$/.test(a)&&!el._fxgo&&!FXRM.matches){const row=el.closest('.sr');if(row){e.stopImmediatePropagation();e.preventDefault();row.style.height=row.offsetHeight+'px';row.classList.add('fx-out');setTimeout(()=>{el._fxgo=1;el.click();el._fxgo=0},240);return}}
  if(FXADD.test(a)){const r=el.getBoundingClientRect();FXTAP={x:r.left+r.width/2,y:r.top+r.height/2,t:Date.now()};setTimeout(()=>{if(!FXTAP)return;const err=document.querySelector('#app .err:not([hidden]),#sheet .err:not([hidden])');if(err&&err.textContent.trim())return;fxBurst(el.isConnected?el:null,FXTAP.x,FXTAP.y);FXTAP=null},30)}},true);
-{const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);setTimeout(()=>{const b=$('#aw [data-a=awn]')||$('#aw .btn');fxBurst(b,innerWidth/2,innerHeight*.6)},40);return r}}
+{const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}return r}}
 
 /* ===== v22: simpler Customise look, screen lock during tour and pop-ups ===== */
 (function(){const st=document.createElement('style');st.textContent=`
