@@ -631,7 +631,7 @@ const TOUR=[
  {t:'home',q:'.grid',h:'Widgets',p:'Hold a widget until everything wiggles. Drag it to move, use the corner handle to resize, or tap the minus to remove it. Arrows show where the others will go.'},
  {t:'home',q:'[data-a=cs]',h:'Colour scheme',p:'Change your colours and glow strength any time.'},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals. Type into a total to correct it by hand. The lights follow your green, amber and red rules.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Save for later',p:'Turn this on before adding a meal and it becomes a one-tap button next time.'},
  {t:'diet',q:'.card',n:-1,h:'Body metrics',p:'Log your scale readings. They save for the day, and your last entry shows faintly as a guide.'},
  {t:'plan',q:'.card',h:'Start any workout',p:'Pick a plan and day, then follow the guided session. Set the rest between sets here. It’s saved with that day.'},
@@ -715,7 +715,7 @@ TOUR.length=0;TOUR.push(
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. That’s edit mode: drag to move, use the corner handle to resize, tap the minus to remove.',ok:()=>ED,after:()=>{ED=false}},
  {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals, and you can type into a total to correct it. The lights follow your green, amber and red rules.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals added with it switched on become one-tap buttons next time.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
  {t:'diet',q:'.eat',h:'Eating schedule',p:'Add your meal times. Swell nudges you on Home, and “Add reminders to my calendar” gets your phone to notify you, including a reminder to log your food at the end of the day.'},
  {t:'diet',q:'.card',n:-2,h:'Body metrics',p:'Log your scale readings. They save for the day, and your last entry shows faintly as a guide.'},
@@ -1059,7 +1059,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  {t:'diet',q:'.hdr .wd2:not(.on)',pick:a=>a.find(x=>x.dataset.i>realToday())||a[0],h:'Your turn',p:'Tap another day. We’ll bring you back to today straight after.',ok:()=>VD!=null,after:()=>{VD=null}},
  {t:'diet',q:'.dp',h:'Today so far',p:'Shows how much of your calories and macros you’ve had. On a past day it becomes a summary of whether you hit your goals.'},
  {t:'diet',q:'[data-a=editgoal]',h:'Your goals',p:'Tap any goal number to change it.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals you add with it on go into Saved meals, ready to add again in one tap.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
  {t:'diet',q:'.card',pick:H('Saved meals'),h:'Saved meals',p:'Tap a saved meal and Swell asks if you’ve eaten it today. Add a picture to spot it quickly. Swipe left to delete.'},
  {t:'diet',q:'.card',pick:H('Body metrics'),h:'Body metrics',p:'Your scale readings stay saved until you change them. Log a new weight and Swell estimates the rest, shown in grey under each one.'},
@@ -1943,5 +1943,226 @@ spRun=function(d,finish){
  requestAnimationFrame(frame);
 };
 RELEASES.push({v:'2026.10.27',date:'27 Oct',items:[{i:'<circle cx="12" cy="12" r="8"/><path d="M4 14h16"/>',h:'A new opening',p:'When Swell opens, the name sinks into the water and a wave rises out of it to build the logo.'}]});
+/* ===== v37: label scanning that really reads the label, on the phone (no AI, no credits), plus editing logged meals ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.scbox{margin:0 0 12px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+.scbox>b{display:block;font-size:15px}.scbox .chips{padding:8px 0 2px;flex-wrap:wrap;gap:6px}.scbox label{margin-top:8px}
+.scbox p.sm{margin:8px 0 0}.scbox .glink{margin-top:4px}
+input[data-uns]{border-color:#f5b94a!important;box-shadow:0 0 0 3px rgba(245,185,74,.22)!important}
+.unsk{color:#f5c46a;font-weight:600}
+#sc .scst{margin-top:10px;color:var(--dim);font-size:14px;text-align:center;max-width:300px;line-height:1.45}
+#sc .scbtns{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.logc .sr .in{cursor:pointer}`;document.head.appendChild(st)})();
+/* label photo clean-up: even lighting, straighten, drop table rules */
+function lblPrep(img,rot){
+ const sw=img.naturalWidth||img.width,sh=img.naturalHeight||img.height,rw=rot%180?sh:sw,rh=rot%180?sw:sh;
+ let s=Math.min(2200/Math.max(rw,rh),Math.max(1,1500/rw));const W=Math.round(rw*s),H=Math.round(rh*s);
+ const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.translate(W/2,H/2);x.rotate(rot*Math.PI/180);x.drawImage(img,-sw*s/2,-sh*s/2,sw*s,sh*s);x.restore();
+ const id=x.getImageData(0,0,W,H),d=id.data,N=W*H,g=new Float32Array(N);
+ for(let i=0;i<N;i++)g[i]=d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114;
+ // light text on a dark pack: flip it
+ const hs=new Uint32Array(256);for(let i=0;i<N;i+=7)hs[g[i]|0]++;let acc=0,med=0;const tot=Math.ceil(N/7);for(let v=0;v<256;v++){acc+=hs[v];if(acc>=tot/2){med=v;break}}
+ if(med<115)for(let i=0;i<N;i++)g[i]=255-g[i];
+ // even out the lighting: divide by a heavily blurred copy (integral image box blur)
+ const r=Math.max(12,Math.round(Math.max(W,H)/28)),I=new Float64Array((W+1)*(H+1));
+ for(let y=0;y<H;y++){let row=0;for(let xx=0;xx<W;xx++){row+=g[y*W+xx];I[(y+1)*(W+1)+xx+1]=I[y*(W+1)+xx+1]+row}}
+ const bgv=(xx,y)=>{const a=Math.max(0,xx-r),b=Math.max(0,y-r),e=Math.min(W,xx+r+1),f=Math.min(H,y+r+1);return(I[f*(W+1)+e]-I[b*(W+1)+e]-I[f*(W+1)+a]+I[b*(W+1)+a])/((e-a)*(f-b))};
+ const n=new Float32Array(N);for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++){const i=y*W+xx,bv=bgv(xx,y)+1;n[i]=Math.min(255,g[i]/bv*235)}
+ // contrast stretch
+ const h2=new Uint32Array(256);for(let i=0;i<N;i+=5)h2[n[i]|0]++;const t2=Math.ceil(N/5);let lo=0,hi=255;acc=0;for(let v=0;v<256;v++){acc+=h2[v];if(acc>t2*.01){lo=v;break}}acc=0;for(let v=255;v>=0;v--){acc+=h2[v];if(acc>t2*.25){hi=v;break}}
+ for(let i=0;i<N;i++)n[i]=Math.max(0,Math.min(255,(n[i]-lo)/Math.max(20,hi-lo)*255));
+ // straighten: try small angles, keep the one whose rows line up best
+ const sm=600/W,SW=600,SH=Math.round(H*sm),B=new Uint8Array(SW*SH);for(let y=0;y<SH;y++)for(let xx=0;xx<SW;xx++)B[y*SW+xx]=n[Math.floor(y/sm)*W+Math.floor(xx/sm)]<140?1:0;
+ let best=0,bs=-1;for(let a=-12;a<=12.01;a+=.5){const t=Math.tan(a*Math.PI/180),P=new Float64Array(SH*2);for(let y=0;y<SH;y++)for(let xx=0;xx<SW;xx+=2)if(B[y*SW+xx]){const yy=Math.round(y-(xx-SW/2)*t)+Math.floor(SH/2);if(yy>=0&&yy<SH*2)P[yy]++}let sc=0;for(let k=1;k<P.length;k++){const dd=P[k]-P[k-1];sc+=dd*dd}if(sc>bs){bs=sc;best=a}}
+ for(let i=0;i<N;i++){const v=n[i]|0;d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}x.putImageData(id,0,0);
+ let out=c;if(Math.abs(best)>=.5){const c2=document.createElement('canvas');c2.width=W;c2.height=H;const y2=c2.getContext('2d',{willReadFrequently:true});y2.fillStyle='#fff';y2.fillRect(0,0,W,H);y2.translate(W/2,H/2);y2.rotate(-best*Math.PI/180);y2.drawImage(c,-W/2,-H/2);out=c2}
+ // remove long ruled lines so they don't merge with the numbers
+ const ox=out.getContext('2d',{willReadFrequently:true}),od=ox.getImageData(0,0,W,H),q=od.data,dk=i=>q[i*4]<205;
+ const LH=Math.round(W*.14),LV=Math.round(H*.18),kill=new Uint8Array(N);
+ for(let y=0;y<H;y++){let st=-1;for(let xx=0;xx<=W;xx++){const k=xx<W&&dk(y*W+xx);if(k&&st<0)st=xx;if(!k&&st>=0){if(xx-st>=LH)for(let z=st;z<xx;z++)kill[y*W+z]=1;st=-1}}}
+ for(let xx=0;xx<W;xx++){let st=-1;for(let y=0;y<=H;y++){const k=y<H&&dk(y*W+xx);if(k&&st<0)st=y;if(!k&&st>=0){if(y-st>=LV)for(let z=st;z<y;z++)kill[z*W+xx]=1;st=-1}}}
+ for(let y=1;y<H-1;y++)for(let xx=1;xx<W-1;xx++){const i=y*W+xx;if(kill[i]||kill[i-W]||kill[i+W]||kill[i-1]||kill[i+1]){q[i*4]=q[i*4+1]=q[i*4+2]=255}}
+ ox.putImageData(od,0,0);out._skew=best;out._inv=med<115;return out}
+
+/* label reader: finds the nutrition table in OCR words and pulls out energy, fat, carbs and protein for each column */
+function lblParse(words){
+ const lev=(a,b)=>{if(Math.abs(a.length-b.length)>2)return 9;const m=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=m[0];m[0]=i;for(let j=1;j<=b.length;j++){const t=m[j];m[j]=Math.min(m[j]+1,m[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return m[b.length]};
+ const W=words.filter(w=>w.text&&w.text.trim()).map(w=>({t:w.text.trim(),c:w.confidence,x0:w.bbox.x0,x1:w.bbox.x1,y0:w.bbox.y0,y1:w.bbox.y1,cy:(w.bbox.y0+w.bbox.y1)/2,h:w.bbox.y1-w.bbox.y0}));
+ if(!W.length)return null;
+ const hs=W.map(w=>w.h).sort((a,b)=>a-b),mh=hs[Math.floor(hs.length/2)]||20;
+ // group words into rows by their vertical centre
+ const rows=[];W.slice().sort((a,b)=>a.cy-b.cy).forEach(w=>{const r=rows.find(r=>Math.abs(r.cy-w.cy)<mh*.55);if(r){r.w.push(w);r.cy=(r.cy*(r.w.length-1)+w.cy)/r.w.length}else rows.push({cy:w.cy,w:[w]})});
+ rows.forEach(r=>{r.w.sort((a,b)=>a.x0-b.x0);r.txt=r.w.map(w=>w.t).join(' ').toLowerCase()});
+ const word=(r,keys,max=2)=>{for(const w of r.w){const t=w.t.toLowerCase().replace(/[^a-z]/g,'');if(t.length<3)continue;for(const k of keys){const tol=k.length>=7?max:k.length>=5?1:0;if(t===k||(t.length>=k.length-1&&lev(t,k)<=tol)||(k.length>=7&&t.startsWith(k.slice(0,7))))return w}}return null};
+ const EXC=['saturates','saturated','sugars','sugar','trans','fibre','fiber','polyols','starch','monounsaturates','polyunsaturates','which','added','dietary'];
+ // numbers in a row, to the right of the label
+ const nums=(r,after)=>{const out=[];r.w.forEach((w,wi)=>{if(after&&w.x1<=after.x1)return;let raw=w.t;
+   if(/%/.test(raw))return;
+   raw=raw.replace(/^[‘’'"`“”,.:;_~-]+/,'').replace(/[‘’'"`“”,:;_]+$/,'').replace(/k[}\)\]]/gi,'kj');
+   const parts=raw.split(/[\/|]/);parts.forEach(pt=>{let t=pt,fix=false;
+    if(/^[\dlI|oO.,]*[lI|][\dlI|oO.,]*(g|kcal|kj)?$/.test(t)&&/[\d]|g$/.test(t))t=t.replace(/[lI|]/g,'1').replace(/[oO](?=[\d.,g])/g,'0');
+    t=t.replace(/(?<=\d)[oO]|[oO](?=\d)/g,'0').replace(/(?<=\d)[lI|!]|[lI|!](?=[\d.,])/g,'1').replace(/(?<=\d)S|S(?=\d)/g,'5');
+    const m=t.match(/^[<~]?(\d+(?:[.,]\d+)?)([a-zA-Z)]*)$/)||t.match(/(\d+(?:[.,]\d+)?)\s*(kcal|kj|g|mg)\b/i);if(!m)return;
+    let v=m[1].replace(',','.'),u=(m[2]||'').toLowerCase().replace(/[^a-z]/g,'');
+    if(!u){const nx=r.w[wi+1];if(nx&&/^(g|kcal|kj|mg)$/i.test(nx.t))u=nx.t.toLowerCase();else if(nx&&/^9$/.test(nx.t)&&nx.x0-w.x1<w.h*.8){u='g';nx._skip=1}}
+    if(w._skip)return;
+    if(u==='kj'||u==='k'||u==='kj)')u='kj';if(/^kc/.test(u))u='kcal';
+    out.push({v:+v,s:v,u,c:w.c,x:(w.x0+w.x1)/2,fix,w})})});
+  return out};
+ // headers: per 100g / per serving columns
+ const isServ=/serv|portion|pack|bar\b|slice|biscuit|pot\b|bottle|can\b|each|pouch|cup|bag|tub|piece|scoop|sachet|half/;
+ const cols=[];const grab=(x,lab,g,kind)=>{if(!cols.some(c=>Math.abs(c.x-x)<mh*2))cols.push({x,lab,g,kind})};
+ rows.forEach((r,ri)=>{const t=r.txt;r.w.forEach((w,i)=>{const s=w.t.toLowerCase().replace(/(?<=per|^)[li|](?=[0o]{2})/g,'1').replace(/(?<=1)o|(?<=10)o/g,'0'),nx=(r.w[i+1]||{}).t||'',both=(s+' '+nx).toLowerCase();
+   if(/^1[0o][0o]\s?(g|ml)/.test(s.replace(/[^a-z0-9]/g,''))||/^(per)?1[0o][0o](g|ml|9)$/.test(s.replace(/[^a-z0-9]/g,''))||(/^1[0o][0o]$/.test(s)&&/^(g|ml)/i.test(nx)))grab((w.x0+w.x1)/2,/ml/.test(both)?'Per 100ml':'Per 100g',100,'100');
+   else if(/^per$/.test(s.replace(/[^a-z]/g,''))&&nx&&!/^1[0o][0o]/.test(nx.toLowerCase())){const rest=r.w.slice(i+1,i+4).map(q=>q.t).join(' ').toLowerCase()+' '+((rows[ri+1]&&rows[ri+1].txt)||'');const gm=rest.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/);const lab=r.w.slice(i,i+3).map(q=>q.t).join(' ').replace(/[^A-Za-z0-9 ().]/g,'');grab((w.x0+w.x1)/2+(r.w[i+1]?(r.w[i+1].x1-w.x1)/2:0),lab.length>3?lab[0].toUpperCase()+lab.slice(1):'Per serving',gm?+gm[1].replace(',','.'):null,'serv')}})});
+ let sv=null;rows.forEach(r=>{const m=r.txt.match(/serving size[^(]*\((\d+(?:[.,]\d+)?)\s*(g|ml)/)||r.txt.match(/serving size\s*(\d+(?:[.,]\d+)?)\s*(g|ml)/);if(m)sv=+m[1].replace(',','.')});
+ // find each nutrient row
+ const F={};const KEY={k:['energy','calories','calorie'],f:['fat','fats','lipids'],c:['carbohydrate','carbohydrates','carbs','carbohydrat','carb'],p:['protein','proteins']};
+ rows.forEach((r,ri)=>{for(const k of ['k','p','f','c']){if(F[k])continue;const w=word(r,KEY[k]);if(!w)continue;
+   if(k!=='k'&&EXC.some(e=>r.txt.includes(e)))continue;
+   if((k==='f'||k==='c')&&/^(-|of)/.test(r.txt.trim()))continue;
+   let n=nums(r,w);
+   if(k==='k'){const nb=rows.slice(ri+1,ri+3).filter(q=>/kcal|kca|cal\b/.test(q.txt)&&!word(q,KEY.f)&&!word(q,KEY.c)&&!word(q,KEY.p));nb.forEach(q=>n=n.concat(nums(q,null)))
+     if(!n.length&&/calorie/.test(r.txt)){}}
+   F[k]={r,w,n,c:w.c}}});
+ // structure: fat sits above saturates, carbs above sugars, energy is the kcal row
+ const idx=re=>rows.findIndex(r=>re.test(r.txt.replace(/\s/g,'')));
+ const above=(i)=>{for(let j=i-1;j>=Math.max(0,i-2);j--)if(nums(rows[j],rows[j].w.find(w=>/[a-z]{2,}/i.test(w.t))).length)return rows[j];return null};
+ if(!F.f){const i=idx(/saturat|aturates|whichsat/);const r=i>0&&above(i);if(r&&!Object.values(F).some(f=>f.r===r))F.f={r,w:r.w.find(w=>/[a-z]{2,}/i.test(w.t))||{x1:-1},n:nums(r,r.w.find(w=>/[a-z]{2,}/i.test(w.t))),c:0,guess:1}}
+ if(!F.c){const i=idx(/sugar|whichsu|sugas|supers/);const r=i>0&&above(i);if(r&&!Object.values(F).some(f=>f.r===r))F.c={r,w:r.w.find(w=>/[a-z]{2,}/i.test(w.t))||{x1:-1},n:nums(r,r.w.find(w=>/[a-z]{2,}/i.test(w.t))),c:0,guess:1}}
+ if(!F.k){const i=rows.findIndex(r=>/kcal/.test(r.txt));if(i>=0){const r=rows[i];let n=nums(r,null);const pj=rows[i-1];if(pj&&/k[jJ]/i.test(pj.txt))n=nums(pj,null).concat(n);F.k={r,w:{x1:-1,c:0},n,c:0,guess:1}}}
+ if(!F.p){const i=idx(/^salt|^sait|^sat\b/);if(i>0){const r=rows[i-1];if(r&&!Object.values(F).some(f=>f.r===r)){const lw=r.w.find(w=>/[a-z]{2,}/i.test(w.t));F.p={r,w:lw||{x1:-1},n:nums(r,lw),c:0,guess:1}}}}
+ const US=rows.some(r=>/nutrition\s*facts|amount\s*per\s*serving|total\s*fat|total\s*carb/.test(r.txt));
+ if(Object.keys(F).length<2)return null;
+ if(US){const col={lab:sv?`Per serving (${sv}g)`:'Per serving',g:sv,kind:'serv',v:{},u:{},raw:{}};
+  ['k','p','f','c'].forEach(k=>{if(!F[k]){col.u[k]=1;return}let n=F[k].n.filter(q=>q.u!=='mg');const ri=rows.indexOf(F[k].r);
+   if(!n.length&&rows[ri+1])n=nums(rows[ri+1],null).filter(q=>q.u!=='mg'&&q.x<F[k].r.w[F[k].r.w.length-1].x1+mh*6);
+   const q=n[0];if(!q){col.u[k]=1;return}let v=q.v,sure=q.c>=72&&F[k].c>=55;
+   if(k!=='k'&&!q.u&&/9$/.test(q.s)&&q.s.length>1){v=+q.s.slice(0,-1);sure=sure&&q.v>60}
+   if(k!=='k'&&q.u!=='g'&&!(k!=='k'&&!q.u))sure=false;
+   col.v[k]=v;col.raw[k]=q.w.t;if(!sure||F[k].guess)col.u[k]=1});
+  const v=col.v;if([v.k,v.p,v.f,v.c].every(x=>x!=null)){const est=4*v.p+4*v.c+9*v.f;if(Math.abs(est-v.k)/Math.max(1,v.k)>.25&&Math.abs(est-v.k)>25)col.off=1}
+  return{cols:[col],found:Object.keys(F)}}
+ // columns: where the numbers line up, labelled by any headings we could read
+ const hdr=cols.slice();cols.length=0;const xs=[];
+ const vrows=rows.filter(r=>Object.values(F).some(f=>f.r===r)||/salt|sugar|saturat|fibre|fiber|sodium/.test(r.txt));
+ vrows.forEach(r=>{const lw=r.w.find(w=>/[a-z]{3,}/i.test(w.t));nums(r,lw).filter(q=>q.u!=='mg'||true).forEach(q=>xs.push(q.x))});
+ xs.sort((a,b)=>a-b);const cl=[];xs.forEach(x=>{const z=cl[cl.length-1];if(z&&x-z.hi<mh*2.6){z.hi=x;z.s+=x;z.n++}else cl.push({lo:x,hi:x,s:x,n:1})});
+ const big=Math.max(0,...cl.map(c=>c.n));let C=cl.filter(c=>c.n>=Math.max(2,big*.35)).map(c=>({x:c.s/c.n,lo:c.lo,hi:c.hi,n:c.n}));
+ if(!C.length&&cl.length)C=[cl.sort((a,b)=>b.n-a.n)[0]].map(c=>({x:c.s/c.n,lo:c.lo,hi:c.hi}));
+ C.sort((a,b)=>a.x-b.x);
+ C.forEach(c=>{let h=null,bd=1e9;hdr.forEach(z=>{const dd=z.x<c.lo?c.lo-z.x:z.x>c.hi?z.x-c.hi:0;if(dd<mh*2.6&&dd<bd){bd=dd;h=z}});c.h=h});
+ const any100=hdr.some(z=>z.kind==='100')||rows.some(r=>/per\s?1[0o][0o]\s?(g|ml)/.test(r.txt));
+ C.forEach((c,i)=>{if(c.h){cols.push({x:c.x,lab:c.h.lab,g:c.h.g,kind:c.h.kind});return}
+  const has100=C.some(z=>z.h&&z.h.kind==='100');
+  if(C.length===1)cols.push(any100&&!sv?{x:c.x,lab:'Per 100g',g:100,kind:'100'}:{x:c.x,lab:sv?`Per serving (${sv}g)`:'Per serving',g:sv,kind:'serv'});
+  else if(!has100&&i===0)cols.push({x:c.x,lab:'Per 100g',g:100,kind:'100'});
+  else cols.push({x:c.x,lab:'Per serving',g:null,kind:'serv'})});
+ // only one per-100g column
+ let seen=false;cols.forEach(c=>{if(c.kind==='100'){if(seen){c.kind='serv';c.lab='Per serving';c.g=null}seen=true}});
+ cols.forEach(c=>{if(c.kind==='serv'&&!/\d/.test(c.lab)&&!/serv|portion|pack|bar|slice|biscuit|pot|bottle|can|each|pouch|cup|bag|tub|piece|scoop|sachet|half|container/i.test(c.lab))c.lab='Per serving'});
+ if(cols.length===1&&cols[0].kind==='serv'&&!cols[0].g)cols[0].g=sv;
+ const pers=rows.filter(r=>r.cy<Math.min(...Object.values(F).map(f=>f.r.cy))).reduce((n,r)=>n+(r.txt.match(/\bper\b/g)||[]).length,0),AMB=cols.length<Math.max(hdr.length,pers);
+ const R=cols.map(c=>({lab:c.lab,g:c.g,kind:c.kind,v:{},u:{},raw:{}}));
+ const pick=(arr,ci)=>{let b=null,bd=1e9;arr.forEach(q=>{const dd=Math.abs(q.x-cols[ci].x);if(dd<bd){bd=dd;b=q}});const ok=b&&cols.every((c,j)=>j===ci||Math.abs(b.x-c.x)>=bd);return ok?b:null};
+ // a "g" read as "9": 9.29 -> 9.2, 609 -> 60
+ const unG=(q,max)=>{if(q.u){if(q.v>max&&/9$/.test(q.s))return{v:+q.s.slice(0,-1).replace(/\.$/,''),sure:false};return{v:q.v,sure:q.u==='g'&&q.v<=max}}; const s=q.s;
+   if(/9$/.test(s)&&(/\.\d{2,}$/.test(s)||q.v>max||/^\d{2,}9$/.test(s)&&q.v>max)){return{v:+s.slice(0,-1).replace(/\.$/,''),sure:/\.\d{2,}$/.test(s)}}
+   if(/9$/.test(s)&&/^\d+9$/.test(s)&&q.v>max*.5)return{v:+s.slice(0,-1),sure:false};
+   return{v:q.v,sure:q.v<=max&&q.c>80}};
+ R.forEach((col,ci)=>{
+  const cap=col.kind==='100'?100:250;
+  ['p','f','c'].forEach(k=>{if(!F[k])return;const q=pick(F[k].n.filter(z=>z.u!=='mg'&&z.u!=='kcal'&&z.u!=='kj'),ci);if(!q){col.u[k]=1;return}
+   const r=unG(q,cap);col.v[k]=r.v;col.raw[k]=q.w.t;if(!r.sure||q.c<72||F[k].c<55||F[k].guess)col.u[k]=1});
+  if(F.k){const all=F.k.n,kc=all.filter(z=>z.u==='kcal'),kj=all.filter(z=>z.u==='kj'),un=all.filter(z=>!z.u);
+   let q=pick(kc,ci),v=null,sure=true;
+   if(q)v=q.v;else if((q=pick(kj,ci))){v=Math.round(q.v/4.184)}else if((q=pick(un,ci))){v=q.v;
+     if(/calorie/.test(F.k.r.txt)){} else if(un.length>=2*cols.length){const ord=un.filter(z=>Math.abs(z.x-cols[ci].x)<mh*5);if(ord.length>=2){v=Math.min(...ord.map(z=>z.v));}}
+     else if(v>900&&col.kind==='100'){v=Math.round(v/4.184);sure=false}}
+   if(v!=null){col.v.k=Math.round(v);col.raw.k=q.w.t;if(!sure||q.c<72)col.u.k=1}else col.u.k=1}else col.u.k=1;
+  ['k','p','f','c'].forEach(k=>{if(col.v[k]==null)col.u[k]=1});
+ });
+ cols.forEach(c=>{c.lab=c.lab.replace(/\s*%?\s*RI\*?/gi,'').replace(/\s+/g,' ').trim()});
+ if(AMB)R.forEach(c=>['k','p','f','c'].forEach(k=>c.u[k]=1));
+ // cross-checks: columns should scale together, and energy should roughly match the macros
+ if(R.length>=2){const a=R.find(c=>c.kind==='100'),b=R.find(c=>c.kind!=='100');
+  if(a&&b){const ks=['k','p','f','c'].filter(k=>a.v[k]>0&&b.v[k]>0),rt=ks.map(k=>b.v[k]/a.v[k]).sort((x,y)=>x-y),m=rt.length?rt[Math.floor(rt.length/2)]:(b.g?b.g/100:null);
+   if(m){if(!b.g)b.g=Math.round(m*100);
+    ['k','p','f','c'].forEach(k=>{const pa=a.v[k],pb=b.v[k];
+     if(pa!=null&&pb!=null&&pa>0){const e=Math.abs(pb/pa-m)/m;const tol=Math.max(.12,.6/Math.max(pb,.5));if(e>tol&&rt.length>=3){a.u[k]=a.u[k]||(pb>=pa*m?0:1);b.u[k]=1}
+       else if(e<=tol&&rt.length>=3&&ks.length>=3){if(!(a.raw[k]&&/9$/.test(a.raw[k])&&!/g$/i.test(a.raw[k])&&a.v[k]%1===0&&pa>9))a.u[k]=0;b.u[k]=0}}
+     if(pa==null&&pb!=null){a.v[k]=Math.round(pb/m*10)/10;a.u[k]=1}
+     if(pb==null&&pa!=null){b.v[k]=Math.round(pa*m*10)/10;b.u[k]=1}})}}}
+ R.forEach(col=>{const v=col.v;if([v.k,v.p,v.f,v.c].every(x=>x!=null)){const est=4*v.p+4*v.c+9*v.f;col.check=v.k>0?Math.abs(est-v.k)/v.k:1;if(col.check>.25&&Math.abs(est-v.k)>25)col.off=1}
+  if(col.kind==='100'&&(v.p||0)+(v.f||0)+(v.c||0)>105)col.off=1;
+  if(col.off&&v.k>0){const ok=(p,f,c)=>Math.abs(4*p+4*c+9*f-v.k)/v.k<.15;let hit=null;
+   [['p',v.p/10,v.f,v.c],['f',v.p,v.f/10,v.c],['c',v.p,v.f,v.c/10]].forEach(([k,p,f,c])=>{if(!hit&&v[k]>=10&&ok(p,f,c))hit=k});
+   if(hit){v[hit]=v[hit]/10;col.u[hit]=1;col.off=0}else['k','p','f','c'].forEach(k=>col.u[k]=1)}
+  ['k','p','f','c'].forEach(k=>{if(col.v[k]!=null)col.v[k]=k==='k'?Math.round(col.v[k]):Math.round(col.v[k]*10)/10})});
+ R.forEach(c=>{c.lab=c.lab.replace(/\s*%?\s*RI\*?\b/gi,'').replace(/[^A-Za-z0-9 ().,]/g,'').replace(/\s+/g,' ').trim()||'Per serving'});
+ return{cols:R,found:Object.keys(F)}}
+
+
+let SCAN=null,OCRP=null,OCRW=null,OCRQ={},OCRN=0;
+function ocrReady(){if(OCRP)return OCRP;OCRP=new Promise((ok,no)=>{let w;try{w=new Worker('ocr/worker.js')}catch(e){return no(e)}OCRW=w;
+  const to=setTimeout(()=>no(Error('timeout')),60000);
+  w.onmessage=e=>{const m=e.data;if(m.t==='ready'){clearTimeout(to);ok(w);return}const q=OCRQ[m.id];if(m.t==='err'&&!q){clearTimeout(to);no(Error(m.msg));return}if(q){delete OCRQ[m.id];m.t==='err'?q.no(Error(m.msg)):q.ok(m.words)}};
+  w.onerror=e=>{clearTimeout(to);no(Error(e.message||'worker'))};w.postMessage({t:'init'})}).catch(e=>{OCRP=null;try{OCRW&&OCRW.terminate()}catch(_){}OCRW=null;throw e});return OCRP}
+function ocrRead(cv,psm){return new Promise((ok,no)=>cv.toBlob(b=>{if(!b)return no(Error('blob'));b.arrayBuffer().then(png=>{const id=++OCRN;OCRQ[id]={ok,no};OCRW.postMessage({t:'read',id,png,psm},[png])})},'image/png'))}
+const scScore=r=>r?r.cols.reduce((m,c)=>Math.max(m,['k','p','f','c'].reduce((n,k)=>n+(c.v[k]!=null?(c.u[k]?.5:1):0),0)),0):-1;
+function scanApply(){const c=SCAN.cols[SCAN.sel],f=c.kind==='100'&&+SCAN.amt>0?+SCAN.amt/100:1;SCAN.u={};
+ ['k','p','f','c'].forEach(k=>{const v=c.v[k];M[k]=v==null?'':k==='k'?Math.round(v*f):Math.round(v*f*10)/10;SCAN.u[k]=c.u[k]?1:0})}
+scanFx=function(src){$('#sc')&&$('#sc').remove();const o=document.createElement('div');o.id='sc';
+ o.innerHTML=`<div class="scw"><img src="${src}" alt="Label"><i class="ln"></i></div><div style="margin-top:22px">${$('#ov .ringw')?$('#ov .ringw').outerHTML:''}</div><div class="hero">Reading label…</div><div class="scst">Everything happens on your phone.</div>`;document.body.appendChild(o);
+ const st=t=>{const e=o.querySelector('.scst');if(e)e.textContent=t};
+ const fail=(h,p)=>{if(!o.isConnected)return;o.innerHTML=`<div class="hero" style="text-align:center;padding:0 24px">${h}</div><div class="scst">${p}</div><div class="scbtns"><button class="btn on" data-scx="again">Try again</button><button class="btn" data-scx="hand">Type it in</button></div>`;
+  o.querySelector('[data-scx=again]').onclick=()=>{o.remove();$('#fi')&&$('#fi').click()};o.querySelector('[data-scx=hand]').onclick=()=>{o.remove();const i=$('[data-b="M.k"]');i&&i.focus()}};
+ const img=new Image();img.onerror=()=>fail('That photo couldn’t be opened','Try taking it again.');
+ img.onload=async()=>{const t0=performance.now();
+  if(!OCRW)st('Getting the label reader ready. The first time takes a few seconds.');
+  try{await ocrReady()}catch(e){return fail('The label reader couldn’t start','It needs a signal the first time you use it. After that it works offline.')}
+  st('Looking for the nutrition table…');let best=null,bs=-1;
+  try{for(const rot of[0,90,270]){if(!o.isConnected)return;const cv=lblPrep(img,rot),w=await ocrRead(cv,6);let r=null;try{r=lblParse(w)}catch(_){}const sc=scScore(r);if(sc>bs){bs=sc;best=r}if(bs>=3.5)break;if(rot===0)st('Turning the photo to read it another way…')}}
+  catch(e){return fail('Something went wrong reading that','Try again, or type the numbers in.')}
+  if(!best||bs<1.5)return fail('Swell couldn’t find a nutrition table','Lay the pack flat, get the whole table in, avoid glare, and hold still.');
+  const wait=Math.max(0,900-(performance.now()-t0));setTimeout(()=>{if(!o.isConnected)return;
+   const si=best.cols.findIndex(c=>c.kind!=='100'&&c.g),s100=best.cols.findIndex(c=>c.kind==='100');
+   SCAN={cols:best.cols,sel:si>=0?si:Math.max(0,s100),amt:''};scanApply();o.remove();tab='diet';render();
+   const c=$('.scbox');c&&c.closest('.card').scrollIntoView({block:'start',behavior:'smooth'});
+   const un=Object.values(SCAN.u).filter(Boolean).length;toast(un?'Label read. Check the highlighted numbers.':'Label read. Check it matches, then add it.')},wait)};
+ img.src=src};
+const NMK={k:'calories',p:'protein',f:'fat',c:'carbs'};
+const andL=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+{const _d=diet;diet=function(){let h=_d.apply(this,arguments);
+ h=h.replace('<p class="sm">Swipe left to delete.</p>','<p class="sm">Tap a meal to edit it. Swipe left to delete.</p>');
+ if(!SCAN)return h;const c=SCAN.cols[SCAN.sel],un=['k','p','f','c'].filter(k=>SCAN.u[k]);
+ const chips=SCAN.cols.length>1?`<div class="chips">${SCAN.cols.map((x,i)=>`<button class="chip ${i===SCAN.sel?'on':''}" data-a="scsel" data-i="${i}">${esc(x.lab)}${x.kind!=='100'&&x.g&&!/\d/.test(x.lab)?` (${x.g}g)`:''}</button>`).join('')}</div>`:`<p class="sm" style="margin-top:4px">${esc(c.lab)}${c.kind!=='100'&&c.g&&!/\d/.test(c.lab)?` (${c.g}g)`:''}</p>`;
+ const amt=c.kind==='100'?`<label>How much did you have? (g)<input type="number" inputmode="decimal" data-scamt placeholder="100" value="${esc(SCAN.amt)}"></label>`:'';
+ const note=c.off?'The numbers don’t quite add up, so check them all against the label.':un.length?`Swell isn’t sure about <span class="unsk">${andL(un.map(k=>NMK[k]))}</span>, so ${un.length>1?'they’re':'it’s'} highlighted. Check against the label, and change anything that’s wrong.`:'Check the numbers match the label, then add it. You can still change them.';
+ const box=`<div class="scbox"><b>Read from your label</b>${chips}${amt}<p class="sm">${note}</p><button class="glink" data-a="scclr">Clear</button></div>`;
+ h=h.replace(/(data-a="scan">[^<]*<\/button>)/,'$1'+box);
+ un.forEach(k=>{h=h.replace(`data-b="M.${k}"`,`data-b="M.${k}" data-uns`)});return h}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='scsel'&&SCAN){e.stopImmediatePropagation();SCAN.sel=+el.dataset.i;SCAN.amt='';scanApply();render();return}
+ if(a==='scclr'){e.stopImmediatePropagation();SCAN=null;M={...M,k:'',p:'',f:'',c:''};render();return}
+ if(a==='addm'&&SCAN)setTimeout(()=>{if(!M.k&&!M.n){SCAN=null;render()}},0)},true);
+document.addEventListener('input',e=>{const el=e.target;
+ if(el.hasAttribute&&el.hasAttribute('data-scamt')&&SCAN){SCAN.amt=el.value;const u={...SCAN.u};scanApply();SCAN.u=u;['k','p','f','c'].forEach(k=>{const i=$(`[data-b="M.${k}"]`);if(i)i.value=M[k]});return}
+ const m=el.dataset&&el.dataset.b&&el.dataset.b.match(/^M\.([kpfc])$/);if(m&&SCAN){SCAN.u[m[1]]=0;el.removeAttribute('data-uns')}});
+/* tap a logged meal to edit it */
+let ME=null;
+function meForm(){const x=ME.x,f=(k,l)=>`<label>${l}<input type="number" inputmode="decimal" data-me="${k}" value="${esc(x[k])}"></label>`;
+ return`<h2>Edit meal</h2><input placeholder="Meal name" data-me="n" value="${esc(x.n)}"><div class="row">${f('k','Calories')}${f('p','Protein (g)')}</div><div class="row">${f('f','Fat (g)')}${f('c','Carbs (g)')}</div><p class="sm">Your totals for the day update to match.</p><button class="btn big on" data-a="mesave">Save changes</button><div class="row"><button class="btn" data-a="medel">Delete meal</button><button class="btn" data-a="shx">Cancel</button></div>`}
+document.addEventListener('click',e=>{const r=e.target.closest('.logc .sr .in');if(!r||e.target.closest('button,input,[data-a]'))return;const sr=r.parentNode;if(sr.classList.contains('open')||Date.now()-swd<400)return;
+ const all=[...document.querySelectorAll('.logc .sr')],i=all.indexOf(sr),ml=(S.meals||{})[today()]||[];if(i<0||!ml[i])return;ME={i,x:{...ml[i]}};sheet(meForm())});
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.me;if(k&&ME)ME.x[k]=k==='n'?e.target.value:e.target.value});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||!ME)return;const a=el.dataset.a;if(a!=='mesave'&&a!=='medel')return;e.stopImmediatePropagation();
+ const ml=(S.meals||{})[today()]||[],old=ml[ME.i];if(!old){ME=null;sheet(null);return}
+ if(a==='mesave'){const x=ME.x,nw={...old,n:String(x.n||'').trim()||'Meal',k:+x.k||0,p:+x.p||0,f:+x.f||0,c:+x.c||0};addTot(old,-1);addTot(nw,1);ml[ME.i]=nw;toast('Meal updated.')}
+ else{addTot(old,-1);ml.splice(ME.i,1);toast('Meal deleted.')}
+ ME=null;save();sheet(null);render();try{evalDay()}catch(_){}},true);
+RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',h:'Label scanning that reads the label',p:'Take a photo of a nutrition label and Swell reads the calories, protein, fat and carbs, right on your phone. Anything it isn’t sure of is highlighted for you to check. You can also tap a logged meal to edit it.'});
+RELEASES.find(r=>r.v==='2026.10.27').tour=(RELEASES.find(r=>r.v==='2026.10.27').tour||[]).concat([{t:'diet',q:'.scanb',h:'Scan a label',p:'Take a photo of the nutrition table. Swell reads it on your phone, highlights anything it isn’t sure of, and lets you pick per 100g or per serving.'}]);
 render();periodic();reqShow();
 </script></body></html>
