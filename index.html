@@ -1298,7 +1298,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  if(a==='lx2done'){o.remove();document.body.classList.remove('lx2on');save();render();return}
  if(a==='lx2exp'){o.classList.remove('min');LXY=scrollY;return}
  if(a==='lx2tab'){LX2.tab=el.dataset.i;o.classList.remove('min')}
- else if(a==='lx2pre'){const p=PRE[+el.dataset.i];S.p=p[1];S.s=p[2];LX2.cust=false;if(p[0]==='Purple Gyal')S.gi=75}
+ else if(a==='lx2pre'){const p=PRE[+el.dataset.i];S.p=p[1];S.s=p[2];LX2.cust=false;if(p[0]==='Purple Gyal')S.gi=75;if(p[0]==='Spider-Man'){S.gi=100;S.lxl='corners';S.lxs='bold';lx2Lights();S.lights.forEach(l=>l.a=100)}else if(!S.lights||S.lights.some(l=>/^#/.test(l.c)))lx2Lights()}
  else if(a==='lx2cust'){LX2.cust=true}
  else if(a==='lx2lay'){S.lxl=el.dataset.i;S.lxm=0;lx2Lights()}
  else if(a==='lx2str'){S.lxs=el.dataset.i;S.lxm=0;lx2Lights()}
@@ -1348,7 +1348,7 @@ function splash(){if(document.getElementById('splash'))return;
 <linearGradient id="qgSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#15357f"/><stop offset="1" stop-color="#0a1736"/></linearGradient>
 <radialGradient id="qgGlow"><stop offset="0" stop-color="#e2604f" stop-opacity=".5"/><stop offset="1" stop-color="#e2604f" stop-opacity="0"/></radialGradient></defs>
 <g id="qword"><g clip-path="url(#qtclip)"><path id="qwBack" fill="#7f8a9c"/><path id="qwFront" fill="#eef2f8"/></g></g>
-<g id="qlogo" transform="translate(180 292) scale(.7) translate(-120 -120)">
+<g id="qlogo" transform="translate(180 320) scale(.7) translate(-120 -120)">
 <circle id="qglow" cx="120" cy="120" r="150" fill="url(#qgGlow)" opacity="0"/>
 <g clip-path="url(#qcc)"><g clip-path="url(#qsunc)"><circle cx="120" cy="120" r="86" fill="url(#qgSun)"/><rect x="0" y="116" width="240" height="4" fill="#0b1226"/><rect x="0" y="130" width="240" height="6" fill="#0b1226"/><rect x="0" y="146" width="240" height="8" fill="#0b1226"/></g>
 <rect id="qseaF" x="0" y="165.7" width="240" height="120" fill="url(#qgSea)" opacity="0"/>
@@ -1368,7 +1368,7 @@ function splash(){if(document.getElementById('splash'))return;
 }
 function spRun(d,finish){
  const q=s=>d.querySelector(s),clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,esin=k=>-(Math.cos(Math.PI*k)-1)/2,eoutx=k=>k>=1?1:1-Math.pow(2,-10*k);
- const CX=180,CY=292,S=.7,R=S*86;
+ const CX=180,CY=320,S=.7,R=S*86;
  const F0=300,F1=2400,D0=2700,D1=3500,SW1=4800,WV0=4300,WV1=5400,CR0=5300,C0=5950,L0=7000,X0=8000;
  const cv=q('canvas'),ctx=cv.getContext('2d');let DPR=1,K=1,OX=0,OY=0;
  const size=()=>{const W=innerWidth,H=innerHeight;DPR=Math.min(2,devicePixelRatio||1);K=Math.max(W/360,H/640);OX=(W-360*K)/2;OY=(H-640*K)/2;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR)};size();addEventListener('resize',size);
@@ -1474,6 +1474,29 @@ RELEASES.push({v:'2026.10.26',date:'26 Oct',items:[
 {const r=RELEASES.find(x=>x.v==='2026.10.26');r&&r.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4v16M4 12h16"/>',h:'New colours: Spider-Man',p:'Red and blue lights at full brightness. Find it in Settings, then Customise look.'})}
 // Spider-Man: red and blue lights at full strength
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=pre],[data-a=lx2pre]');if(!el)return;const pr=PRE[+el.dataset.i];if(!pr||pr[0]!=='Spider-Man')return;
- setTimeout(()=>{S.gi=100;S.lxs='bold';if(S.lights&&S.lights.length){lx2Lights();S.lights.forEach(l=>l.a=100)}save();applyBg();if($('#lx2'))lx2r()},0)},true);
+ setTimeout(()=>{S.gi=100;S.lxl='corners';S.lxs='bold';lx2Lights();S.lights.forEach(l=>l.a=100);save();applyBg();if($('#lx2'))lx2r()},0)},true);
+
+/* ===== v26: sign up for anyone, pop-ups stay above the keyboard ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+#sheet .mwc,#req .mwc,#mw .mwc,#imp .mwc,#wn .mwc{max-height:calc(var(--vvh,100vh) - 32px)}
+.kbon #sheet,.kbon #req,.kbon #mw,.kbon #imp,.kbon #wn{bottom:auto}
+.sgn .row{gap:10px}.sgn .sm{margin:4px 0 0}`;document.head.appendChild(st)})();
+// keep bottom pop-ups in the part of the screen the keyboard leaves visible
+function vvFix(){const v=window.visualViewport;if(!v)return;const kb=innerHeight-v.height>120;document.documentElement.style.setProperty('--vvh',v.height+'px');document.documentElement.classList.toggle('kbon',kb);
+ document.querySelectorAll('#sheet,#req,#mw,#imp,#wn').forEach(o=>{if(kb){o.style.top=v.offsetTop+'px';o.style.height=v.height+'px'}else{o.style.top='';o.style.height=''}})}
+if(window.visualViewport){visualViewport.addEventListener('resize',vvFix);visualViewport.addEventListener('scroll',vvFix)}
+new MutationObserver(()=>{if(document.documentElement.classList.contains('kbon'))vvFix()}).observe(document.body,{childList:true});
+document.addEventListener('focusin',e=>{const el=e.target;if(!el.matches||!el.matches('input,select,textarea'))return;const box=el.closest('.mwc');if(!box)return;setTimeout(()=>{vvFix();el.scrollIntoView({block:'center',behavior:'smooth'})},350)});
+// sign up: anyone can create an account on their own phone, once
+const tcase=v=>v.trim().replace(/\s+/g,' ').toLowerCase().replace(/(^|[\s'-])\p{L}/gu,m=>m.toUpperCase());
+{const _onb=onb;onb=function(){if(S.user||(!S.seenA2HS&&!isStandalone()))return _onb.apply(this,arguments);
+ return`<div class="card sgn" style="margin-top:12vh"><h1>Welcome to Swell</h1><p>Create your account. You only do this once, and everything stays saved on this phone.</p>
+ <div class="row"><label>First name<input id="nmf" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" value="${esc(NS.f||'')}"></label><label>Last name<input id="nml" autocomplete="family-name" autocapitalize="words" autocorrect="off" spellcheck="false" value="${esc(NS.l||'')}"></label></div>
+ ${NS.sug?`<p class="hero" style="font-size:19px;margin:14px 0 4px">Are you ${esc(NS.sug)}?</p><div class="row"><button class="btn on" data-a="nyes">Yes, that’s me</button><button class="btn" data-a="snew">No, I’m new</button></div>`:`${NS.err?`<p class="err">${NS.err}</p>`:''}<button class="btn big on" data-a="sgo">Create my account</button>`}</div>`}}
+document.addEventListener('input',e=>{if(e.target.id==='nmf')NS.f=e.target.value;if(e.target.id==='nml')NS.l=e.target.value},true);
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||S.user)return;const a=el.dataset.a;if(a!=='sgo'&&a!=='snew')return;e.stopImmediatePropagation();
+ const f=tcase(NS.f||''),l=tcase(NS.l||''),full=(f+' '+l).trim();
+ if(a==='sgo'){if(!f){NS.err='Enter your first name to carry on.';return render()}const m=l?matchName(full):null;if(m&&m.exact){login(m.u);return render()}if(m&&!m.exact){NS.sug=m.u;NS.err='';return render()}}
+ NS.sug=null;login(full);S.full=full;save();render()},true);
 render();periodic();reqShow();
 </script></body></html>
