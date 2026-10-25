@@ -1,6 +1,6 @@
 # Swell (formerly Forged) – working notes
 
-Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStorage only). Netlify publishes the `main` branch to everythings-swell.netlify.app (renamed from forgedtest; users added the app from the new address). Push notifications run through OneSignal (App ID in the v31 block), sharing sw.js with the offline cache.
+Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStorage only). Netlify publishes the `main` branch to everythings-swell.netlify.app (renamed from forgedtest; users added the app from the new address). Push notifications run through OneSignal (App ID in the v31 block), sharing sw.js with the offline cache. Label scanning runs on the phone: `ocr/` holds the self-hosted Tesseract core, English model and `worker.js`; the table parser and image clean-up live in the v37 block (`lblPrep`, `lblParse`).
 
 ## How updates are handled
 - Build and test every change on the `pending` branch. Push `pending` freely.
