@@ -2466,37 +2466,75 @@ glStop=function(){if(!GL.on)return;GL.on=false;removeEventListener('deviceorient
 {const _r=render;render=function(){_r.apply(this,arguments);try{glRefresh()}catch(_){}}}
 if(typeof applyLights==='function'){const _al=applyLights;applyLights=function(){const r=_al.apply(this,arguments);try{glRefresh()}catch(_){}return r}}
 try{glRefresh()}catch(_){}
-/* ===== v44: swipe in from the screen edge to change tab. Only from the very edge, and only a deliberate swipe.
-   The page follows your finger 1:1, carries on off the screen, and the next tab slides in as one piece. No fades, no cascade. ===== */
-(function(){const st=document.createElement('style');st.textContent=`#app.eswipe>*:not(.nav){transition:none!important;will-change:transform}`;document.head.appendChild(st)})();
+/* ===== v44: swipe in from the screen edge to change tab.
+   Only from the very edge. Once the drag is clearly meant (a short distance inwards), the transition plays by itself:
+   the current page and the next one travel together, like turning a page, with no gap in between. ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.swgh{position:fixed;inset:0;z-index:40;pointer-events:none;overflow:hidden}
+.swgh>div{position:absolute;left:0;right:0;top:0;margin:0 auto}`;document.head.appendChild(st)})();
 let NOFX=false;
 if(typeof fxApply==='function'){const _fx=fxApply;fxApply=function(root){if(NOFX&&root&&root.id==='app')return;return _fx.apply(this,arguments)}}
-{const EDGE=22;let g=null,busy=false;
+{const EDGE=22,TRIG=64;let g=null,busy=false;
  const order=()=>[...document.querySelectorAll('#app .nav button[data-i]')].map(b=>b.dataset.i);
  const kids=()=>[...document.querySelectorAll('#app > *')].filter(c=>!c.classList.contains('nav')&&getComputedStyle(c).position!=='fixed');
- const free=t=>!busy&&!ED&&TU==null&&!AW&&!$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#splash,#imp,#tour')&&!(t&&t.closest('input,textarea,select,.chipw,#lx2'));
- const setX=x=>kids().forEach(c=>{c.style.transform=x?`translateX(${x.toFixed(1)}px)`:''});
- const anim=(from,to,ms,ease)=>Promise.all(kids().map(c=>{c.style.transform='';return c.animate([{transform:`translateX(${from}px)`},{transform:`translateX(${to}px)`}],{duration:ms,easing:ease,fill:'forwards'}).finished.then(a=>{a.cancel?.()}).catch(()=>{})}));
+ const free=t=>!busy&&!ED&&TU==null&&!AW&&!$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#splash,#imp,#tour,.ftip')&&!(t&&t.closest('input,textarea,select,.chipw,#lx2'));
+ // a still copy of the page you're leaving, so it can slide away while the next page slides in
+ const ghost=()=>{const app=document.getElementById('app'),cs=getComputedStyle(app),w=document.createElement('div');w.className='swgh';const inner=document.createElement('div');
+  ['paddingTop','paddingRight','paddingBottom','paddingLeft','maxWidth','width','boxSizing','fontSize','lineHeight','color'].forEach(k=>inner.style[k]=cs[k]);inner.style.top=(app.getBoundingClientRect().top)+'px';
+  kids().forEach(c=>{const k=c.cloneNode(true);k.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));k.querySelectorAll('input,select,textarea').forEach((x,n)=>{});inner.appendChild(k)});
+  w.appendChild(inner);document.body.appendChild(w);return w};
+ const go=dir=>{const o=order(),i=o.indexOf(tab),j=i+dir;
+  if(j<0||j>=o.length){if(!MRM())kids().forEach(c=>c.animate([{transform:'none'},{transform:`translateX(${-dir*14}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.16,1,.3,1)'}));return}
+  const b=document.querySelector(`#app .nav button[data-i="${o[j]}"]`);if(!b)return;
+  if(MRM()){NOFX=true;b.click();NOFX=false;return}
+  busy=true;const W=innerWidth,gh=ghost();
+  NOFX=true;b.click();NOFX=false;navigator.vibrate&&navigator.vibrate(6);
+  const ease='cubic-bezier(.32,.72,0,1)',ms=420;
+  gh.firstChild.animate([{transform:'none'},{transform:`translateX(${-dir*W}px)`}],{duration:ms,easing:ease,fill:'forwards'});
+  const ins=kids().map(c=>c.animate([{transform:`translateX(${dir*W}px)`},{transform:'none'}],{duration:ms,easing:ease}));
+  Promise.all(ins.map(a=>a.finished.catch(()=>{}))).then(()=>{gh.remove();busy=false})};
  addEventListener('touchstart',e=>{g=null;if(e.touches.length!==1||!S.user||!S.setup||!S.setup.done)return;const t=e.touches[0],W=innerWidth;
-  if(t.clientX>EDGE&&t.clientX<W-EDGE)return;if(!free(e.target))return;g={x0:t.clientX,y0:t.clientY,t0:performance.now(),side:t.clientX<=EDGE?'l':'r',on:false,dx:0,lt:performance.now(),lx:t.clientX,v:0}},{passive:true});
+  if(t.clientX>EDGE&&t.clientX<W-EDGE)return;if(!free(e.target))return;g={x0:t.clientX,y0:t.clientY,side:t.clientX<=EDGE?'l':'r'}},{passive:true});
  addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=t.clientX-g.x0,dy=t.clientY-g.y0;
-  if(!g.on){if(Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)){g=null;return}
-   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.6&&((g.side==='l'&&dx>0)||(g.side==='r'&&dx<0))){g.on=true;document.getElementById('app').classList.add('eswipe')}else return}
-  const now=performance.now();g.v=(t.clientX-g.lx)/Math.max(1,now-g.lt);g.lt=now;g.lx=t.clientX;g.dx=dx;if(e.cancelable)e.preventDefault();
-  const o=order(),i=o.indexOf(tab),end=(dx>0&&i===0)||(dx<0&&i===o.length-1);setX(end?dx*.18:dx)},{passive:false});
- const finish=()=>{document.getElementById('app').classList.remove('eswipe');kids().forEach(c=>{c.style.transform='';c.getAnimations().forEach(a=>a.cancel())})};
- const done=async()=>{if(!g)return;const G=g;g=null;if(!G.on)return;
-  const W=innerWidth,o=order(),i=o.indexOf(tab),j=G.dx>0?i-1:i+1,end=j<0||j>=o.length,cur=end?G.dx*.18:G.dx;
-  const go=!end&&(Math.abs(G.dx)>W*.3||(Math.abs(G.v)>.5&&Math.sign(G.v)===Math.sign(G.dx)&&Math.abs(G.dx)>60));
-  if(MRM()){finish();if(go){NOFX=true;const b=document.querySelector(`#app .nav button[data-i="${o[j]}"]`);b&&b.click();NOFX=false}return}
-  busy=true;
-  if(!go){await anim(cur,0,240,'cubic-bezier(.16,1,.3,1)');finish();busy=false;return}
-  const dir=G.dx>0?1:-1,rest=(W-Math.abs(cur))/W;
-  await anim(cur,dir*W,Math.round(120+140*rest),'cubic-bezier(.3,0,.8,.5)');
-  NOFX=true;const b=document.querySelector(`#app .nav button[data-i="${o[j]}"]`);if(b)b.click();NOFX=false;navigator.vibrate&&navigator.vibrate(6);
-  document.getElementById('app').classList.add('eswipe');await anim(-dir*W,0,300,'cubic-bezier(.16,1,.3,1)');finish();busy=false};
- addEventListener('touchend',done,{passive:true});addEventListener('touchcancel',()=>{if(g&&g.on){const G=g;g=null;anim(G.dx,0,240,'cubic-bezier(.16,1,.3,1)').then(finish)}else g=null},{passive:true})}
-RELEASES.push({v:'2026.11.23',date:'Next update',items:[]});RELEASES.find(r=>r.v==='2026.11.23').items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/><path d="M4 4v16"/>',h:'Swipe between tabs',p:'Swipe in from the very edge of the screen to move to the next tab. Swipes anywhere else work as normal, so it only happens when you mean it.'});
+  if(Math.abs(dy)>18&&Math.abs(dy)>Math.abs(dx)){g=null;return}
+  const inward=(g.side==='l'&&dx>0)||(g.side==='r'&&dx<0);if(!inward){if(Math.abs(dx)>8)g=null;return}
+  if(Math.abs(dx)>10&&e.cancelable)e.preventDefault();
+  if(Math.abs(dx)>=TRIG&&Math.abs(dx)>Math.abs(dy)*1.8){const dir=g.side==='r'?1:-1;g=null;go(dir)}},{passive:false});
+ addEventListener('touchend',()=>{g=null},{passive:true});addEventListener('touchcancel',()=>{g=null},{passive:true})}
+RELEASES.push({v:'2026.11.23',date:'Next update',items:[]});RELEASES.find(r=>r.v==='2026.11.23').items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/><path d="M4 4v16"/>',h:'Swipe between tabs',p:'Swipe in from the very edge of the screen and the next tab slides in. Swipes anywhere else work as normal, so it only happens when you mean it.'});
+/* ===== v45: a short first-run tour of the essentials; everything else appears as a one-off tip when it becomes useful ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.ftip{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px));max-width:520px;margin:0 auto;z-index:55;padding:14px 16px;border-radius:20px;background:rgba(22,26,40,.94);border:1px solid var(--edge);box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:fxtoast .42s var(--e-spring) both}
+.ftip b{display:block;font-size:15px;margin-bottom:3px}.ftip p{margin:0;font-size:14px;line-height:1.45;color:var(--dim)}
+.ftip .row{justify-content:flex-end;margin-top:8px}.ftip .btn{min-height:38px;padding:7px 16px}`;document.head.appendChild(st)})();
+const FULLTOUR=TOUR.slice();
+const ESSW=[s=>s.h==='Welcome to Swell',s=>s.h==='Your week',s=>s.h==='Start workout'&&s.t==='home',s=>s.h==='Macros'&&s.t==='home',s=>s.h==='Your turn'&&/^Hold any widget/.test(s.p||''),s=>s.h==='Today so far',s=>/^Scan (a )?label$/.test(s.h),s=>s.h==='Your plans',s=>s.h==='Your turn'&&/^Tap Settings/.test(s.p||'')];
+const ESS=ESSW.map(f=>FULLTOUR.find(f)).filter(Boolean).map(x=>({...x}));
+if(ESS[0])ESS[0].p='A quick look at the essentials. Anything else, Swell will point out when you need it, and the full tour is in Settings. Tip: pull down from the top of any screen to refresh.';
+const tourSet=list=>{TOUR.length=0;list.forEach(x=>TOUR.push(x))};
+let TOURESS=false;if(!S.tourDone&&ESS.length>=6){tourSet(ESS);TOURESS=true}
+// once the short tour is done, or when someone asks to replay it, the full tour is back in place
+window.addEventListener('click',e=>{if(e.target.closest('[data-a=tour]')&&TOURESS){tourSet(FULLTOUR);TOURESS=false}},true);
+{const _r=render;render=function(){if(TOURESS&&S.tourDone&&TU==null){tourSet(FULLTOUR);TOURESS=false;S.tourAt=Date.now();save()}_r.apply(this,arguments);try{tipCheck()}catch(_){}}}
+/* one-off tips: shown once, only when the thing they describe is on screen and nothing else is open */
+const TIPS=[
+ {id:'move',t:'home',q:'.hdr,.cal2,.calw',ok:()=>!!activePlan(),h:'Move a workout',p:'Hold a workout in your week and drag it onto another day to move it.'},
+ {id:'goal',t:'home',q:'.wd[data-id=goal]',ok:()=>!S.goal2,h:'Set a goal',p:'Tap Set a goal to pick a target, like losing weight or building a body part. Swell tracks it for you.'},
+ {id:'saved',t:'diet',q:'[data-a=smask]',ok:()=>(S.saved||[]).length>0,h:'Saved meals',p:'Tap a saved meal to add it again in one go. You can add a photo to spot it quickly.'},
+ {id:'body',t:'diet',q:'[data-bm]',ok:()=>Object.keys(S.meals||{}).length>=2,h:'Body metrics',p:'Log your weight here now and then. Swell estimates the rest and keeps a record for your monthly report.'},
+ {id:'eat',t:'diet',q:'[data-a=adde]',ok:()=>Object.keys(S.meals||{}).length>=3&&!(S.eat||[]).length,h:'Eating schedule',p:'Add your usual meal times and Swell can remind you when it’s time to eat.'},
+ {id:'paste',t:'plan',q:'[data-a=imp]',ok:()=>!(S.plans||[]).length,h:'Already have a plan?',p:'Tap Paste a plan and Swell builds it from your text, so you don’t have to type it all in.'},
+ {id:'timer',t:'timer',q:'[data-a=tal]',ok:()=>true,h:'Counting sets',p:'Tap +1 set after each set. Turn on Auto-start rest and your rest timer begins on its own.'},
+ {id:'stimer',t:'timer',q:'[data-a=savt]',ok:()=>(S.timers||[]).length===0&&(S.tal&&Object.keys(S.tal).length>0),h:'Saved timers',p:'Save your sets and rest as a timer, like an alarm, and run it in one tap next time.'}];
+let TIPT=0,TIPGAP=180000;
+function tipCheck(){if(!S.user||!S.setup||!S.setup.done||!S.tourDone||TU!=null||ED||AW||$('.ftip')||$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#splash,#imp,#tour'))return;if(Date.now()-TIPT<20000||Date.now()-(S.tourAt||0)<TIPGAP)return;
+ S.tips=S.tips||{};const tp=TIPS.find(x=>!S.tips[x.id]&&x.t===tab&&(()=>{try{return x.ok()&&document.querySelector(x.q)}catch(_){return false}})());if(!tp)return;
+ setTimeout(()=>{if(tab!==tp.t||$('.ftip')||$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#tour')||TU!=null||ED)return;TIPT=Date.now();S.tips[tp.id]=1;save();
+  const d=document.createElement('div');d.className='ftip';d.setAttribute('role','status');d.innerHTML=`<b>${esc(tp.h)}</b><p>${esc(tp.p)}</p><div class="row"><button class="btn on" type="button">Got it</button></div>`;
+  const off=()=>{if(!d.isConnected)return;d.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(10px)'}],{duration:220,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}).onfinish=()=>d.remove()};
+  d.querySelector('button').onclick=off;document.body.appendChild(d);setTimeout(off,14000)},1200)}
+// people who already use Swell have seen these screens, so don't tip them about things they already know
+if(S.tourDone&&!S.tipsInit){S.tipsInit=1;S.tips=S.tips||{};TIPS.forEach(x=>S.tips[x.id]=1);save()}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
