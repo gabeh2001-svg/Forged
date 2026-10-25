@@ -1237,7 +1237,7 @@ function fxApply(root,pre,same){if(!root||FXRM.matches)return;const post=fxSnap(
    const nv=parseFloat(v&&v.textContent)||0;if(v&&nv!==p.v){const txt=v.textContent,t0=performance.now(),a0=p.v;(function st(t){const k=Math.min(1,(t-t0)/650),e=1-Math.pow(1-k,3);v.textContent=txt.replace(/^-?[\d.]+/,String(Math.round(a0+(nv-a0)*e)));if(k<1)requestAnimationFrame(st)})(t0);
     if(nv>p.v){fxFloat(v,'+'+Math.round(nv-p.v)+(p.u?' '+p.u:''),now.length*120);now.push(1)}}});
   root.querySelectorAll('.ring2').forEach((r,i)=>{const c=r.querySelectorAll('circle')[1],p=pre.rings.get(i);if(!c||!p)return;const n=c.getAttribute('stroke-dasharray');if(n===p)return;const a=parseFloat(p),b=parseFloat(n),rest=n.split(' ')[1],t0=performance.now();(function st(t){const k=Math.min(1,(t-t0)/800),e=1-Math.pow(1-k,3);c.setAttribute('stroke-dasharray',(a+(b-a)*e).toFixed(1)+' '+rest);if(k<1)requestAnimationFrame(st)})(t0)})}
- else if(post.m.size){root.animate([{opacity:.0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}}
+ else if(post.m.size){[...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;c.animate([{opacity:0},{opacity:1}],{duration:220,easing:'ease-out'})})}}
 function fxFloat(h,t,d){const f=document.createElement('div');f.className='fx-float';f.textContent=t;h.style.position='relative';f.style.left='50%';f.style.bottom='100%';f.style.animationDelay=(d||0)+'ms';f.style.opacity=0;h.appendChild(f);setTimeout(()=>f.remove(),1700+(d||0))}
 function fxBurst(el,x,y){if(FXRM.matches)return;if(el&&el.isConnected){const r=el.getBoundingClientRect();if(r.width){x=r.left+r.width/2;y=r.top+r.height/2}}if(x==null)return;const b=document.createElement('div');b.className='fx-burst';b.style.left=x+'px';b.style.top=y+'px';
  b.innerHTML='<div class="ck"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3.2L14 6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+Array.from({length:8},(_,k)=>`<i style="--r:${k*45+22}deg"></i>`).join('');document.body.appendChild(b);setTimeout(()=>b.remove(),1000);navigator.vibrate&&navigator.vibrate(10)}
@@ -1710,5 +1710,80 @@ function pushAsk(){const st=pushState();
  L.insertAdjacentHTML('afterbegin',`<button data-a="pushask">${ico('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>')}<span>Notifications<small>${sub}</small></span></button>`)}}
 document.addEventListener('click',e=>{if(e.target.closest('[data-a=pushask]'))pushAsk()});
 RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',h:'Notifications',p:'Turn on notifications in Settings to hear about new features and reminders.'});
+/* ===== v32: smooth tab switching with a gliding highlight, notification preferences and personal reminders ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.nav{position:fixed}.nav .navhl{position:absolute;top:0;left:0;border-radius:16px;background:rgba(255,255,255,.2);pointer-events:none;z-index:0}
+.nav button{position:relative;z-index:1}.nav.glide button.on{background:transparent}
+.npl{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.npr{display:flex;align-items:center;gap:12px;padding:12px 2px;border-top:1px solid rgba(255,255,255,.1)}
+.npr:first-child{border-top:0}.npr>div{flex:1;min-width:0}.npr b{display:block;font-size:15px}.npr small{display:block;color:var(--dim);font-size:13px;line-height:1.4;margin-top:2px}
+.tg{flex:none;width:52px;height:32px;border-radius:999px;border:0;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .25s}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3);transition:transform .28s cubic-bezier(.3,1.3,.5,1)}
+.tg.on{background:var(--G)}.tg.on::after{transform:translateX(20px)}
+.npst{display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.08);margin:8px 0 4px;font-size:14px}
+.npst i{width:10px;height:10px;border-radius:50%;flex:none}`;document.head.appendChild(st)})();
+/* gliding highlight on the bottom bar */
+let NAVR=null;
+function navGlide(){const n=document.querySelector('#app .nav'),b=n&&n.querySelector('button.on');if(!b)return;const nr=n.getBoundingClientRect(),br=b.getBoundingClientRect(),to={x:br.left-nr.left,y:br.top-nr.top,w:br.width,h:br.height};
+ const from=NAVR;NAVR=to;if(!from||(from.x===to.x&&from.w===to.w)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const hl=document.createElement('i');hl.className='navhl';hl.style.cssText=`width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px)`;n.appendChild(hl);n.classList.add('glide');
+ const a=hl.animate([{transform:`translate(${from.x}px,${from.y}px)`,width:from.w+'px'},{transform:`translate(${to.x}px,${to.y}px)`,width:to.w+'px'}],{duration:420,easing:'cubic-bezier(.3,1.25,.4,1)'});
+ a.onfinish=a.oncancel=()=>{hl.remove();n.classList.remove('glide')}}
+{const _r=render;render=function(){_r.apply(this,arguments);try{navGlide()}catch(_){}}}
+// start each tab at the top instead of keeping the old scroll position
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a=tab]');if(el&&el.dataset.i!==tab)scrollTo(0,0)},true);
+/* notification preferences */
+const NT=[['workout','Workout days','The morning of a planned workout, at 8am.',true],['rest','Rest timer','When your rest is over, even with your phone locked.',true],['meal','Meal times','At each time in your eating schedule on the Diet tab.',false],['log','Log your day','In the evening if you haven’t logged any food yet, at your end-of-day time.',true],['miss','Haven’t seen you','If you haven’t opened Swell for 3 days.',true],['week','Weekly check-in','Sunday mornings, to log your weight and look back on the week.',false],['wrap','Your Wrapped','When your monthly or yearly Wrapped is ready.',true],['news','News and updates','When there’s something new in Swell.',true]];
+function npGet(){S.np=S.np||{};NT.forEach(([k,,,d])=>{if(S.np[k]===undefined)S.np[k]=k==='meal'?!!(S.eat&&S.eat.length):d});return S.np}
+function notifSheet(){const st=pushState(),P=npGet(),col={on:'var(--G)',off:'var(--A)',blocked:'var(--R)',home:'var(--A)',none:'var(--R)'}[st],
+ msg={on:'Notifications are on. Choose exactly what Swell can send you.',off:'Notifications are off. Pick what you’d like below, then turn them on.',blocked:'Notifications are switched off for Swell in your phone’s settings.',home:'Add Swell to your Home Screen and open it from there to use notifications.',none:'This phone or browser doesn’t support notifications. iPhones need iOS 16.4 or later.'}[st];
+ sheet(`<h2>Notifications</h2><div class="npst"><i style="background:${col}"></i><span>${msg}</span></div><div class="npl">${NT.map(([k,h,p])=>`<div class="npr"><div><b>${h}</b><small>${p}</small></div><button class="tg ${P[k]?'on':''}" data-a="npt" data-i="${k}" role="switch" aria-checked="${!!P[k]}" aria-label="${h}"></button></div>`).join('')}</div>
+ ${st==='off'?'<button class="btn big on" data-a="pushask" style="margin-top:12px">Turn on notifications</button>':''}${st==='on'?'<button class="btn" data-a="nptest" style="margin-top:12px">Send me a test</button>':''}
+ <p class="sm" style="margin:12px 2px 0">You can change these any time in Settings, then Notifications.</p><button class="btn big" data-a="shx" style="margin-top:8px">Done</button>`)}
+{const _ss=settingsSheet;settingsSheet=function(){_ss.apply(this,arguments);const b=$('#sheet .setl [data-a=pushask]');if(b){b.dataset.a='npopen';const st=pushState(),n=NT.filter(x=>npGet()[x[0]]).length;const sm=b.querySelector('small');if(sm&&st==='on')sm.textContent=`On, ${n} of ${NT.length} types. Tap to choose.`;else if(sm&&st==='off')sm.textContent='Off. Tap to choose what you get.'}}}
+/* personal reminders: work out what's due over the next week and ask the server to schedule it */
+const REM_URL='/.netlify/functions/remind';
+function at(d,hm){const [h,m]=(hm||'08:00').split(':').map(Number),x=new Date(d+'T00:00:00');x.setHours(h||0,m||0,0,0);return x}
+function remPlan(){const P=npGet(),t=realToday(),now=Date.now(),L=[];try{ensureSched()}catch(_){}const p=activePlan();
+ for(let i=0;i<7;i++){const d=addDays(t,i);
+  if(P.workout&&p&&S.sch&&S.sch[d]!==undefined){const dy=p.days[S.sch[d]%p.days.length];L.push({k:'workout|'+d,t:'workout',at:at(d,'08:00'),p:{n:dy&&dy.name}})}
+  if(P.meal)(S.eat||[]).forEach(x=>L.push({k:'meal|'+d+'|'+x.n+'|'+x.t,t:'meal',at:at(d,x.t),p:{n:x.n}}));
+  if(P.log&&i>0||P.log&&!((S.meals||{})[d]||[]).length)L.push({k:'log|'+d,t:'log',at:at(d,S.eodT||'21:00')});
+  if(P.week&&new Date(d+'T12:00').getDay()===0)L.push({k:'week|'+d,t:'week',at:at(d,'10:00')})}
+ if(P.miss)L.push({k:'miss',t:'miss',at:at(addDays(t,3),'18:00')});
+ if(P.wrap){const nx=addDays(t.slice(0,7)+'-28',7).slice(0,7)+'-01';L.push({k:'wrap|'+nx,t:'wrap',at:at(nx,'10:00'),p:{m:MON[+t.slice(5,7)-1]}})}
+ return L.filter(x=>x.at.getTime()>now+60e3)}
+let REMBUSY=false;
+async function remSync(force){if(!OS_ON||REMBUSY||pushState()!=='on'||!S.uid)return;const day=realToday();if(!force&&S.remDay===day&&S.remSig===remSig())return;REMBUSY=true;
+ try{S.remIds=S.remIds||{};const want=remPlan(),wk=new Set(want.map(x=>x.k)),cancel=[],keep={};
+  Object.entries(S.remIds).forEach(([k,v])=>{if(k.startsWith('rest'))return;if(wk.has(k)&&!(k==='miss'&&S.remDay!==day))keep[k]=v;else cancel.push(v.id)});
+  const add=want.filter(x=>!keep[x.k]);if(!add.length&&!cancel.length){S.remDay=day;S.remSig=remSig();save();return}
+  const r=await fetch(REM_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:S.uid,cancel,add:add.map(x=>({t:x.t,at:x.at.toISOString(),p:x.p}))})});if(!r.ok)return;const j=await r.json();
+  const ids={};Object.entries(S.remIds).forEach(([k,v])=>{if(k.startsWith('rest'))ids[k]=v});Object.assign(ids,keep);add.forEach((x,i)=>{if(j.ids&&j.ids[i])ids[x.k]={id:j.ids[i]}});S.remIds=ids;S.remDay=day;S.remSig=remSig();save()}catch(_){}finally{REMBUSY=false}}
+function remSig(){const P=npGet();return JSON.stringify([P,S.eat||[],S.eodT||'',S.active||'',Object.keys(S.sch||{}).filter(d=>d>=realToday()).slice(0,8)])}
+setTimeout(()=>remSync(),6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>remSync(),1500)});
+/* rest timer: schedule a "rest's over" push when rest starts, cancel it if rest ends early */
+async function restPush(endMs,next){if(!OS_ON||pushState()!=='on'||!S.uid||!npGet().rest)return;await restCancel();try{const r=await fetch(REM_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:S.uid,add:[{t:'rest',at:new Date(endMs).toISOString(),p:{n:next}}]})});const j=await r.json();if(j.ids&&j.ids[0]){S.remIds=S.remIds||{};S.remIds.rest={id:j.ids[0],end:endMs};save()}}catch(_){}}
+async function restCancel(){const R=S.remIds&&S.remIds.rest;if(!R)return;delete S.remIds.rest;save();if(R.end<Date.now())return;try{await fetch(REM_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:S.uid,cancel:[R.id]})})}catch(_){}}
+let RPH=null;
+if(typeof awr==='function'){const _w=awr;awr=function(){_w.apply(this,arguments);const ph=AW&&AW.ph;if(ph!==RPH){if(ph==='rest'&&AW.end){const ms=Date.now()+Math.max(0,AW.end-performance.now());let nx='';try{nx=AW.d.ex[AW.e].n}catch(_){}restPush(ms,nx)}else if(RPH==='rest')restCancel();RPH=ph}}}
+// don't double up: if Swell is open on screen, skip the rest push
+if(OS_ON)OneSignalDeferred.push(OS=>{try{OS.Notifications.addEventListener('foregroundWillDisplay',e=>{const d=e.notification&&e.notification.additionalData;if(d&&d.type==='rest'&&!document.hidden)e.preventDefault()})}catch(_){}});
+// news opt-out is a tag on the person's OneSignal record
+function npNewsTag(){if(!OS_ON)return;OneSignalDeferred.push(OS=>{try{OS.User.addTags({news:npGet().news?'1':'0'})}catch(_){}})}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='npopen'){e.stopImmediatePropagation();notifSheet();return}
+ if(a==='npt'){const k=el.dataset.i,P=npGet();P[k]=!P[k];el.classList.toggle('on',P[k]);el.setAttribute('aria-checked',P[k]);save();if(k==='news')npNewsTag();if(k==='rest'&&!P.rest)restCancel();remSync(true);return}
+ if(a==='nptest'){if(!S.uid)return;fetch(REM_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:S.uid,add:[{t:'test',at:new Date(Date.now()+8000).toISOString()}]})}).then(r=>toast(r.ok?'A test notification is on its way. Lock your phone to see it.':'Swell couldn’t send a test right now. Try again in a minute.'),()=>toast('You’re offline, so the test couldn’t be sent.'));return}},true);
+// after notifications are allowed, show the choices straight away and set everything up
+{const _pa=pushAsk;pushAsk=function(){_pa.apply(this,arguments);let n=0;const iv=setInterval(()=>{if(pushState()==='on'||++n>60){clearInterval(iv);if(pushState()==='on'){npNewsTag();remSync(true);notifSheet()}}},1000)}}
+// logging food cancels tonight's reminder
+document.addEventListener('click',e=>{if(e.target.closest('[data-a=addm],[data-a=smyes]'))setTimeout(()=>remSync(true),800)});
+/* a one-time invitation, after What's new, for people who haven't chosen yet */
+setInterval(()=>{if(S.npAsked||!S.user||!S.setup.done||!isStandalone()||pushState()!=='off'||$('#splash')||$('#sheet')||$('#wn')||$('#req')||$('#lx2')||$('#wr')||$('#pk')||AW||TU!=null)return;if(S.seenVer!==APP_VER)return;S.npAsked=1;save();
+ sheet(`<h2>Want reminders from Swell?</h2><p class="sm">Choose exactly what Swell can send you, from rest timer alerts to meal times. Everything can be switched on or off, any time.</p><button class="btn big on" data-a="npopen">Choose my reminders</button><button class="btn big" data-a="shx">Not now</button>`)},4000);
+{const R=RELEASES.find(r=>r.v==='2026.10.27');const it=R.items.find(x=>x.h==='Notifications');if(it){it.h='Reminders you control';it.p='Turn on notifications in Settings and pick exactly which ones you want: workout days, rest timer, meal times, logging your day and more.'}
+ R.items.push({i:'<rect x="3" y="15" width="18" height="6" rx="3"/><circle cx="8" cy="18" r="1.5"/>',h:'Smoother tabs',p:'Switching tabs is now smooth, and the highlight glides to the tab you pick.'});
+ R.tour.push({t:'home',q:'[data-a=settings]',h:'New: reminders you control',p:'Open Settings, then Notifications, to pick exactly which reminders Swell sends you. Each one has its own switch.'})}
 render();periodic();reqShow();
 </script></body></html>
