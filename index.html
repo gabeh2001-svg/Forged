@@ -223,6 +223,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='forge.v1';
 let S={};try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+/* preview only (the Claude preview, not the live site or a local file): start inside the app with a demo profile */
+const PREVIEW=location.protocol!=='file:'&&!/netlify\.app$|^localhost$|^127\./.test(location.hostname);
+if(PREVIEW&&!S.user)S={user:'Gabriel',seenA2HS:1,tourDone:1,npAsked:1,seenVer:'2026.10.26',p:'#7f0000',s:'#000000',active:'demo',setup:{done:true,freq:4,h:180,w:80,age:25,sex:'m',act:1.55,k:2800,p:200,f:80,c:300},plans:[{id:'demo',name:'Push Pull Legs',perWeek:3,cur:0,days:[{name:'Push',ex:[{n:'Bench press',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Shoulder press',eq:'Dumbbell',s:3,t:'Reps',v:10},{n:'Tricep pushdown',eq:'Cable',s:3,t:'Reps',v:12}]},{name:'Pull',ex:[{n:'Lat pulldown',eq:'Cable',s:3,t:'Reps',v:10},{n:'Barbell row',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Bicep curl',eq:'Dumbbell',s:3,t:'Reps',v:12}]},{name:'Legs',ex:[{n:'Squat',eq:'Barbell',s:3,t:'Reps',v:6},{n:'Leg press',eq:'Machine',s:3,t:'Reps',v:10},{n:'Calf raise',eq:'Machine',s:3,t:'Reps',v:15}]}]}]};
 Object.assign(S,{plans:S.plans||[],checks:S.checks||{},macros:S.macros||{},wins:S.wins||{},bg:S.bg||0,setup:S.setup||{}});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -374,7 +377,7 @@ document.addEventListener('pointerdown',e=>{const w=e.target.closest('.wd');if(!
  if(!ED){const lp=setTimeout(()=>{ED=true;navigator.vibrate&&navigator.vibrate(15);render()},800),c=ev=>{if(!ev||ev.type!=='pointermove'||Math.hypot(ev.clientX-x,ev.clientY-y)>8){clearTimeout(lp);['pointermove','pointerup','pointercancel'].forEach(t=>document.removeEventListener(t,c))}};['pointermove','pointerup','pointercancel'].forEach(t=>document.addEventListener(t,c));return}
  const rz=!!e.target.closest('.hd');let on=false;if(rz)e.preventDefault();
  const m=ev=>{const dx=ev.clientX-x,dy=ev.clientY-y;
-  if(rz){const nw=Math.min(2,Math.max(1,L.w+Math.round(dx/90))),nh=Math.min(2,Math.max(1,L.h+Math.round(dy/80)));const hh=nw===1?1:nh;if(nw!==L.w||hh!==L.h){L.w=nw;L.h=hh;save();render();return end()}return}
+  if(rz){const nw=Math.min(2,Math.max(1,L.w+Math.round((w.classList.contains('rcol')?-dx:dx)/90))),nh=Math.min(2,Math.max(1,L.h+Math.round(dy/80)));const hh=nw===1?1:nh;if(nw!==L.w||hh!==L.h){L.w=nw;L.h=hh;save();render();return end()}return}
   if(!on&&Math.hypot(dx,dy)>6){on=true;w.classList.add('drag')}if(on)w.style.transform=`translate(${dx}px,${dy}px) scale(1.04)`};
  const end=()=>{document.removeEventListener('pointermove',m);document.removeEventListener('pointerup',u);document.removeEventListener('pointercancel',u);if(rz)document.addEventListener('pointerdown',e2=>0,{once:true})};
  const u=ev=>{end();if(!on)return;w.style.pointerEvents='none';const t=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.wd');w.style.pointerEvents='';if(t&&t!==w){const a=S.lay.indexOf(L),b=S.lay.findIndex(l=>l.id===t.dataset.id);S.lay.splice(a,1);S.lay.splice(b,0,L);save()}render()};
@@ -628,7 +631,7 @@ const TOUR=[
  {t:'home',q:'.grid',h:'Widgets',p:'Hold a widget until everything wiggles. Drag it to move, use the corner handle to resize, or tap the minus to remove it. Arrows show where the others will go.'},
  {t:'home',q:'[data-a=cs]',h:'Colour scheme',p:'Change your colours and glow strength any time.'},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals. Type into a total to correct it by hand. The lights follow your green, amber and red rules.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Save for later',p:'Turn this on before adding a meal and it becomes a one-tap button next time.'},
  {t:'diet',q:'.card',n:-1,h:'Body metrics',p:'Log your scale readings. They save for the day, and your last entry shows faintly as a guide.'},
  {t:'plan',q:'.card',h:'Start any workout',p:'Pick a plan and day, then follow the guided session. Set the rest between sets here. It’s saved with that day.'},
@@ -712,7 +715,7 @@ TOUR.length=0;TOUR.push(
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. That’s edit mode: drag to move, use the corner handle to resize, tap the minus to remove.',ok:()=>ED,after:()=>{ED=false}},
  {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals, and you can type into a total to correct it. The lights follow your green, amber and red rules.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals added with it switched on become one-tap buttons next time.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
  {t:'diet',q:'.eat',h:'Eating schedule',p:'Add your meal times. Swell nudges you on Home, and “Add reminders to my calendar” gets your phone to notify you, including a reminder to log your food at the end of the day.'},
  {t:'diet',q:'.card',n:-2,h:'Body metrics',p:'Log your scale readings. They save for the day, and your last entry shows faintly as a guide.'},
@@ -1056,7 +1059,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  {t:'diet',q:'.hdr .wd2:not(.on)',pick:a=>a.find(x=>x.dataset.i>realToday())||a[0],h:'Your turn',p:'Tap another day. We’ll bring you back to today straight after.',ok:()=>VD!=null,after:()=>{VD=null}},
  {t:'diet',q:'.dp',h:'Today so far',p:'Shows how much of your calories and macros you’ve had. On a past day it becomes a summary of whether you hit your goals.'},
  {t:'diet',q:'[data-a=editgoal]',h:'Your goals',p:'Tap any goal number to change it.'},
- {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. If no label is found, you’ll be asked to try again.'},
+ {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals you add with it on go into Saved meals, ready to add again in one tap.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
  {t:'diet',q:'.card',pick:H('Saved meals'),h:'Saved meals',p:'Tap a saved meal and Swell asks if you’ve eaten it today. Add a picture to spot it quickly. Swipe left to delete.'},
  {t:'diet',q:'.card',pick:H('Body metrics'),h:'Body metrics',p:'Your scale readings stay saved until you change them. Log a new weight and Swell estimates the rest, shown in grey under each one.'},
@@ -1246,14 +1249,14 @@ function fxBurst(el,x,y){if(FXRM.matches)return;if(el&&el.isConnected){const r=e
 {const _s=sheet;sheet=function(h){const o=$('#sheet'),pre=o&&h?fxSnap(o):null;_s.apply(this,arguments);if(pre)try{fxApply($('#sheet'),pre,true)}catch(_){}}}
 if(typeof awr==='function'){const _w=awr;awr=function(){const o=$('#aw'),pre=o?fxSnap(o):null;_w.apply(this,arguments);if(pre)try{fxApply($('#aw'),pre,true)}catch(_){}}}
 /* moments: a tick burst where you tapped whenever something is added or recorded */
-const FXADD=/^(addm|smyes|usem|adde|addx2?|addw|savt|gsave|grec|gyes2|awsave|egsave|estuse|estset|conf2?|lxadd|reqsave|fin|edone|nyes)$/;
+const FXADD=/^(addm|smyes|usem|adde|addx2?|addw|savt|gsave|grec|gyes2|awsave|egsave|estuse|conf2?|lxadd|reqsave|fin|edone|nyes)$/;
 let FXTAP=null;
 document.addEventListener('pointerdown',e=>{const b=e.target.closest('.btn,.pill');if(!b||FXRM.matches)return;const r=b.getBoundingClientRect(),d=Math.max(r.width,r.height)*2.2,o=document.createElement('span');o.className='fx-rip';o.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;if(getComputedStyle(b).position==='static')b.style.position='relative';b.style.overflow='hidden';b.appendChild(o);setTimeout(()=>o.remove(),600)},true);
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
  /* deletes slide out first, then the list closes the gap */
  if(/^del[a-z]$/.test(a)&&!el._fxgo&&!FXRM.matches){const row=el.closest('.sr');if(row){e.stopImmediatePropagation();e.preventDefault();row.style.height=row.offsetHeight+'px';row.classList.add('fx-out');setTimeout(()=>{el._fxgo=1;el.click();el._fxgo=0},240);return}}
  if(FXADD.test(a)){const r=el.getBoundingClientRect();FXTAP={x:r.left+r.width/2,y:r.top+r.height/2,t:Date.now()};setTimeout(()=>{if(!FXTAP)return;const err=document.querySelector('#app .err:not([hidden]),#sheet .err:not([hidden])');if(err&&err.textContent.trim())return;fxBurst(el.isConnected?el:null,FXTAP.x,FXTAP.y);FXTAP=null},30)}},true);
-{const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);setTimeout(()=>{const b=$('#aw [data-a=awn]')||$('#aw .btn');fxBurst(b,innerWidth/2,innerHeight*.6)},40);return r}}
+{const _c=completeSet;completeSet=function(){const r=_c.apply(this,arguments);try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}return r}}
 
 /* ===== v22: simpler Customise look, screen lock during tour and pop-ups ===== */
 (function(){const st=document.createElement('style');st.textContent=`
@@ -1335,7 +1338,7 @@ body.spon #app{opacity:0}
 @keyframes swdraw{0%{stroke-dashoffset:150}45%,70%{stroke-dashoffset:0}100%{stroke-dashoffset:-150}}
 @media (prefers-reduced-motion:reduce){.swl .orb,.swl .orb2,.swl .wl{animation:none}}`;document.head.appendChild(st);
  const w=document.querySelector('#ov .ringw');
- if(w)w.innerHTML=`<svg class="swl" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3"/><g class="orb"><circle cx="50" cy="50" r="44" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="46 230"/></g><g class="orb2"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="14 40"/></g><circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.8"/><g transform="translate(50 50) scale(.35) translate(-120 -120)"><path class="wl" pathLength="150" d="M-4 156 C40 154 80 144 106 120 C124 102 136 80 160 70 C184 60 208 70 212 92 C214 104 206 112 198 108 C204 100 200 90 190 90 C177 92 170 106 170 122 C170 138 176 150 192 158" transform="translate(-62 -16) scale(1.15)" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#swlc)"/><clipPath id="swlc"><circle cx="120" cy="120" r="84"/></clipPath><path d="M30 165.7 H210" stroke="#fff" stroke-opacity=".7" stroke-width="4.5" stroke-linecap="round"/></g></svg>`;
+ if(w)w.innerHTML=`<svg class="swl" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="swlc"><circle cx="50" cy="50" r="28.6"/></clipPath></defs><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3"/><g class="orb"><circle cx="50" cy="50" r="44" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="46 230"/></g><g class="orb2"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="14 40"/></g><g clip-path="url(#swlc)"><g transform="translate(50 50) scale(.35) translate(-120 -120)"><path class="wl" pathLength="150" d="M-4 156 C40 154 80 144 106 120 C124 102 136 80 160 70 C184 60 208 70 212 92 C214 104 206 112 198 108 C204 100 200 90 190 90 C177 92 170 106 170 122 C170 138 176 150 192 158" transform="translate(-62 -16) scale(1.15)" fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(-62 -16) scale(1.15)" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3.4" stroke-linecap="round"><path d="M150 108 C139 120 137 133 139 143 C141 149 145 154 152 157"/><path d="M128 125 C121 134 121 143 124 149 C126 153 130 156 134 157"/></g><path d="M20 165.7 H220" stroke="#fff" stroke-opacity=".7" stroke-width="4.5" stroke-linecap="round"/></g></g><circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.8"/></svg>`;
 })();
 function splash(){if(document.getElementById('splash'))return;
  if(performance.now()>8000)return; // only on a fresh launch, not when coming back to an open app
@@ -1566,7 +1569,7 @@ function mrep(ym){const t=realToday(),first=ym+'-01';let days=[];for(let d=first
  days.forEach(d=>{const m=M[d]||{},lg=SZ.some(k=>+m[k]>0)||(ML[d]||[]).length>0;if(lg){logged++;sk+=+m.k||0;sp+=+m.p||0;if(g.p&&+m.p>=+g.p)pHit++}
   const ok=lg&&SZ.every(k=>!+g[k]||RULES[k](+m[k]||0,+g[k])===0);if(ok)onT++;cl=lg?cl+1:0;co=ok?co+1:0;bestLog=Math.max(bestLog,cl);bestOn=Math.max(bestOn,co);
   if(FD[d]){done++;const w=new Date(d+'T12:00'),mon=addDays(d,-((w.getDay()+6)%7));wk[mon]=(wk[mon]||0)+1}if(W[d])wins++});
- const p=typeof activePlan==='function'&&activePlan(),per=p?+p.perWeek||0:+g.freq||0,planned=Math.max(done,Math.round(per*days.length/7));
+ const p=typeof activePlan==='function'&&activePlan(),per=p?+p.perWeek||0:+g.freq||0,sd=Object.keys(S.sch||{}).filter(d=>ymOf(d)===ym&&d<=t),planned=Math.max(done,sd.length?sd.length:Math.round(per*days.length/7));
  const bm=Object.keys(S.bm||{}).filter(d=>ymOf(d)===ym).sort(),fv=k=>{for(const d of bm){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null},lv=k=>{for(const d of [...bm].reverse()){const v=S.bm[d][k];if(v!==undefined&&v!=='')return+v}return null};
  let gl=null;try{if(S.goal2){const c=gCalc(S.goal2);gl={n:S.goal2.name,pct:Math.round((c.pct||0)*100)}}}catch(_){}
  const r={ym,label:ymLabel(ym),n:days.length,logged,onT,avgK:logged?Math.round(sk/logged):0,avgP:logged?Math.round(sp/logged):0,gK:+g.k||0,gP:+g.p||0,pHit,done,planned,wins,bestLog,bestOn,busy:Math.max(0,...Object.values(wk)),w0:fv('w'),w1:lv('w'),bf0:fv('bf'),bf1:lv('bf'),sm0:fv('smm'),sm1:lv('smm'),goal:gl,u:U()};
@@ -1643,8 +1646,8 @@ function repList(kind){const R=Object.values(S.reports||{}).sort((a,b)=>a.ym<b.y
  const yrs=[...new Set(R.map(r=>r.ym.slice(0,4)))];
  return`<div class="rpl">${row(live,monName(cur)+' so far','wrm')}${R.map(r=>row(r,r.label,'wrm')).join('')}${kind==='all'?yrs.map(y=>{const Y=yrep(y);return Y&&Y.months>=2?row(Y,`Your ${y}`+(y===cur.slice(0,4)?' so far':''),'wry'):''}).join(''):''}</div>`}
 function reportsSheet(){sheet(`<h2>Reports</h2><p class="sm">A Swell Wrapped for every month, plus your year once you’ve had two months. Day-by-day logs are kept for two months, and these reports are kept for good.</p>${repList('all')}<button class="btn big" data-a="shx" style="margin-top:12px">Close</button>`)}
-{const _d=diet;diet=function(){return _d.apply(this,arguments)+`<div class="card"><h2>Diet reports</h2><p class="sm">Your food each month, with your Wrapped.</p>${repList('diet')}</div>`}}
-{const _p=planner;planner=function(){const h=_p.apply(this,arguments);return D?h:h+`<div class="card"><h2>Workout reports</h2><p class="sm">Your training each month, with your Wrapped.</p>${repList('work')}</div>`}}
+{const _d=diet;diet=function(){return _d.apply(this,arguments)+`<div class="card" style="margin-top:14px"><h2>Diet reports</h2><p class="sm">Your food each month, with your Wrapped.</p>${repList('diet')}</div>`}}
+{const _p=planner;planner=function(){const h=_p.apply(this,arguments);return D?h:h+`<div class="card" style="margin-top:14px"><h2>Workout reports</h2><p class="sm">Your training each month, with your Wrapped.</p>${repList('work')}</div>`}}
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
  if(a==='reports'){reportsSheet();return}
  if(a==='wrm'){const ym=el.dataset.i,r=(S.reports||{})[ym]||mrep(ym),k=el.dataset.k;sheet(null);const sl=wrSlides(r,false);let st=0;if(k==='diet')st=sl.findIndex(s=>s.includes('>Fuel<'));if(k==='work')st=sl.findIndex(s=>s.includes('>Training<'));wrPlay(r,false,Math.max(0,st));return}
@@ -1697,7 +1700,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a=a2copy]
 const OS_APP='77fd5321-a090-4c4e-93c4-2568f5524442',OS_ON=location.hostname==='everythings-swell.netlify.app';
 window.OneSignalDeferred=window.OneSignalDeferred||[];
 function osWho(OS){if(!S.user)return;S.uid=S.uid||('u'+Date.now().toString(36)+Math.random().toString(36).slice(2,8));save();try{OS.login(S.uid);OS.User.addTags({name:S.full||S.user})}catch(_){}}
-if(OS_ON)OneSignalDeferred.push(async OS=>{try{await OS.init({appId:OS_APP,serviceWorkerPath:'sw.js',serviceWorkerParam:{scope:'/'},autoResubscribe:true,notifyButton:{enable:false}});osWho(OS);OS.Notifications.addEventListener('permissionChange',()=>{if($('#sheet .setl'))settingsSheet()})}catch(_){}});
+if(OS_ON)OneSignalDeferred.push(async OS=>{try{await OS.init({appId:OS_APP,serviceWorkerPath:'sw.js',serviceWorkerParam:{scope:'/'},autoResubscribe:true,notifyButton:{enable:false},welcomeNotification:{title:'You’re all set',message:'Swell will only send the reminders you choose. Change them any time in Settings.'}});osWho(OS);OS.Notifications.addEventListener('permissionChange',()=>{if($('#sheet .setl'))settingsSheet()})}catch(_){}});
 {const _li=login;login=function(){const r=_li.apply(this,arguments);if(OS_ON)OneSignalDeferred.push(OS=>osWho(OS));return r}}
 function pushState(){if(!('Notification' in window))return isStandalone()?'none':'home';const p=Notification.permission;return p==='granted'?'on':p==='denied'?'blocked':'off'}
 function pushAsk(){const st=pushState();
@@ -1786,5 +1789,409 @@ setInterval(()=>{if(S.npAsked||!S.user||!S.setup.done||!isStandalone()||pushStat
 {const R=RELEASES.find(r=>r.v==='2026.10.27');const it=R.items.find(x=>x.h==='Notifications');if(it){it.h='Reminders you control';it.p='Turn on notifications in Settings and pick exactly which ones you want: workout days, rest timer, meal times, logging your day and more.'}
  R.items.push({i:'<rect x="3" y="15" width="18" height="6" rx="3"/><circle cx="8" cy="18" r="1.5"/>',h:'Smoother tabs',p:'Switching tabs is now smooth, and the highlight glides to the tab you pick.'});
  R.tour.push({t:'home',q:'[data-a=settings]',h:'New: reminders you control',p:'Open Settings, then Notifications, to pick exactly which reminders Swell sends you. Each one has its own switch.'})}
+
+/* ===== v33: the new wave loader, and motion principles applied across the app ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+:root{--e-out:cubic-bezier(.16,1,.3,1);--e-in:cubic-bezier(.55,0,.9,.45);--e-inout:cubic-bezier(.65,0,.35,1);--e-spring:cubic-bezier(.34,1.4,.64,1)}
+.ringw .swl{width:104px;height:104px;display:block}
+/* loading screen fades in and out instead of popping */
+#ov{display:grid!important;opacity:0;visibility:hidden;transition:opacity .4s var(--e-out),visibility 0s linear .4s}
+#ov.on{opacity:1;visibility:visible;transition:opacity .35s var(--e-out),visibility 0s}
+#ov .ringw{transform:scale(.92);transition:transform .5s var(--e-spring)}#ov.on .ringw{transform:none}
+/* pop-ups: backdrop fades, card rises with a soft settle */
+#sheet .mwb,#wn .mwb,#req .mwb,#mw .mwb,#imp .mwb{animation:fxfade .3s var(--e-out) both}
+#sheet .mwc,#req .mwc,#mw .mwc,#imp .mwc,#wn .mwc{animation:fxrise .46s var(--e-spring) both}
+@keyframes fxfade{from{opacity:0}}@keyframes fxrise{from{opacity:0;transform:translateY(36px) scale(.98)}}
+.toast{animation:fxtoast .42s var(--e-spring) both}@keyframes fxtoast{from{opacity:0;transform:translateY(18px) scale(.96)}}
+.btn,.chip,.card[data-a],.nav button,.ck{transition:transform .22s var(--e-spring),background .2s,filter .2s}
+@media (prefers-reduced-motion:reduce){#ov,#ov .ringw{transition:none}#sheet .mwc,#req .mwc,#mw .mwc,#imp .mwc,#wn .mwc,.toast{animation:none}}`;document.head.appendChild(st);
+ const w=document.querySelector('#ov .ringw');if(w)w.innerHTML=`<svg class="swl" viewBox="0 0 100 100" aria-label="Loading"><defs><clipPath id="cAP"><circle cx="50" cy="50" r="28.6"/></clipPath></defs>
+<circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2.5"/>
+<g><circle cx="50" cy="50" r="44" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="40 236"/><animateTransform attributeName="transform" type="rotate" dur="4.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.38;.6;.72;1" keySplines=".4 0 .6 1;.4 0 .6 1;.6 0 .4 1;.2 .6 .3 1" values="0 50 50;110 50 50;140 50 50;300 50 50;360 50 50"/></g>
+<g clip-path="url(#cAP)"><g transform="translate(50 50) scale(.35) translate(-120 -120)"><g transform="translate(-62 -16) scale(1.15)">
+<path fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" d="M-4 158 C30 158 60 158 90 158 C110 158 125 158 140 158 C155 158 170 158 185 158 C195 158 205 158 212 158 C218 158 224 158 230 158 C234 158 238 158 242 158 C246 158 250 158 254 158"><animate attributeName="d" dur="4.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.08;.24;.38;.52;.6;.66;.74;.82;.9;1" keySplines=".4 0 .6 1;.3 .2 .6 .9;.2 .4 .3 1;.4 0 .6 1;.55 0 .9 .5;.3 .6 .3 1;.3 0 .5 1;.3 0 .5 1;.3 0 .5 1;0 0 1 1" values="M-4 158 C30 158 60 158 90 158 C110 158 125 158 140 158 C155 158 170 158 185 158 C195 158 205 158 212 158 C218 158 224 158 230 158 C234 158 238 158 242 158 C246 158 250 158 254 158;M-4 158 C20 158 40 155 64 152 C84 150 100 154 120 157 C140 158 160 158 180 158 C195 158 205 158 212 158 C218 158 224 158 230 158 C234 158 238 158 242 158 C246 158 250 158 254 158;M-4 158 C40 156 70 146 96 128 C116 114 132 100 150 98 C168 96 182 106 190 122 C196 134 202 146 210 154 C218 158 226 158 236 158 C240 158 246 158 250 158 C254 158 258 158 262 158;M-4 156 C40 154 80 144 106 120 C124 102 136 80 160 70 C184 60 208 70 212 92 C214 104 206 112 198 108 C204 100 200 90 190 90 C177 92 170 106 170 122 C170 138 176 150 192 158;M-4 156 C40 154 80 143 106 119 C124 101 137 78 161 68 C186 58 211 69 214 92 C216 106 206 115 197 110 C203 101 199 91 190 91 C177 93 170 106 170 122 C170 138 176 150 192 158;M-4 158 C40 156 80 148 110 132 C130 118 150 106 172 104 C196 102 214 116 222 136 C226 146 224 154 220 156 C216 158 210 158 204 158 C198 158 194 158 192 158 C190 158 190 158 192 158;M-4 158 C40 158 80 158 106 158 C124 158 140 158 156 158 C172 158 186 158 198 158 C206 158 212 158 218 158 C224 158 230 158 236 158 C242 158 248 158 254 158 C258 158 262 158 266 158;M-4 158 C40 158 80 158 110 158 C130 158 140 155.5 152 155.5 C164 155.5 172 158 186 158 C200 158 212 158 220 158 C226 158 232 158 238 158 C244 158 248 158 254 158 C258 158 262 158 266 158;M-4 158 C40 158 80 158 110 158 C140 158 170 158 190 158 C200 158 206 156.6 214 156.6 C222 156.6 228 158 236 158 C244 158 248 158 254 158 C258 158 262 158 266 158;M-4 158 C30 158 60 158 90 158 C110 158 125 158 140 158 C155 158 170 158 185 158 C195 158 205 158 212 158 C218 158 224 158 230 158 C234 158 238 158 242 158 C246 158 250 158 254 158;M-4 158 C30 158 60 158 90 158 C110 158 125 158 140 158 C155 158 170 158 185 158 C195 158 205 158 212 158 C218 158 224 158 230 158 C234 158 238 158 242 158 C246 158 250 158 254 158"/></path>
+<g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity="0"><path d="M150 108 C139 120 137 133 139 143 C141 149 145 154 152 157"/><path d="M128 125 C121 134 121 143 124 149 C126 153 130 156 134 157"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;.33;.4;.54;.59;1" values="0;0;.55;.55;0;0"/></g>
+<circle cx="198" cy="152" r="3" fill="#fff"><animateTransform attributeName="transform" type="translate" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.660;0.710;0.760;0.820;0.880;1" values="0 0;0 0;6.3 -12.8;10.5 -16.0;13.3 -11.2;15.4 -1.6;15.4 -1.6"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.660;0.710;0.760;0.820;0.880;1" values="0;0;1;.9;.5;0;0"/></circle><circle cx="198" cy="152" r="2.4" fill="#fff"><animateTransform attributeName="transform" type="translate" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.670;0.720;0.770;0.830;0.890;1" values="0 0;0 0;10.8 -8.8;18.0 -11.0;22.8 -7.7;26.4 -1.1;26.4 -1.1"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.670;0.720;0.770;0.830;0.890;1" values="0;0;1;.9;.5;0;0"/></circle><circle cx="198" cy="152" r="2.2" fill="#fff"><animateTransform attributeName="transform" type="translate" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.675;0.725;0.775;0.835;0.895;1" values="0 0;0 0;-2.7 -11.2;-4.5 -14.0;-5.7 -9.8;-6.6 -1.4;-6.6 -1.4"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.675;0.725;0.775;0.835;0.895;1" values="0;0;1;.9;.5;0;0"/></circle><circle cx="198" cy="152" r="1.8" fill="#fff"><animateTransform attributeName="transform" type="translate" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.680;0.730;0.780;0.840;0.900;1" values="0 0;0 0;14.4 -4.8;24.0 -6.0;30.4 -4.2;35.2 -0.6;35.2 -0.6"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.680;0.730;0.780;0.840;0.900;1" values="0;0;1;.9;.5;0;0"/></circle><circle cx="198" cy="152" r="1.6" fill="#fff"><animateTransform attributeName="transform" type="translate" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.665;0.715;0.765;0.825;0.885;1" values="0 0;0 0;2.7 -16.0;4.5 -20.0;5.7 -14.0;6.6 -2.0;6.6 -2.0"/><animate attributeName="opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;0.665;0.715;0.765;0.825;0.885;1" values="0;0;1;.9;.5;0;0"/></circle></g>
+<path d="M20 165.7 H220" stroke="#fff" stroke-opacity=".7" stroke-width="4" stroke-linecap="round"/></g></g>
+<circle cx="50" cy="50" r="30" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.8"><animate attributeName="stroke-width" dur="4.6s" repeatCount="indefinite" keyTimes="0;.655;.69;.8;1" values="1.8;1.8;2.8;1.8;1.8"/><animate attributeName="stroke-opacity" dur="4.6s" repeatCount="indefinite" keyTimes="0;.655;.69;.8;1" values=".85;.85;1;.85;.85"/></circle></svg>`})();
+const MRM=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* exits: things fade and sink away rather than vanishing (follow-through) */
+const GHOST=new Set(['sheet','wn','req','mw','imp','lx2','aw']);
+const GPROPS=['display','position','top','right','bottom','left','inset','z-index','box-sizing','width','height','min-width','min-height','max-width','max-height','margin-top','margin-right','margin-bottom','margin-left','padding-top','padding-right','padding-bottom','padding-left','flex-direction','flex-wrap','flex','flex-grow','flex-shrink','flex-basis','align-items','align-self','justify-content','gap','row-gap','column-gap','grid-template-columns','grid-template-rows','place-items','overflow','overflow-x','overflow-y','color','background','background-color','background-image','border','border-top','border-right','border-bottom','border-left','border-radius','box-shadow','backdrop-filter','-webkit-backdrop-filter','opacity','transform','font-family','font-size','font-weight','font-style','line-height','letter-spacing','text-align','text-transform','white-space','text-overflow','object-fit','fill','stroke','stroke-width','visibility'];
+function ghostOut(el){const all=[el,...el.querySelectorAll('*')];if(all.length>260)return;const r=el.getBoundingClientRect();if(!r.width)return;
+ const g=el.cloneNode(true),gs=[g,...g.querySelectorAll('*')];
+ all.forEach((n,i)=>{const cs=getComputedStyle(n),t=gs[i];if(!t||!t.style)return;for(const p of GPROPS)t.style.setProperty(p,cs.getPropertyValue(p));t.style.animation='none';t.style.transition='none';t.removeAttribute&&t.removeAttribute('id')});
+ g.__ghost=1;g.classList.remove('toast');g.style.position='fixed';g.style.left=r.left+'px';g.style.top=r.top+'px';g.style.width=r.width+'px';g.style.height=r.height+'px';g.style.margin='0';g.style.pointerEvents='none';g.setAttribute('aria-hidden','true');document.body.appendChild(g);
+ const card=g.querySelector('.mwc,.card,.lxh')||g,isAw=el.id==='aw';
+ if(card!==g&&!isAw)card.animate([{transform:'none',opacity:1},{transform:'translateY(28px) scale(.98)',opacity:0}],{duration:260,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'});
+ g.animate([{opacity:1},{opacity:0}],{duration:isAw?320:280,easing:'ease-in',fill:'forwards'}).onfinish=()=>g.remove()}
+{const _rm=Element.prototype.remove;Element.prototype.remove=function(){try{if(!MRM()&&!this.__ghost&&this.isConnected&&this.parentNode===document.body&&(GHOST.has(this.id)||this.classList&&this.classList.contains('toast')))ghostOut(this)}catch(_){}return _rm.call(this)}}
+/* tabs: content arrives in a quick cascade instead of all at once (staging + overlap) */
+{const _fa=fxApply;fxApply=function(root,pre,same){if(same||!root||MRM())return _fa.apply(this,arguments);let j=0;[...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;const fixedIn=c.querySelector('[style*="position:fixed"],.nav');const k=Math.min(j++,8);c.animate(fixedIn?[{opacity:0},{opacity:1}]:[{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:420,delay:k*28,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})}}
+/* guided workouts: each step slides in from the side, so the flow reads as moving forward */
+let AWK='',AWPT=0;document.addEventListener('click',e=>{if(e.target.closest('[data-a=awpick]'))AWPT=Date.now()},true);
+if(typeof awr==='function'){const _w=awr;awr=function(){_w.apply(this,arguments);const o=$('#aw');if(!o||!AW){AWK='';return}const k=AW.e+'|'+AW.s+'|'+AW.ph;if(k===AWK)return;const first=!AWK;AWK=k;if(first||MRM()||Date.now()-AWPT<700)return;
+ [...o.children].forEach((c,i)=>{if(getComputedStyle(c).position==='fixed')return;c.animate([{opacity:0,transform:'translateX(22px)'},{opacity:1,transform:'none'}],{duration:440,delay:Math.min(i,6)*40,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})}}
+RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<path d="M3 15c3 0 4-6 8-6s4 6 8 6"/><path d="M3 19h18"/>',h:'Smoother everywhere',p:'A new wave loader, and every animation has been tuned: pop-ups ease away instead of vanishing, screens arrive in a gentle cascade and guided workout steps slide in.'});
+
+/* ===== v34: refinement pass: consistent spacing, concentric corners, comfortable tap targets, tidier edit mode ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+/* rhythm: one gap size between blocks (14px), tighter gaps inside them */
+.grid{gap:14px}.card{margin-bottom:14px}
+h2{margin:0 0 10px;line-height:1.25}
+.sm{line-height:1.45}
+/* concentric corners: an inner shape's radius = outer radius - the padding between them */
+.card .sr,.card .sr .in{border-radius:14px}
+.card input,.card select,.card textarea,.mwc input,.mwc select,.mwc textarea{border-radius:12px}
+.prev{border-radius:12px}
+.wd .sr,.wd .sr .in{border-radius:14px}
+#sheet .mwc .sr,#sheet .mwc .sr .in{border-radius:14px}
+.pc{border-radius:18px}.pc i{border-radius:10px}
+.rpr{border-radius:14px}.rpr i{border-radius:10px}
+/* comfortable tap targets (44pt minimum) */
+.btn{min-height:44px}.chip{min-height:40px;padding:9px 16px;display:inline-flex;align-items:center}
+.glink{padding:6px 0;display:inline-block}
+.hd{width:36px;height:36px;right:6px;bottom:6px}
+/* pressing: big things move less than small things */
+.btn.big:active,.card[data-a]:active{transform:scale(.98)}.wd:active{transform:scale(.97)}.chip:active{transform:scale(.95)}
+/* numbers that change sit still while they count */
+.ring2 text,.est4 b,.pbl span:last-child,#wr .big,.stat b{font-variant-numeric:tabular-nums}
+/* edit mode: badges sit on the corner instead of over the titles; resize handle points into free space */
+.edit .wd{overflow:visible}
+.mn{left:-8px!important;top:-8px!important;width:30px!important;height:30px!important;z-index:4;box-shadow:0 4px 12px rgba(0,0,0,.45)}
+.edit .wd.rcol .hd{right:auto;left:6px}
+/* Done floats above the bottom bar instead of covering the calendar */
+button[data-a=edone][style*="position:fixed"]{top:auto!important;right:auto!important;left:50%!important;bottom:calc(92px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%);padding:12px 32px;min-width:140px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:30!important}
+button[data-a=edone][style*="position:fixed"]:active{transform:translateX(-50%) scale(.96)}
+/* Macros 1:1: rings centred in the space under the title */
+.wd:has(.mg.two)>.c{display:flex;flex-direction:column;height:100%}.wd .mg.two{flex:1;height:auto!important;align-content:center!important;gap:6px 6px!important;margin-top:4px!important}.wd .mg.two .mr .ring2{width:38px!important;height:38px!important}`;document.head.appendChild(st)})();
+/* mark widgets in the right-hand column so resizing works by pulling left */
+{const _r=render;render=function(){_r.apply(this,arguments);try{const g=document.querySelector('#app .grid.edit');if(!g)return;const gr=g.getBoundingClientRect(),mid=gr.left+gr.width/2;g.querySelectorAll('.wd').forEach(w=>{const r=w.getBoundingClientRect();w.classList.toggle('rcol',r.width<gr.width*.75&&r.left>mid-4)})}catch(_){}}}
+RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/>',h:'Easier widget editing',p:'Resize widgets from whichever side has room, remove buttons no longer cover titles, and Done sits at the bottom of the screen.'});
+/* ===== v35: nav highlight glides and stays (no swap at the end) ===== */
+(function(){const st=document.createElement('style');st.textContent=`.nav.glide2 button.on,.nav.glide2 button{background:transparent!important;transition:transform .22s var(--e-spring),filter .2s!important}.nav .navhl2{position:absolute;top:0;left:0;border-radius:16px;background:rgba(255,255,255,.2);pointer-events:none;z-index:0;will-change:transform,width}`;document.head.appendChild(st)})();
+let NAVP=null;
+navGlide=function(){const n=document.querySelector('#app .nav'),b=n&&n.querySelector('button.on');if(!b)return;
+ const nr=n.getBoundingClientRect(),br=b.getBoundingClientRect(),to={x:br.left-nr.left,y:br.top-nr.top,w:br.width,h:br.height};
+ let from=NAVP;const old=NAVP&&NAVP.el;
+ if(old&&old.isConnected===false&&old.__live){from=old.__live()}
+ const hl=document.createElement('i');hl.className='navhl2';hl.style.cssText=`width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px)`;n.appendChild(hl);n.classList.add('glide2');
+ NAVP={...to,el:hl};
+ if(!from||(Math.abs(from.x-to.x)<1&&Math.abs(from.w-to.w)<1)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const a=hl.animate([{transform:`translate(${from.x}px,${from.y}px)`,width:from.w+'px'},{transform:`translate(${to.x}px,${to.y}px)`,width:to.w+'px'}],{duration:380,easing:'cubic-bezier(.22,1,.36,1)'});
+ const t0=performance.now();hl.__live=()=>{const k=Math.min(1,(performance.now()-t0)/380),e=1-Math.pow(1-k,4);return{x:from.x+(to.x-from.x)*e,y:to.y,w:from.w+(to.w-from.w)*e,h:to.h}}};
+/* ===== v36: opening: the word sinks into a water line, a wave rises out of it and the logo builds around the wave ===== */
+spRun=function(d,finish){
+ const q=s=>d.querySelector(s),cl=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,seg=(t,a,b)=>cl((t-a)/(b-a));
+ const eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,eout=k=>1-Math.pow(1-k,4),ein=k=>k*k*k,eback=(k,c=1.15)=>k<=0?0:k>=1?1:1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2);
+ const CX=180,CY=320,SC=.7,ns='http://www.w3.org/2000/svg',mk=(tag,at,par)=>{const e=document.createElementNS(ns,tag);for(const k in at)e.setAttribute(k,at[k]);par.appendChild(e);return e};
+ const fs=74,tc=q('#qtc');tc.setAttribute('font-size',fs);tc.setAttribute('x',CX);const base=CY+fs*.3;tc.setAttribute('y',base);
+ const bb=tc.getBBox(),G={x0:bb.x,x1:bb.x+bb.width,top:bb.y+bb.height*.14,bot:base+4};
+ const svg=q('svg'),defs=q('defs'),logo=q('#qlogo'),word=q('#qword');
+ const HY=CY+SC*(165.7-120),HX0=CX+SC*(20-120),HX1=CX+SC*(220-120),W0=(G.x1-G.x0)/2+12;
+ // the word is hidden below the water line as it sinks
+ const wc=mk('clipPath',{id:'qwlc'},defs);mk('rect',{x:-400,y:-1000,width:1200,height:1000+HY},wc);
+ const wg=document.createElementNS(ns,'g');wg.setAttribute('clip-path','url(#qwlc)');word.parentNode.insertBefore(wg,word);wg.appendChild(word);
+ const ln=mk('path',{fill:'none',stroke:'#eef2f8','stroke-width':2.4*SC,'stroke-linecap':'round','stroke-linejoin':'round'},svg);
+ q('#qring').setAttribute('opacity',0);
+ const dr=(e,k)=>{e.setAttribute('stroke-dasharray',`${k.toFixed(4)} 2`);e.setAttribute('visibility',k>0?'visible':'hidden')},pl=e=>{e.setAttribute('pathLength',1);dr(e,0)};
+ const arcs=mk('g',{fill:'none',stroke:'#eef2f8','stroke-width':2.6,'stroke-linecap':'round'},logo);
+ const AR=['M47.1 165.7 A86 86 0 0 1 120 34','M192.9 165.7 A86 86 0 0 0 120 34','M47.1 165.7 A86 86 0 0 0 120 206','M192.9 165.7 A86 86 0 0 1 120 206'].map(x=>{const e=mk('path',{d:x},arcs);pl(e);return e});
+ const sc=q('[clip-path="url(#qsunc)"]'),sm=document.createElementNS(ns,'g');while(sc.firstChild)sm.appendChild(sc.firstChild);sc.appendChild(sm);
+ q('#qsunlv').setAttribute('d','M0 0H240V165.7H0Z');
+ // the wave: every point starts flat on the water line and rises in turn, so the swell travels and the crest curls over last
+ const wl=q('#qwvLine'),wf=q('#qwvFill'),fc=[...q('#qface').children];fc.forEach(pl);
+ const WD='M-4 156 C40 154 80 144 106 120 C124 102 136 80 160 70 C184 60 208 70 212 92 C214 104 206 112 198 108 C204 100 200 90 190 90 C177 92 170 106 170 122 C170 138 176 150 192 158';
+ const N=WD.match(/-?[\d.]+/g).map(Number),PT=[];for(let k=0;k<N.length;k+=2)PT.push([N[k],N[k+1]]);
+ const wave=t=>{const n=PT.length,ps=PT.map(([x,y],k)=>{const h=eback(seg(t,3500+k/(n-1)*650,3500+k/(n-1)*650+520));return[x,158+(y-158)*h]});
+  let s=`M${ps[0][0]} ${ps[0][1].toFixed(2)}`;for(let k=1;k<ps.length;k+=3)s+=` C${ps[k][0]} ${ps[k][1].toFixed(2)} ${ps[k+1][0]} ${ps[k+1][1].toFixed(2)} ${ps[k+2][0]} ${ps[k+2][1].toFixed(2)}`;return s};
+ q('#qwv').setAttribute('opacity',1);q('#qsea').setAttribute('stroke','#7fd6e6');q('#qhz').setAttribute('opacity',0);
+ const surf=(level,A,ph,off,x0,x1)=>{let s='';for(let x=x0;x<=x1+6;x+=5){const y=level+A*Math.sin(x*.05+ph+off)+A*.45*Math.sin(x*.11-ph*1.4+off);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
+ const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false,swapped=false;
+ const X0=5800,t0=performance.now();
+ const frame=now=>{if(!d.isConnected)return;const t=now-t0,ph=t/1000*3.2;
+  // 1. water fills the word, then keeps rippling gently while it waits
+  const pf=seg(t,300,2000),level=lerp(G.bot+6,G.top-8,eio(pf)),A=t<2000?lerp(6,1.4,pf):lerp(1.4,.9,seg(t,2000,2400));
+  const x0=G.x0-14,x1=G.x1+14,b=G.bot+40;q('#qwFront').setAttribute('d',surf(level,A,ph,0,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);q('#qwBack').setAttribute('d',surf(level-3,A*1.1,ph*.8,2.1,x0,x1)+`L${x1} ${b}L${x0} ${b}Z`);
+  // 2. a water line draws out from the middle under the word
+  const hw=W0*eout(seg(t,2050,2500))+(HX1-HX0)/2*0,cw=lerp(hw,(HX1-HX0)/2,eio(seg(t,3150,3650)));
+  // 3. a small lift, then the word sinks below the line, speeding up as it goes
+  const lift=-4*eio(seg(t,2400,2620)),sink=ein(seg(t,2620,3050))*(G.bot-bb.y+10);
+  word.setAttribute('transform',`translate(0 ${(lift+sink).toFixed(2)})`);word.setAttribute('opacity',t>3100?0:1);
+  // 4. ripples spread out along the line where it went under, then fade
+  const rk=seg(t,2800,3700),ramp=3.2*Math.sin(Math.PI*Math.min(1,rk*3))*(1-rk);
+  if(!swapped){let s='';const n=48;for(let k=0;k<=n;k++){const x=CX-cw+2*cw*k/n,dx=x-CX,y=HY+ramp*Math.exp(-Math.pow(dx/(30+rk*90),2))*Math.sin(dx*.16-rk*14);s+=(k?'L':'M')+x.toFixed(1)+' '+y.toFixed(2)}ln.setAttribute('d',cw>.5?s:'');}
+  if(t>=3650&&!swapped){swapped=true;ln.remove();q('#qhz').setAttribute('opacity',1)}
+  // 5. the wave rises out of the line and curls over
+  const wd=wave(t);wl.setAttribute('d',wd);wf.setAttribute('d',wd+' L192 158 L-4 158 Z');wl.setAttribute('visibility',t>=3500?'visible':'hidden');
+  wf.setAttribute('opacity',eio(seg(t,4100,4800)).toFixed(3));
+  // 6. the ring draws up and round from the ends of the horizon, the sea and sun settle in behind
+  const ka=eio(seg(t,3800,4500)),kb=eio(seg(t,4000,4600));AR.forEach((a,i)=>dr(a,i<2?ka:kb));
+  q('#qseaF').setAttribute('opacity',eio(seg(t,4000,4400)).toFixed(3));
+  sm.setAttribute('transform',`translate(0 ${lerp(135,0,eout(seg(t,4200,5100))).toFixed(2)})`);
+  fc.forEach((f,i)=>dr(f,eio(seg(t,4500+i*130,4950+i*130))));
+  q('#qsea').setAttribute('opacity',(eio(seg(t,4700,5100))*.9).toFixed(3));
+  const so=lerp(1,.78,seg(t,4800,5400));[wl,q('#qhz'),arcs].forEach(e=>e.setAttribute('stroke-opacity',so));q('#qface').setAttribute('stroke-opacity',lerp(1,.55,seg(t,4800,5400)));
+  q('#qglow').setAttribute('opacity',(seg(t,4800,5500)*.9).toFixed(3));
+  // 7. hand over to the app: the logo eases up and fades as the app rises in
+  q('.qbg').style.opacity=(1-eio(seg(t,5400,6500))).toFixed(3);
+  const xe=eio(seg(t,X0,X0+900)),s2=SC*lerp(1,.72,xe),yy=lerp(CY,CY-60,xe),lo=1-eio(seg(t,X0+100,X0+800));
+  logo.setAttribute('transform',`translate(${CX} ${yy.toFixed(2)}) scale(${s2.toFixed(4)}) translate(-120 -120)`);logo.setAttribute('opacity',lo.toFixed(3));
+  if(t>X0+300&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(34px) scale(.97)'},{opacity:1,transform:'none'}],{duration:850,delay:i*80,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
+  if(t>X0+950){d.dataset.done=1;d.remove();return}
+  requestAnimationFrame(frame)};
+ requestAnimationFrame(frame);
+};
+RELEASES.push({v:'2026.10.27',date:'27 Oct',items:[{i:'<circle cx="12" cy="12" r="8"/><path d="M4 14h16"/>',h:'A new opening',p:'When Swell opens, the name sinks into the water and a wave rises out of it to build the logo.'}]});
+/* ===== v37: label scanning that really reads the label, on the phone (no AI, no credits), plus editing logged meals ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+.scbox{margin:0 0 12px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08)}
+.scbox>b{display:block;font-size:15px}.scbox .chips{padding:8px 0 2px;flex-wrap:wrap;gap:6px}.scbox label{margin-top:8px}
+.scbox p.sm{margin:8px 0 0}.scbox .glink{margin-top:4px}
+input[data-uns]{border-color:#f5b94a!important;box-shadow:0 0 0 3px rgba(245,185,74,.22)!important}
+.unsk{color:#f5c46a;font-weight:600}
+#sc .scst{margin-top:10px;color:var(--dim);font-size:14px;text-align:center;max-width:300px;line-height:1.45}
+#sc .scbtns{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.logc .sr .in{cursor:pointer}
+#aw .btn{font-size:15px;min-height:44px}#aw [data-a=awx]{padding:10px 18px}`;document.head.appendChild(st)})();
+/* label photo clean-up: even lighting, straighten, drop table rules */
+function lblPrep(img,rot){
+ const sw=img.naturalWidth||img.width,sh=img.naturalHeight||img.height,rw=rot%180?sh:sw,rh=rot%180?sw:sh;
+ let s=Math.min(2200/Math.max(rw,rh),Math.max(1,1500/rw));const W=Math.round(rw*s),H=Math.round(rh*s);
+ const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});
+ x.fillStyle='#fff';x.fillRect(0,0,W,H);x.save();x.translate(W/2,H/2);x.rotate(rot*Math.PI/180);x.drawImage(img,-sw*s/2,-sh*s/2,sw*s,sh*s);x.restore();
+ const id=x.getImageData(0,0,W,H),d=id.data,N=W*H,g=new Float32Array(N);
+ for(let i=0;i<N;i++)g[i]=d[i*4]*.299+d[i*4+1]*.587+d[i*4+2]*.114;
+ // light text on a dark pack: flip it
+ const hs=new Uint32Array(256);for(let i=0;i<N;i+=7)hs[g[i]|0]++;let acc=0,med=0;const tot=Math.ceil(N/7);for(let v=0;v<256;v++){acc+=hs[v];if(acc>=tot/2){med=v;break}}
+ if(med<115)for(let i=0;i<N;i++)g[i]=255-g[i];
+ // even out the lighting: divide by a heavily blurred copy (integral image box blur)
+ const r=Math.max(12,Math.round(Math.max(W,H)/28)),I=new Float64Array((W+1)*(H+1));
+ for(let y=0;y<H;y++){let row=0;for(let xx=0;xx<W;xx++){row+=g[y*W+xx];I[(y+1)*(W+1)+xx+1]=I[y*(W+1)+xx+1]+row}}
+ const bgv=(xx,y)=>{const a=Math.max(0,xx-r),b=Math.max(0,y-r),e=Math.min(W,xx+r+1),f=Math.min(H,y+r+1);return(I[f*(W+1)+e]-I[b*(W+1)+e]-I[f*(W+1)+a]+I[b*(W+1)+a])/((e-a)*(f-b))};
+ const n=new Float32Array(N);for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++){const i=y*W+xx,bv=bgv(xx,y)+1;n[i]=Math.min(255,g[i]/bv*235)}
+ // contrast stretch
+ const h2=new Uint32Array(256);for(let i=0;i<N;i+=5)h2[n[i]|0]++;const t2=Math.ceil(N/5);let lo=0,hi=255;acc=0;for(let v=0;v<256;v++){acc+=h2[v];if(acc>t2*.01){lo=v;break}}acc=0;for(let v=255;v>=0;v--){acc+=h2[v];if(acc>t2*.25){hi=v;break}}
+ for(let i=0;i<N;i++)n[i]=Math.max(0,Math.min(255,(n[i]-lo)/Math.max(20,hi-lo)*255));
+ // straighten: try small angles, keep the one whose rows line up best
+ const sm=600/W,SW=600,SH=Math.round(H*sm),B=new Uint8Array(SW*SH);for(let y=0;y<SH;y++)for(let xx=0;xx<SW;xx++)B[y*SW+xx]=n[Math.floor(y/sm)*W+Math.floor(xx/sm)]<140?1:0;
+ let best=0,bs=-1;for(let a=-12;a<=12.01;a+=.5){const t=Math.tan(a*Math.PI/180),P=new Float64Array(SH*2);for(let y=0;y<SH;y++)for(let xx=0;xx<SW;xx+=2)if(B[y*SW+xx]){const yy=Math.round(y-(xx-SW/2)*t)+Math.floor(SH/2);if(yy>=0&&yy<SH*2)P[yy]++}let sc=0;for(let k=1;k<P.length;k++){const dd=P[k]-P[k-1];sc+=dd*dd}if(sc>bs){bs=sc;best=a}}
+ for(let i=0;i<N;i++){const v=n[i]|0;d[i*4]=d[i*4+1]=d[i*4+2]=v;d[i*4+3]=255}x.putImageData(id,0,0);
+ let out=c;if(Math.abs(best)>=.5){const c2=document.createElement('canvas');c2.width=W;c2.height=H;const y2=c2.getContext('2d',{willReadFrequently:true});y2.fillStyle='#fff';y2.fillRect(0,0,W,H);y2.translate(W/2,H/2);y2.rotate(-best*Math.PI/180);y2.drawImage(c,-W/2,-H/2);out=c2}
+ // remove long ruled lines so they don't merge with the numbers
+ const ox=out.getContext('2d',{willReadFrequently:true}),od=ox.getImageData(0,0,W,H),q=od.data,dk=i=>q[i*4]<205;
+ const LH=Math.round(W*.14),LV=Math.round(H*.18),kill=new Uint8Array(N);
+ for(let y=0;y<H;y++){let st=-1;for(let xx=0;xx<=W;xx++){const k=xx<W&&dk(y*W+xx);if(k&&st<0)st=xx;if(!k&&st>=0){if(xx-st>=LH)for(let z=st;z<xx;z++)kill[y*W+z]=1;st=-1}}}
+ for(let xx=0;xx<W;xx++){let st=-1;for(let y=0;y<=H;y++){const k=y<H&&dk(y*W+xx);if(k&&st<0)st=y;if(!k&&st>=0){if(y-st>=LV)for(let z=st;z<y;z++)kill[z*W+xx]=1;st=-1}}}
+ for(let y=1;y<H-1;y++)for(let xx=1;xx<W-1;xx++){const i=y*W+xx;if(kill[i]||kill[i-W]||kill[i+W]||kill[i-1]||kill[i+1]){q[i*4]=q[i*4+1]=q[i*4+2]=255}}
+ ox.putImageData(od,0,0);out._skew=best;out._inv=med<115;return out}
+
+/* label reader: finds the nutrition table in OCR words and pulls out energy, fat, carbs and protein for each column */
+function lblParse(words){
+ const lev=(a,b)=>{if(Math.abs(a.length-b.length)>2)return 9;const m=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=m[0];m[0]=i;for(let j=1;j<=b.length;j++){const t=m[j];m[j]=Math.min(m[j]+1,m[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return m[b.length]};
+ const W=words.filter(w=>w.text&&w.text.trim()).map(w=>({t:w.text.trim(),c:w.confidence,x0:w.bbox.x0,x1:w.bbox.x1,y0:w.bbox.y0,y1:w.bbox.y1,cy:(w.bbox.y0+w.bbox.y1)/2,h:w.bbox.y1-w.bbox.y0}));
+ if(!W.length)return null;
+ const hs=W.map(w=>w.h).sort((a,b)=>a-b),mh=hs[Math.floor(hs.length/2)]||20;
+ // group words into rows by their vertical centre
+ const rows=[];W.slice().sort((a,b)=>a.cy-b.cy).forEach(w=>{const r=rows.find(r=>Math.abs(r.cy-w.cy)<mh*.55);if(r){r.w.push(w);r.cy=(r.cy*(r.w.length-1)+w.cy)/r.w.length}else rows.push({cy:w.cy,w:[w]})});
+ rows.forEach(r=>{r.w.sort((a,b)=>a.x0-b.x0);r.txt=r.w.map(w=>w.t).join(' ').toLowerCase()});
+ const word=(r,keys,max=2)=>{for(const w of r.w){const t=w.t.toLowerCase().replace(/[^a-z]/g,'');if(t.length<3)continue;for(const k of keys){const tol=k.length>=7?max:k.length>=5?1:0;if(t===k||(t.length>=k.length-1&&lev(t,k)<=tol)||(k.length>=7&&t.startsWith(k.slice(0,7))))return w}}return null};
+ const EXC=['saturates','saturated','sugars','sugar','trans','fibre','fiber','polyols','starch','monounsaturates','polyunsaturates','which','added','dietary'];
+ // numbers in a row, to the right of the label
+ const nums=(r,after)=>{const out=[];r.w.forEach((w,wi)=>{if(after&&w.x1<=after.x1)return;let raw=w.t;
+   if(/%/.test(raw))return;
+   raw=raw.replace(/^[‘’'"`“”,.:;_~-]+/,'').replace(/[‘’'"`“”,:;_]+$/,'').replace(/k[}\)\]]/gi,'kj');
+   const parts=raw.split(/[\/|]/);parts.forEach(pt=>{let t=pt,fix=false;
+    if(/^[\dlI|oO.,]*[lI|][\dlI|oO.,]*(g|kcal|kj)?$/.test(t)&&/[\d]|g$/.test(t))t=t.replace(/[lI|]/g,'1').replace(/[oO](?=[\d.,g])/g,'0');
+    t=t.replace(/(?<=\d)[oO]|[oO](?=\d)/g,'0').replace(/(?<=\d)[lI|!]|[lI|!](?=[\d.,])/g,'1').replace(/(?<=\d)S|S(?=\d)/g,'5');
+    const m=t.match(/^[<~]?(\d+(?:[.,]\d+)?)([a-zA-Z)]*)$/)||t.match(/(\d+(?:[.,]\d+)?)\s*(kcal|kj|g|mg)\b/i);if(!m)return;
+    let v=m[1].replace(',','.'),u=(m[2]||'').toLowerCase().replace(/[^a-z]/g,'');
+    if(!u){const nx=r.w[wi+1];if(nx&&/^(g|kcal|kj|mg)$/i.test(nx.t))u=nx.t.toLowerCase();else if(nx&&/^9$/.test(nx.t)&&nx.x0-w.x1<w.h*.8){u='g';nx._skip=1}}
+    if(w._skip)return;
+    if(u==='kj'||u==='k'||u==='kj)')u='kj';if(/^kc/.test(u))u='kcal';
+    out.push({v:+v,s:v,u,c:w.c,x:(w.x0+w.x1)/2,fix,w})})});
+  return out};
+ // headers: per 100g / per serving columns
+ const isServ=/serv|portion|pack|bar\b|slice|biscuit|pot\b|bottle|can\b|each|pouch|cup|bag|tub|piece|scoop|sachet|half/;
+ const cols=[];const grab=(x,lab,g,kind)=>{if(!cols.some(c=>Math.abs(c.x-x)<mh*2))cols.push({x,lab,g,kind})};
+ rows.forEach((r,ri)=>{const t=r.txt;r.w.forEach((w,i)=>{const s=w.t.toLowerCase().replace(/(?<=per|^)[li|](?=[0o]{2})/g,'1').replace(/(?<=1)o|(?<=10)o/g,'0'),nx=(r.w[i+1]||{}).t||'',both=(s+' '+nx).toLowerCase();
+   if(/^1[0o][0o]\s?(g|ml)/.test(s.replace(/[^a-z0-9]/g,''))||/^(per)?1[0o][0o](g|ml|9)$/.test(s.replace(/[^a-z0-9]/g,''))||(/^1[0o][0o]$/.test(s)&&/^(g|ml)/i.test(nx)))grab((w.x0+w.x1)/2,/ml/.test(both)?'Per 100ml':'Per 100g',100,'100');
+   else if(/^per$/.test(s.replace(/[^a-z]/g,''))&&nx&&!/^1[0o][0o]/.test(nx.toLowerCase())){const rest=r.w.slice(i+1,i+4).map(q=>q.t).join(' ').toLowerCase()+' '+((rows[ri+1]&&rows[ri+1].txt)||'');const gm=rest.match(/(\d+(?:[.,]\d+)?)\s*(g|ml)\b/);const lab=r.w.slice(i,i+3).map(q=>q.t).join(' ').replace(/[^A-Za-z0-9 ().]/g,'');grab((w.x0+w.x1)/2+(r.w[i+1]?(r.w[i+1].x1-w.x1)/2:0),lab.length>3?lab[0].toUpperCase()+lab.slice(1):'Per serving',gm?+gm[1].replace(',','.'):null,'serv')}})});
+ let sv=null;rows.forEach(r=>{const m=r.txt.match(/serving size[^(]*\((\d+(?:[.,]\d+)?)\s*(g|ml)/)||r.txt.match(/serving size\s*(\d+(?:[.,]\d+)?)\s*(g|ml)/);if(m)sv=+m[1].replace(',','.')});
+ // find each nutrient row
+ const F={};const KEY={k:['energy','calories','calorie'],f:['fat','fats','lipids'],c:['carbohydrate','carbohydrates','carbs','carbohydrat','carb'],p:['protein','proteins']};
+ rows.forEach((r,ri)=>{for(const k of ['k','p','f','c']){if(F[k])continue;const w=word(r,KEY[k]);if(!w)continue;
+   if(k!=='k'&&EXC.some(e=>r.txt.includes(e)))continue;
+   if((k==='f'||k==='c')&&/^(-|of)/.test(r.txt.trim()))continue;
+   let n=nums(r,w);
+   if(k==='k'){const nb=rows.slice(ri+1,ri+3).filter(q=>/kcal|kca|cal\b/.test(q.txt)&&!word(q,KEY.f)&&!word(q,KEY.c)&&!word(q,KEY.p));nb.forEach(q=>n=n.concat(nums(q,null)))
+     if(!n.length&&/calorie/.test(r.txt)){}}
+   F[k]={r,w,n,c:w.c}}});
+ // structure: fat sits above saturates, carbs above sugars, energy is the kcal row
+ const idx=re=>rows.findIndex(r=>re.test(r.txt.replace(/\s/g,'')));
+ const above=(i)=>{for(let j=i-1;j>=Math.max(0,i-2);j--)if(nums(rows[j],rows[j].w.find(w=>/[a-z]{2,}/i.test(w.t))).length)return rows[j];return null};
+ if(!F.f){const i=idx(/saturat|aturates|whichsat/);const r=i>0&&above(i);if(r&&!Object.values(F).some(f=>f.r===r))F.f={r,w:r.w.find(w=>/[a-z]{2,}/i.test(w.t))||{x1:-1},n:nums(r,r.w.find(w=>/[a-z]{2,}/i.test(w.t))),c:0,guess:1}}
+ if(!F.c){const i=idx(/sugar|whichsu|sugas|supers/);const r=i>0&&above(i);if(r&&!Object.values(F).some(f=>f.r===r))F.c={r,w:r.w.find(w=>/[a-z]{2,}/i.test(w.t))||{x1:-1},n:nums(r,r.w.find(w=>/[a-z]{2,}/i.test(w.t))),c:0,guess:1}}
+ if(!F.k){const i=rows.findIndex(r=>/kcal/.test(r.txt));if(i>=0){const r=rows[i];let n=nums(r,null);const pj=rows[i-1];if(pj&&/k[jJ]/i.test(pj.txt))n=nums(pj,null).concat(n);F.k={r,w:{x1:-1,c:0},n,c:0,guess:1}}}
+ if(!F.p){const i=idx(/^salt|^sait|^sat\b/);if(i>0){const r=rows[i-1];if(r&&!Object.values(F).some(f=>f.r===r)){const lw=r.w.find(w=>/[a-z]{2,}/i.test(w.t));F.p={r,w:lw||{x1:-1},n:nums(r,lw),c:0,guess:1}}}}
+ const US=rows.some(r=>/nutrition\s*facts|amount\s*per\s*serving|total\s*fat|total\s*carb/.test(r.txt));
+ if(Object.keys(F).length<2)return null;
+ if(US){const col={lab:sv?`Per serving (${sv}g)`:'Per serving',g:sv,kind:'serv',v:{},u:{},raw:{}};
+  ['k','p','f','c'].forEach(k=>{if(!F[k]){col.u[k]=1;return}let n=F[k].n.filter(q=>q.u!=='mg');const ri=rows.indexOf(F[k].r);
+   if(!n.length&&rows[ri+1])n=nums(rows[ri+1],null).filter(q=>q.u!=='mg'&&q.x<F[k].r.w[F[k].r.w.length-1].x1+mh*6);
+   const q=n[0];if(!q){col.u[k]=1;return}let v=q.v,sure=q.c>=72&&F[k].c>=55;
+   if(k!=='k'&&!q.u&&/9$/.test(q.s)&&q.s.length>1){v=+q.s.slice(0,-1);sure=sure&&q.v>60}
+   if(k!=='k'&&q.u!=='g'&&!(k!=='k'&&!q.u))sure=false;
+   col.v[k]=v;col.raw[k]=q.w.t;if(!sure||F[k].guess)col.u[k]=1});
+  const v=col.v;if([v.k,v.p,v.f,v.c].every(x=>x!=null)){const est=4*v.p+4*v.c+9*v.f;if(Math.abs(est-v.k)/Math.max(1,v.k)>.25&&Math.abs(est-v.k)>25)col.off=1}
+  return{cols:[col],found:Object.keys(F)}}
+ // columns: where the numbers line up, labelled by any headings we could read
+ const hdr=cols.slice();cols.length=0;const xs=[];
+ const vrows=rows.filter(r=>Object.values(F).some(f=>f.r===r)||/salt|sugar|saturat|fibre|fiber|sodium/.test(r.txt));
+ vrows.forEach(r=>{const lw=r.w.find(w=>/[a-z]{3,}/i.test(w.t));nums(r,lw).filter(q=>q.u!=='mg'||true).forEach(q=>xs.push(q.x))});
+ xs.sort((a,b)=>a-b);const cl=[];xs.forEach(x=>{const z=cl[cl.length-1];if(z&&x-z.hi<mh*2.6){z.hi=x;z.s+=x;z.n++}else cl.push({lo:x,hi:x,s:x,n:1})});
+ const big=Math.max(0,...cl.map(c=>c.n));let C=cl.filter(c=>c.n>=Math.max(2,big*.35)).map(c=>({x:c.s/c.n,lo:c.lo,hi:c.hi,n:c.n}));
+ if(!C.length&&cl.length)C=[cl.sort((a,b)=>b.n-a.n)[0]].map(c=>({x:c.s/c.n,lo:c.lo,hi:c.hi}));
+ C.sort((a,b)=>a.x-b.x);
+ C.forEach(c=>{let h=null,bd=1e9;hdr.forEach(z=>{const dd=z.x<c.lo?c.lo-z.x:z.x>c.hi?z.x-c.hi:0;if(dd<mh*2.6&&dd<bd){bd=dd;h=z}});c.h=h});
+ const any100=hdr.some(z=>z.kind==='100')||rows.some(r=>/per\s?1[0o][0o]\s?(g|ml)/.test(r.txt));
+ C.forEach((c,i)=>{if(c.h){cols.push({x:c.x,lab:c.h.lab,g:c.h.g,kind:c.h.kind});return}
+  const has100=C.some(z=>z.h&&z.h.kind==='100');
+  if(C.length===1)cols.push(any100&&!sv?{x:c.x,lab:'Per 100g',g:100,kind:'100'}:{x:c.x,lab:sv?`Per serving (${sv}g)`:'Per serving',g:sv,kind:'serv'});
+  else if(!has100&&i===0)cols.push({x:c.x,lab:'Per 100g',g:100,kind:'100'});
+  else cols.push({x:c.x,lab:'Per serving',g:null,kind:'serv'})});
+ // only one per-100g column
+ let seen=false;cols.forEach(c=>{if(c.kind==='100'){if(seen){c.kind='serv';c.lab='Per serving';c.g=null}seen=true}});
+ cols.forEach(c=>{if(c.kind==='serv'&&!/\d/.test(c.lab)&&!/serv|portion|pack|bar|slice|biscuit|pot|bottle|can|each|pouch|cup|bag|tub|piece|scoop|sachet|half|container/i.test(c.lab))c.lab='Per serving'});
+ if(cols.length===1&&cols[0].kind==='serv'&&!cols[0].g)cols[0].g=sv;
+ const pers=rows.filter(r=>r.cy<Math.min(...Object.values(F).map(f=>f.r.cy))).reduce((n,r)=>n+(r.txt.match(/\bper\b/g)||[]).length,0),AMB=cols.length<Math.max(hdr.length,pers);
+ const R=cols.map(c=>({lab:c.lab,g:c.g,kind:c.kind,v:{},u:{},raw:{}}));
+ const pick=(arr,ci)=>{let b=null,bd=1e9;arr.forEach(q=>{const dd=Math.abs(q.x-cols[ci].x);if(dd<bd){bd=dd;b=q}});const ok=b&&cols.every((c,j)=>j===ci||Math.abs(b.x-c.x)>=bd);return ok?b:null};
+ // a "g" read as "9": 9.29 -> 9.2, 609 -> 60
+ const unG=(q,max)=>{if(q.u){if(q.v>max&&/9$/.test(q.s))return{v:+q.s.slice(0,-1).replace(/\.$/,''),sure:false};return{v:q.v,sure:q.u==='g'&&q.v<=max}}; const s=q.s;
+   if(/9$/.test(s)&&(/\.\d{2,}$/.test(s)||q.v>max||/^\d{2,}9$/.test(s)&&q.v>max)){return{v:+s.slice(0,-1).replace(/\.$/,''),sure:/\.\d{2,}$/.test(s)}}
+   if(/9$/.test(s)&&/^\d+9$/.test(s)&&q.v>max*.5)return{v:+s.slice(0,-1),sure:false};
+   return{v:q.v,sure:q.v<=max&&q.c>80}};
+ R.forEach((col,ci)=>{
+  const cap=col.kind==='100'?100:250;
+  ['p','f','c'].forEach(k=>{if(!F[k])return;const q=pick(F[k].n.filter(z=>z.u!=='mg'&&z.u!=='kcal'&&z.u!=='kj'),ci);if(!q){col.u[k]=1;return}
+   const r=unG(q,cap);col.v[k]=r.v;col.raw[k]=q.w.t;if(!r.sure||q.c<72||F[k].c<55||F[k].guess)col.u[k]=1});
+  if(F.k){const all=F.k.n,kc=all.filter(z=>z.u==='kcal'),kj=all.filter(z=>z.u==='kj'),un=all.filter(z=>!z.u);
+   let q=pick(kc,ci),v=null,sure=true;
+   if(q)v=q.v;else if((q=pick(kj,ci))){v=Math.round(q.v/4.184)}else if((q=pick(un,ci))){v=q.v;
+     if(/calorie/.test(F.k.r.txt)){} else if(un.length>=2*cols.length){const ord=un.filter(z=>Math.abs(z.x-cols[ci].x)<mh*5);if(ord.length>=2){v=Math.min(...ord.map(z=>z.v));}}
+     else if(v>900&&col.kind==='100'){v=Math.round(v/4.184);sure=false}}
+   if(v!=null){col.v.k=Math.round(v);col.raw.k=q.w.t;if(!sure||q.c<72)col.u.k=1}else col.u.k=1}else col.u.k=1;
+  ['k','p','f','c'].forEach(k=>{if(col.v[k]==null)col.u[k]=1});
+ });
+ cols.forEach(c=>{c.lab=c.lab.replace(/\s*%?\s*RI\*?/gi,'').replace(/\s+/g,' ').trim()});
+ if(AMB)R.forEach(c=>['k','p','f','c'].forEach(k=>c.u[k]=1));
+ // cross-checks: columns should scale together, and energy should roughly match the macros
+ if(R.length>=2){const a=R.find(c=>c.kind==='100'),b=R.find(c=>c.kind!=='100');
+  if(a&&b){const ks=['k','p','f','c'].filter(k=>a.v[k]>0&&b.v[k]>0),rt=ks.map(k=>b.v[k]/a.v[k]).sort((x,y)=>x-y),m=rt.length?rt[Math.floor(rt.length/2)]:(b.g?b.g/100:null);
+   if(m){if(!b.g)b.g=Math.round(m*100);
+    ['k','p','f','c'].forEach(k=>{const pa=a.v[k],pb=b.v[k];
+     if(pa!=null&&pb!=null&&pa>0){const e=Math.abs(pb/pa-m)/m;const tol=Math.max(.12,.6/Math.max(pb,.5));if(e>tol&&rt.length>=3){a.u[k]=a.u[k]||(pb>=pa*m?0:1);b.u[k]=1}
+       else if(e<=tol&&rt.length>=3&&ks.length>=3){if(!(a.raw[k]&&/9$/.test(a.raw[k])&&!/g$/i.test(a.raw[k])&&a.v[k]%1===0&&pa>9))a.u[k]=0;b.u[k]=0}}
+     if(pa==null&&pb!=null){a.v[k]=Math.round(pb/m*10)/10;a.u[k]=1}
+     if(pb==null&&pa!=null){b.v[k]=Math.round(pa*m*10)/10;b.u[k]=1}})}}}
+ R.forEach(col=>{const v=col.v;if([v.k,v.p,v.f,v.c].every(x=>x!=null)){const est=4*v.p+4*v.c+9*v.f;col.check=v.k>0?Math.abs(est-v.k)/v.k:1;if(col.check>.25&&Math.abs(est-v.k)>25)col.off=1}
+  if(col.kind==='100'&&(v.p||0)+(v.f||0)+(v.c||0)>105)col.off=1;
+  if(col.off&&v.k>0){const ok=(p,f,c)=>Math.abs(4*p+4*c+9*f-v.k)/v.k<.15;let hit=null;
+   [['p',v.p/10,v.f,v.c],['f',v.p,v.f/10,v.c],['c',v.p,v.f,v.c/10]].forEach(([k,p,f,c])=>{if(!hit&&v[k]>=10&&ok(p,f,c))hit=k});
+   if(hit){v[hit]=v[hit]/10;col.u[hit]=1;col.off=0}else['k','p','f','c'].forEach(k=>col.u[k]=1)}
+  ['k','p','f','c'].forEach(k=>{if(col.v[k]!=null)col.v[k]=k==='k'?Math.round(col.v[k]):Math.round(col.v[k]*10)/10})});
+ R.forEach(c=>{c.lab=c.lab.replace(/\s*%?\s*RI\*?\b/gi,'').replace(/[^A-Za-z0-9 ().,]/g,'').replace(/\s+/g,' ').trim()||'Per serving'});
+ return{cols:R,found:Object.keys(F)}}
+
+
+let SCAN=null,OCRP=null,OCRW=null,OCRQ={},OCRN=0;
+function ocrReady(){if(OCRP)return OCRP;OCRP=new Promise((ok,no)=>{let w;try{w=new Worker('ocr/worker.js')}catch(e){return no(e)}OCRW=w;
+  const to=setTimeout(()=>no(Error('timeout')),60000);
+  w.onmessage=e=>{const m=e.data;if(m.t==='ready'){clearTimeout(to);ok(w);return}const q=OCRQ[m.id];if(m.t==='err'&&!q){clearTimeout(to);no(Error(m.msg));return}if(q){delete OCRQ[m.id];m.t==='err'?q.no(Error(m.msg)):q.ok(m.words)}};
+  w.onerror=e=>{clearTimeout(to);no(Error(e.message||'worker'))};w.postMessage({t:'init'})}).catch(e=>{OCRP=null;try{OCRW&&OCRW.terminate()}catch(_){}OCRW=null;throw e});return OCRP}
+function ocrRead(cv,psm){return new Promise((ok,no)=>cv.toBlob(b=>{if(!b)return no(Error('blob'));b.arrayBuffer().then(png=>{const id=++OCRN;OCRQ[id]={ok,no};OCRW.postMessage({t:'read',id,png,psm},[png])})},'image/png'))}
+const scScore=r=>r?r.cols.reduce((m,c)=>Math.max(m,['k','p','f','c'].reduce((n,k)=>n+(c.v[k]!=null?(c.u[k]?.5:1):0),0)),0):-1;
+function scanApply(){const c=SCAN.cols[SCAN.sel],f=c.kind==='100'&&+SCAN.amt>0?+SCAN.amt/100:1;SCAN.u={};
+ ['k','p','f','c'].forEach(k=>{const v=c.v[k];M[k]=v==null?'':k==='k'?Math.round(v*f):Math.round(v*f*10)/10;SCAN.u[k]=c.u[k]?1:0})}
+scanFx=function(src){$('#sc')&&$('#sc').remove();const o=document.createElement('div');o.id='sc';
+ o.innerHTML=`<div class="scw"><img src="${src}" alt="Label"><i class="ln"></i></div><div style="margin-top:22px">${$('#ov .ringw')?$('#ov .ringw').outerHTML:''}</div><div class="hero">Reading label…</div><div class="scst">Everything happens on your phone.</div>`;document.body.appendChild(o);
+ const st=t=>{const e=o.querySelector('.scst');if(e)e.textContent=t};
+ const fail=(h,p)=>{if(!o.isConnected)return;o.innerHTML=`<div class="hero" style="text-align:center;padding:0 24px">${h}</div><div class="scst">${p}</div><div class="scbtns"><button class="btn on" data-scx="again">Try again</button><button class="btn" data-scx="hand">Type it in</button></div>`;
+  o.querySelector('[data-scx=again]').onclick=()=>{o.remove();$('#fi')&&$('#fi').click()};o.querySelector('[data-scx=hand]').onclick=()=>{o.remove();const i=$('[data-b="M.k"]');i&&i.focus()}};
+ const img=new Image();img.onerror=()=>fail('That photo couldn’t be opened','Try taking it again.');
+ img.onload=async()=>{const t0=performance.now();
+  if(!OCRW)st('Getting the label reader ready. The first time takes a few seconds.');
+  try{await ocrReady()}catch(e){return fail('The label reader couldn’t start','It needs a signal the first time you use it. After that it works offline.')}
+  st('Looking for the nutrition table…');let best=null,bs=-1;
+  try{for(const rot of[0,90,270]){if(!o.isConnected)return;const cv=lblPrep(img,rot),w=await ocrRead(cv,6);let r=null;try{r=lblParse(w)}catch(_){}const sc=scScore(r);if(sc>bs){bs=sc;best=r}if(bs>=3.5)break;if(rot===0)st('Turning the photo to read it another way…')}}
+  catch(e){return fail('Something went wrong reading that','Try again, or type the numbers in.')}
+  if(!best||bs<1.5)return fail('Swell couldn’t find a nutrition table','Lay the pack flat, get the whole table in, avoid glare, and hold still.');
+  const wait=Math.max(0,900-(performance.now()-t0));setTimeout(()=>{if(!o.isConnected)return;
+   const si=best.cols.findIndex(c=>c.kind!=='100'&&c.g),s100=best.cols.findIndex(c=>c.kind==='100');
+   SCAN={cols:best.cols,sel:si>=0?si:Math.max(0,s100),amt:''};scanApply();o.remove();tab='diet';render();
+   const c=$('.scbox');c&&c.closest('.card').scrollIntoView({block:'start',behavior:'smooth'});
+   const un=Object.values(SCAN.u).filter(Boolean).length;toast(un?'Label read. Check the highlighted numbers.':'Label read. Check it matches, then add it.')},wait)};
+ img.src=src};
+const NMK={k:'calories',p:'protein',f:'fat',c:'carbs'};
+const andL=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+{const _d=diet;diet=function(){let h=_d.apply(this,arguments);
+ h=h.replace('<p class="sm">Swipe left to delete.</p>','<p class="sm">Tap a meal to edit it. Swipe left to delete.</p>');
+ if(!SCAN)return h;const c=SCAN.cols[SCAN.sel],un=['k','p','f','c'].filter(k=>SCAN.u[k]);
+ const chips=SCAN.cols.length>1?`<div class="chips">${SCAN.cols.map((x,i)=>`<button class="chip ${i===SCAN.sel?'on':''}" data-a="scsel" data-i="${i}">${esc(x.lab)}${x.kind!=='100'&&x.g&&!/\d/.test(x.lab)?` (${x.g}g)`:''}</button>`).join('')}</div>`:`<p class="sm" style="margin-top:4px">${esc(c.lab)}${c.kind!=='100'&&c.g&&!/\d/.test(c.lab)?` (${c.g}g)`:''}</p>`;
+ const amt=c.kind==='100'?`<label>How much did you have? (g)<input type="number" inputmode="decimal" data-scamt placeholder="100" value="${esc(SCAN.amt)}"></label>`:'';
+ const note=c.off?'The numbers don’t quite add up, so check them all against the label.':un.length?`Swell isn’t sure about <span class="unsk">${andL(un.map(k=>NMK[k]))}</span>, so ${un.length>1?'they’re':'it’s'} highlighted. Check against the label, and change anything that’s wrong.`:'Check the numbers match the label, then add it. You can still change them.';
+ const box=`<div class="scbox"><b>Read from your label</b>${chips}${amt}<p class="sm">${note}</p><button class="glink" data-a="scclr">Clear</button></div>`;
+ h=h.replace(/(data-a="scan">[^<]*<\/button>)/,'$1'+box);
+ un.forEach(k=>{h=h.replace(`data-b="M.${k}"`,`data-b="M.${k}" data-uns`)});return h}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
+ if(a==='scsel'&&SCAN){e.stopImmediatePropagation();SCAN.sel=+el.dataset.i;SCAN.amt='';scanApply();render();return}
+ if(a==='scclr'){e.stopImmediatePropagation();SCAN=null;M={...M,k:'',p:'',f:'',c:''};render();return}
+ if(a==='addm'&&SCAN)setTimeout(()=>{if(!M.k&&!M.n){SCAN=null;render()}},0)},true);
+document.addEventListener('input',e=>{const el=e.target;
+ if(el.hasAttribute&&el.hasAttribute('data-scamt')&&SCAN){SCAN.amt=el.value;const u={...SCAN.u};scanApply();SCAN.u=u;['k','p','f','c'].forEach(k=>{const i=$(`[data-b="M.${k}"]`);if(i)i.value=M[k]});return}
+ const m=el.dataset&&el.dataset.b&&el.dataset.b.match(/^M\.([kpfc])$/);if(m&&SCAN){SCAN.u[m[1]]=0;el.removeAttribute('data-uns')}});
+/* tap a logged meal to edit it */
+let ME=null;
+function meForm(){const x=ME.x,f=(k,l)=>`<label>${l}<input type="number" inputmode="decimal" data-me="${k}" value="${esc(x[k])}"></label>`;
+ return`<h2>Edit meal</h2><input placeholder="Meal name" data-me="n" value="${esc(x.n)}"><div class="row">${f('k','Calories')}${f('p','Protein (g)')}</div><div class="row">${f('f','Fat (g)')}${f('c','Carbs (g)')}</div><p class="sm">Your totals for the day update to match.</p><button class="btn big on" data-a="mesave">Save changes</button><div class="row"><button class="btn" data-a="medel">Delete meal</button><button class="btn" data-a="shx">Cancel</button></div>`}
+document.addEventListener('click',e=>{const r=e.target.closest('.logc .sr .in');if(!r||e.target.closest('button,input,[data-a]'))return;const sr=r.parentNode;if(sr.classList.contains('open')||Date.now()-swd<400)return;
+ const all=[...document.querySelectorAll('.logc .sr')],i=all.indexOf(sr),ml=(S.meals||{})[today()]||[];if(i<0||!ml[i])return;ME={i,x:{...ml[i]}};sheet(meForm())});
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.me;if(k&&ME)ME.x[k]=k==='n'?e.target.value:e.target.value});
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||!ME)return;const a=el.dataset.a;if(a!=='mesave'&&a!=='medel')return;e.stopImmediatePropagation();
+ const ml=(S.meals||{})[today()]||[],old=ml[ME.i];if(!old){ME=null;sheet(null);return}
+ if(a==='mesave'){const x=ME.x,nw={...old,n:String(x.n||'').trim()||'Meal',k:+x.k||0,p:+x.p||0,f:+x.f||0,c:+x.c||0};addTot(old,-1);addTot(nw,1);ml[ME.i]=nw;toast('Meal updated.')}
+ else{addTot(old,-1);ml.splice(ME.i,1);toast('Meal deleted.')}
+ ME=null;save();sheet(null);render();try{evalDay()}catch(_){}},true);
+RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',h:'Label scanning that reads the label',p:'Take a photo of a nutrition label and Swell reads the calories, protein, fat and carbs, right on your phone. Anything it isn’t sure of is highlighted for you to check. You can also tap a logged meal to edit it.'});
+RELEASES.find(r=>r.v==='2026.10.27').tour=(RELEASES.find(r=>r.v==='2026.10.27').tour||[]).concat([{t:'diet',q:'.scanb',h:'Scan a label',p:'Take a photo of the nutrition table. Swell reads it on your phone, highlights anything it isn’t sure of, and lets you pick per 100g or per serving.'}]);
+/* ===== v38: saver mode. Swell keeps an estimate of its Netlify credits and eases off before the monthly limit ===== */
+const BUD_URL='/.netlify/functions/budget',BUD_SITE=/netlify\.app$/.test(location.hostname),monthNow=()=>new Date().toISOString().slice(0,7);
+function budLv(){const b=S.bud;return b&&b.m===monthNow()?b.lv|0:0}
+S.budOpens=(S.budOpens||0)+1;save();
+{const _f=window.fetch;window.fetch=function(u){try{if(String(u&&u.url||u).includes('/.netlify/functions/'))S.budFn=(S.budFn||0)+1}catch(_){}return _f.apply(this,arguments)}}
+const swAsk=m=>new Promise(ok=>{const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(!c)return ok(null);const ch=new MessageChannel();const to=setTimeout(()=>ok(null),1500);ch.port1.onmessage=e=>{clearTimeout(to);ok(e.data)};try{c.postMessage(m,[ch.port2])}catch(_){ok(null)}});
+const swTell=m=>{try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller;c&&c.postMessage(m)}catch(_){}};
+let BUDBUSY=false;
+async function budCheck(force){if(!BUD_SITE||BUDBUSY||!navigator.onLine)return;const lv=budLv(),gap=(lv>=2?72:20)*36e5,b=S.bud;
+ if(!force&&b&&b.m===monthNow()&&Date.now()-b.t<gap)return;BUDBUSY=true;
+ try{const met=(await swAsk({t:'meter'}))||{b:0,r:0},body={uid:S.uid||'',b:met.b,r:met.r,f:S.budFn||0,o:S.budOpens||0};
+  const r=await fetch(BUD_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw 0;const j=await r.json();
+  swTell({t:'metered',b:met.b,r:met.r});S.budFn=0;S.budOpens=0;const before=lv;
+  S.bud={lv:Math.max(0,Math.min(3,j.lv|0)),t:Date.now(),m:j.month||monthNow(),left:j.left,err:j.err?1:0};save();swTell({t:'lv',lv:S.bud.lv});
+  if(S.bud.lv>before&&S.bud.lv>=1&&!S.budSeen)S.budSeen=S.bud.m+':'+S.bud.lv;
+  if(S.bud.lv<2&&S.remHold){S.remHold=0;save();try{remSync(true)}catch(_){}}}
+ catch(_){}finally{BUDBUSY=false}}
+setTimeout(()=>budCheck(),4000);setInterval(()=>budCheck(),6*36e5);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)budCheck()});
+// the brakes
+if(typeof remSync==='function'){const _rs=remSync;remSync=function(){if(budLv()>=2){S.remHold=1;save();return Promise.resolve()}return _rs.apply(this,arguments)}}
+if(typeof restPush==='function'){const _rp=restPush;restPush=function(){if(budLv()>=1)return Promise.resolve();return _rp.apply(this,arguments)}}
+{const _sf=scanFx;scanFx=function(src){if(budLv()<2)return _sf.apply(this,arguments);
+ Promise.resolve(window.caches?caches.match(new URL('ocr/eng.traineddata',location.href).href):null).then(hit=>{if(hit||OCRW)return _sf.call(this,src);toast('Label scanning is resting until the new month to keep Swell online. You can type the numbers in for now.')}).catch(()=>_sf.call(this,src))}}
+const NEXT1=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()+1,1).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
+const budNote=()=>{const lv=budLv();if(!lv)return'';const what=['','rest-timer alerts are off and updates arrive a little slower','new reminders are paused and updates arrive a little slower','reminders and updates are paused'][lv];
+ return`<div class="npst budn"><i style="background:var(--A)"></i><span>Saver mode is on until ${NEXT1()}: ${what}, so Swell stays online. Everything else works as normal.</span></div>`};
+{const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{if(!h||!budLv())return;const o=$('#sheet .mwc'),t=o&&o.querySelector('h2');if(t&&/^(Settings|Notifications)$/.test(t.textContent.trim())&&!o.querySelector('.budn'))t.insertAdjacentHTML('afterend',budNote())}catch(_){}}}
 render();periodic();reqShow();
 </script></body></html>
