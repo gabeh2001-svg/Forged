@@ -223,6 +223,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const KEY='forge.v1';
 let S={};try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+/* preview only (the Claude preview, not the live site or a local file): start inside the app with a demo profile */
+const PREVIEW=location.protocol!=='file:'&&!/netlify\.app$|^localhost$|^127\./.test(location.hostname);
+if(PREVIEW&&!S.user)S={user:'Gabriel',seenA2HS:1,tourDone:1,npAsked:1,seenVer:'2026.10.26',p:'#7f0000',s:'#000000',active:'demo',setup:{done:true,freq:4,h:180,w:80,age:25,sex:'m',act:1.55,k:2800,p:200,f:80,c:300},plans:[{id:'demo',name:'Push Pull Legs',perWeek:3,cur:0,days:[{name:'Push',ex:[{n:'Bench press',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Shoulder press',eq:'Dumbbell',s:3,t:'Reps',v:10},{n:'Tricep pushdown',eq:'Cable',s:3,t:'Reps',v:12}]},{name:'Pull',ex:[{n:'Lat pulldown',eq:'Cable',s:3,t:'Reps',v:10},{n:'Barbell row',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Bicep curl',eq:'Dumbbell',s:3,t:'Reps',v:12}]},{name:'Legs',ex:[{n:'Squat',eq:'Barbell',s:3,t:'Reps',v:6},{n:'Leg press',eq:'Machine',s:3,t:'Reps',v:10},{n:'Calf raise',eq:'Machine',s:3,t:'Reps',v:15}]}]}]};
 Object.assign(S,{plans:S.plans||[],checks:S.checks||{},macros:S.macros||{},wins:S.wins||{},bg:S.bg||0,setup:S.setup||{}});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -1818,11 +1821,11 @@ const GPROPS=['display','position','top','right','bottom','left','inset','z-inde
 function ghostOut(el){const all=[el,...el.querySelectorAll('*')];if(all.length>260)return;const r=el.getBoundingClientRect();if(!r.width)return;
  const g=el.cloneNode(true),gs=[g,...g.querySelectorAll('*')];
  all.forEach((n,i)=>{const cs=getComputedStyle(n),t=gs[i];if(!t||!t.style)return;for(const p of GPROPS)t.style.setProperty(p,cs.getPropertyValue(p));t.style.animation='none';t.style.transition='none';t.removeAttribute&&t.removeAttribute('id')});
- g.style.position='fixed';g.style.left=r.left+'px';g.style.top=r.top+'px';g.style.width=r.width+'px';g.style.height=r.height+'px';g.style.margin='0';g.style.pointerEvents='none';g.setAttribute('aria-hidden','true');document.body.appendChild(g);
+ g.__ghost=1;g.classList.remove('toast');g.style.position='fixed';g.style.left=r.left+'px';g.style.top=r.top+'px';g.style.width=r.width+'px';g.style.height=r.height+'px';g.style.margin='0';g.style.pointerEvents='none';g.setAttribute('aria-hidden','true');document.body.appendChild(g);
  const card=g.querySelector('.mwc,.card,.lxh')||g,isAw=el.id==='aw';
  if(card!==g&&!isAw)card.animate([{transform:'none',opacity:1},{transform:'translateY(28px) scale(.98)',opacity:0}],{duration:260,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'});
  g.animate([{opacity:1},{opacity:0}],{duration:isAw?320:280,easing:'ease-in',fill:'forwards'}).onfinish=()=>g.remove()}
-{const _rm=Element.prototype.remove;Element.prototype.remove=function(){try{if(!MRM()&&this.isConnected&&this.parentNode===document.body&&(GHOST.has(this.id)||this.classList&&this.classList.contains('toast')))ghostOut(this)}catch(_){}return _rm.call(this)}}
+{const _rm=Element.prototype.remove;Element.prototype.remove=function(){try{if(!MRM()&&!this.__ghost&&this.isConnected&&this.parentNode===document.body&&(GHOST.has(this.id)||this.classList&&this.classList.contains('toast')))ghostOut(this)}catch(_){}return _rm.call(this)}}
 /* tabs: content arrives in a quick cascade instead of all at once (staging + overlap) */
 {const _fa=fxApply;fxApply=function(root,pre,same){if(same||!root||MRM())return _fa.apply(this,arguments);let j=0;[...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;const fixedIn=c.querySelector('[style*="position:fixed"],.nav');const k=Math.min(j++,8);c.animate(fixedIn?[{opacity:0},{opacity:1}]:[{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:420,delay:k*28,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})}}
 /* guided workouts: each step slides in from the side, so the flow reads as moving forward */
@@ -1865,5 +1868,17 @@ button[data-a=edone][style*="position:fixed"]:active{transform:translateX(-50%) 
 /* mark widgets in the right-hand column so resizing works by pulling left */
 {const _r=render;render=function(){_r.apply(this,arguments);try{const g=document.querySelector('#app .grid.edit');if(!g)return;const gr=g.getBoundingClientRect(),mid=gr.left+gr.width/2;g.querySelectorAll('.wd').forEach(w=>{const r=w.getBoundingClientRect();w.classList.toggle('rcol',r.width<gr.width*.75&&r.left>mid-4)})}catch(_){}}}
 RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/>',h:'Easier widget editing',p:'Resize widgets from whichever side has room, remove buttons no longer cover titles, and Done sits at the bottom of the screen.'});
+/* ===== v35: nav highlight glides and stays (no swap at the end) ===== */
+(function(){const st=document.createElement('style');st.textContent=`.nav.glide2 button.on,.nav.glide2 button{background:transparent!important;transition:transform .22s var(--e-spring),filter .2s!important}.nav .navhl2{position:absolute;top:0;left:0;border-radius:16px;background:rgba(255,255,255,.2);pointer-events:none;z-index:0;will-change:transform,width}`;document.head.appendChild(st)})();
+let NAVP=null;
+navGlide=function(){const n=document.querySelector('#app .nav'),b=n&&n.querySelector('button.on');if(!b)return;
+ const nr=n.getBoundingClientRect(),br=b.getBoundingClientRect(),to={x:br.left-nr.left,y:br.top-nr.top,w:br.width,h:br.height};
+ let from=NAVP;const old=NAVP&&NAVP.el;
+ if(old&&old.isConnected===false&&old.__live){from=old.__live()}
+ const hl=document.createElement('i');hl.className='navhl2';hl.style.cssText=`width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px)`;n.appendChild(hl);n.classList.add('glide2');
+ NAVP={...to,el:hl};
+ if(!from||(Math.abs(from.x-to.x)<1&&Math.abs(from.w-to.w)<1)||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ const a=hl.animate([{transform:`translate(${from.x}px,${from.y}px)`,width:from.w+'px'},{transform:`translate(${to.x}px,${to.y}px)`,width:to.w+'px'}],{duration:380,easing:'cubic-bezier(.22,1,.36,1)'});
+ const t0=performance.now();hl.__live=()=>{const k=Math.min(1,(performance.now()-t0)/380),e=1-Math.pow(1-k,4);return{x:from.x+(to.x-from.x)*e,y:to.y,w:from.w+(to.w-from.w)*e,h:to.h}}};
 render();periodic();reqShow();
 </script></body></html>
