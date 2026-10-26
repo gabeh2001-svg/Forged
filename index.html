@@ -2988,12 +2988,12 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
  fsx:()=>fsClose(),
  wadd:()=>watAdd(+i),
  wgoal:()=>{WAT().goal=+i||0;save();fsr();render();try{remSync(true)}catch(_){}},
- wrem:()=>{const P=npGet();P.water=!P.water;save();fsr();if(P.water&&pushState()!=='on')setTimeout(notifSheet,60);try{remSync(true)}catch(_){}},
+ wrem:()=>{const P=npGet();P.water=!P.water;save();fsr();if(P.water&&pushState()!=='on')setTimeout(pushNeed,60);try{remSync(true)}catch(_){}},
  wev:()=>{WAT().ev=+i;save();fsr();try{remSync(true)}catch(_){}},
  sptk:()=>supToggle(i),
  sped:()=>{const x=SUP().list.find(y=>y.id===i);if(!x)return;SE={id:x.id,x:{...x,days:(x.days||[]).slice()}};seSheet()},
  spadd:()=>{SE={id:null,x:{n:'',dose:'',t:null,days:[]}};seSheet()},
- sprem:()=>{const P=npGet();P.supp=!P.supp;save();fsr();if(P.supp&&pushState()!=='on')setTimeout(notifSheet,60);try{remSync(true)}catch(_){}},
+ sprem:()=>{const P=npGet();P.supp=!P.supp;save();fsr();if(P.supp&&pushState()!=='on')setTimeout(pushNeed,60);try{remSync(true)}catch(_){}},
  seown:()=>{if(!SE)return;SE.x.t=SE.x.t?null:SUP().t;seSheet()},
  seday:()=>{if(!SE)return;if(i==='all')SE.x.days=[];else{const n=+i,d=SE.x.days||[],k=d.indexOf(n);if(k>=0)d.splice(k,1);else d.push(n);SE.x.days=d.length===7?[]:d}seSheet()},
  sesave:()=>{if(!SE)return;const x=SE.x;x.n=(x.n||'').trim();if(!x.n){toast('Give it a name first.');return}const L=SUP().list;
@@ -3008,8 +3008,8 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
  bdlead:()=>{if(BDE){BDE.lead=+i;fsr()}},
  bdcan:()=>{BDE=null;fsr()},
  bdsave:()=>{if(!BDE)return;const sl=SLP();sl.bed=BDE.t;sl.lead=BDE.lead;const P=npGet();P.bed=true;BDE=null;save();fsr();
-  const at=toMin(sl.bed)-sl.lead;toast(`Bedtime reminder set for ${hm12f(at)}.`);if(pushState()!=='on')setTimeout(notifSheet,500);try{remSync(true)}catch(_){}},
- bdtg:()=>{const P=npGet();P.bed=!P.bed;save();fsr();if(P.bed&&pushState()!=='on')setTimeout(notifSheet,60);try{remSync(true)}catch(_){}},
+  const at=toMin(sl.bed)-sl.lead;toast(`Bedtime reminder set for ${hm12f(at)}.`);if(pushState()!=='on')setTimeout(pushNeed,500);try{remSync(true)}catch(_){}},
+ bdtg:()=>{const P=npGet();P.bed=!P.bed;save();fsr();if(P.bed&&pushState()!=='on')setTimeout(pushNeed,60);try{remSync(true)}catch(_){}},
  bedgo:()=>bedGo(),
  bedwake:()=>bedWake(),
  bedcan:()=>{SLP().on=null;save();bedHide();render()},
@@ -3674,11 +3674,11 @@ function cafInsights(){const o=[],k=slpKey(),n=(S.sleep||{})[k],d=today(),L=cafL
  if(!S.trainAt&&(c.goal==='train'||c.goal==='both'))o.push('Tell Swell when you usually train, below, so it can time your pre-workout dose.');
  return o}
 function cafV(){const c=CAFP(),d=today(),L=cafLog(d),tot=L.reduce((a,x)=>a+x.mg,0),lim=cafLim(),now=d===realToday()?nowMin():null,inb=now!=null?Math.round(inBody(L,now)):null,P=cafPlan(d),P2=npGet(),cut=cutoffFor(100),ins=cafInsights(),kg=kgNow();
- const done=p=>L.some(x=>Math.abs(x.t-p.t)<90&&x.mg>=Math.min(p.mg,60));
+ const done=p=>p.done;
  return`<h1>Caffeine</h1><p class="sub2">${d===realToday()?'Today':esc(dLbl(d))}</p>
  <div class="card"><div class="cafw" style="height:auto">${cupSVG(tot/lim,'f',74)}<div class="ct"><b>${tot} <span>of ${lim} mg</span></b><span>${inb!=null?`About ${inb} mg in your system now`:`${L.length} drink${L.length===1?'':'s'}`}</span><span>Last caffeine by ${hm12f(cut)}</span></div></div>
  <div class="row2" style="margin-top:14px"><button class="btn on" data-a="dago" data-i="coffee">+ Coffee</button><button class="btn" data-a="dago" data-i="energy">+ Energy drink</button></div><button class="glink" data-a="dago" data-i="other" style="margin-top:6px">Tea, pre-workout or something else</button></div>
- <div class="card"><h2>Your plan for today</h2><div class="cpl">${P.map(p=>`<div class="r ${done(p)?'done':''}"><span class="tm">${p.skip?'Skip':hm12(p.t)}</span><div><b>${p.h}${p.skip?'':` · ${p.mg} mg`}</b><small>${p.why}</small></div></div>`).join('')}
+ <div class="card"><h2>Your plan for today</h2><div class="cpl">${P.map(p=>`<div class="r ${done(p)?'done':''}"><span class="tm">${p.skip&&!p.done?'Skip':hm12(p.t)}</span><div><b>${p.h}${p.skip?'':` · ${p.mg} mg`}</b><small>${p.why}</small></div></div>`).join('')}
  <div class="r cut"><span class="tm">${hm12(cut)}</span><div><b>Last caffeine</b><small>After this, a coffee is still in you at bedtime (${hm12(bedMin())}). Caffeine halves about every ${Math.round(cafHL()/6)/10} hours.</small></div></div></div>
  ${cafChart()}<p class="sm" style="margin:6px 0 0">Solid line: what you’ve had. Dashed: your plan for the rest of the day.</p></div>
  ${ins.length?`<div class="card"><h2>Swell noticed</h2>${ins.map(t=>`<div class="cins"><i></i><span>${esc(t)}</span></div>`).join('')}</div>`:''}
@@ -3713,17 +3713,15 @@ function cupSVG(f,id,size){f=Math.max(0,Math.min(1,f||0));const lv=78-f*48,s=siz
 /* ---------- caffeine actions ---------- */
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;const H={
  dago:()=>{daNew(i);daSheet()},
- dac:()=>{DA.cat=i;if(i==='tea'){DA.type='tea';DA.milk='semi'}if(i==='coffee'){DA.type='latte';DA.shots=2}daRefresh()},
- dat:()=>{DA.type=i;const D=DRK[i];if(D.shots)DA.shots=D.shots;if(!D.milk[2])DA.milk='none';else if(DA.milk==='none'&&!D.splash)DA.milk='semi';daRefresh()},
- das:()=>{DA.size=+i;daRefresh()},dash:()=>{DA.shots=Math.max(1,Math.min(4,DA.shots+ +i));daRefresh()},dam:()=>{DA.milk=i;daRefresh()},
+ dac:()=>{const reg=CAFP().reg;DA.cat=i;DA.size=0;if(i==='tea'){Object.assign(DA,reg&&reg.cat==='tea'?reg:{type:'tea',milk:'semi'})}if(i==='coffee'){Object.assign(DA,reg&&reg.cat==='coffee'?reg:{type:'flatwhite',shots:2,milk:'whole'})}daRefresh()},
+ dash:()=>{DA.shots=Math.max(1,Math.min(4,DA.shots+ +i));daRefresh()},dam:()=>{DA.milk=i;daRefresh()},
  dasu:()=>{DA.sugar=Math.max(0,Math.min(4,DA.sugar+ +i));daRefresh()},dasy:()=>{DA.syrup=Math.max(0,Math.min(4,DA.syrup+ +i));daRefresh()},
  dapre:()=>{DA.name=el.dataset.n;DA.mg=el.dataset.mg;DA.kcal=el.dataset.k;daRefresh()},
- daadd:()=>{const v=daCalc();if(!v.mg){toast('Add how much caffeine it had first.');return}const t=toMin(DA.t||hhmm(nowMin()));DA=null;sheet(null);cafAdd({...v,t})},
  cdel:()=>{const d=today(),L=cafLog(d),x=L[+i];if(!x)return;L.splice(+i,1);save();render();fsr();toastUndo(`${x.n} removed from caffeine.`,()=>{(S.cafl[d]=S.cafl[d]||[]).splice(+i,0,x);if(FS==='caf')setTimeout(fsr,0)})},
  cgoal:()=>{CAFP().goal=i;save();fsr();render();try{remSync(true)}catch(_){}},
  csens:()=>{CAFP().sens=i;save();fsr();render()},
  cfirst:()=>{CAFP().first=i==='set'?(CAFP().first||hhmm(wakeMin()+60)):null;save();fsr();try{remSync(true)}catch(_){}},
- crem:()=>{const P=npGet();P.caf=!P.caf;save();fsr();if(P.caf&&pushState()!=='on')setTimeout(notifSheet,60);try{remSync(true)}catch(_){}},
+ crem:()=>{const P=npGet();P.caf=!P.caf;save();fsr();if(P.caf&&pushState()!=='on')setTimeout(pushNeed,60);try{remSync(true)}catch(_){}},
  trat:()=>{S.trainAt=i;if(i==='varies')S.trainT=null;save();if($('#sheet'))trainSheet();if(FS)fsr();render();try{remSync(true)}catch(_){}},
  trsheet:()=>trainSheet()};
  if(H[a]){e.stopImmediatePropagation();e.preventDefault();H[a]()}},true);
@@ -3793,14 +3791,148 @@ TIPS.push({id:'u-caf',t:'home',q:'.grid',w:2,u:1,ok:()=>coffeeMeals()>=3&&!(S.la
  {id:'u-train',t:'plan',q:'[data-a=newp]',w:1,u:1,ok:()=>!S.trainAt&&Object.keys(S.fd||{}).length>=3,h:'When do you train?',p:'Set it in Settings, then When you train. Workout reminders and caffeine timing follow it.'});
 TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
 {const R=RELEASES.find(r=>r.v==='2026.11.23');if(R){R.items.push(
- {i:'<path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>',h:'Caffeine, if you want it',p:'An optional widget: log coffees by type, size, shots and milk, and the milk counts towards your food. Swell plans your caffeine around when you wake, train and sleep. Hold a widget and tap + Caffeine to add it.'},
+ {i:'<path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>',h:'Caffeine, if you want it',p:'An optional widget: log coffees by type, shots and milk, with sizes the way cafés serve them, and the milk counts towards your food. Save your usual as My regular and it’s one tap. Swell plans your caffeine around when you wake, train and sleep. Hold a widget and tap + Caffeine to add it.'},
  {i:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',h:'A bedtime that meets you halfway',p:'If you’re falling asleep later than your goal, your bedtime reminder starts near where you are and moves 15 minutes earlier each week.'},
  {i:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="8"/>',h:'Reminders that fit your day',p:'Swell learns when you actually use it. Log your meals in one go in the evening? You get one reminder then, not one per meal. You can turn this off in Notifications.'},
  {i:'<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M9 15c1.2 1 4.8 1 5-1s-5-2-5-4 3.6-2 5-1"/>',h:'A new icon',p:'Swell has a new icon. To see it, first back up in Settings, then remove Swell from your Home Screen, add it again from Safari, and tap Restore my backup.'})}}
 
 /* preview: show the caffeine widget with a coffee already logged, and an evening training time */
 if(PREVIEW&&!S.v50demo){S.v50demo=1;const t=realToday();S.lay=S.lay||[];if(!S.lay.some(l=>l.id==='caf'))S.lay.push({id:'caf',w:2,h:1});S.trainAt=S.trainAt||'evening';
- S.cafl=S.cafl||{};S.cafl[t]=[{t:8*60+40,mg:126,n:'Regular flat white, oat milk',k:89}];S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:'Regular flat white, oat milk',k:89,p:1.5,f:4.5,c:9.9,caf:1});save()}
+ S.cafl=S.cafl||{};S.cafl[t]=[{t:8*60+40,mg:126,n:'Flat white, oat milk',k:89}];S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:'Flat white, oat milk',k:89,p:1.5,f:4.5,c:9.9,caf:1});save()}
+/* ===== v51: coffee the way a barista would log it (proper sizes, My regular coffee), a cup with a moving surface,
+   a droplet that drops into the cup, reminders that only ask about themselves, and smoother page opening on iPhone ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+/* pages: solid glass that doesn't pop in late, and an opening that never shows the page underneath */
+#fs .card{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background-color:rgba(255,255,255,.075)}
+.fset label{display:flex;flex-direction:column;gap:6px;margin:0}.fset label input{margin:0}
+.cup .cwv{animation:cwv 3.6s linear infinite}
+@keyframes cwv{to{transform:translateX(-40px)}}
+@media (prefers-reduced-motion:reduce){.cup .cwv{animation:none}}
+.cdrp{position:fixed;z-index:130;left:0;top:0;width:40px;height:52px;margin:-26px 0 0 -20px;pointer-events:none;will-change:transform}
+.dstk{position:sticky;bottom:-18px;margin:14px -18px -18px;padding:14px 18px 18px;background:linear-gradient(rgba(22,26,40,0),rgba(22,26,40,.97) 22%);display:flex;flex-direction:column;gap:8px;z-index:2}
+.dstk .btn{margin:0}
+.dreg{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);margin-top:10px}
+.dreg span{font-size:14px}.dreg small{display:block;color:var(--dim);font-size:12.5px}`;document.head.appendChild(st)})();
+
+/* ---------- sizes as they're really served ---------- */
+// one size where that's how it's made (a flat white is a flat white), regular and large where cafés offer both
+Object.assign(DRK,{
+ espresso:{n:'Espresso',sizes:[''],sh:[1],milk:[0]},
+ americano:{n:'Americano',sizes:['Regular','Large'],sh:[2,3],milk:[30,40],splash:1},
+ flatwhite:{n:'Flat white',sizes:[''],sh:[2],milk:[150]},
+ latte:{n:'Latte',sizes:['Regular','Large'],sh:[2,2],milk:[280,360]},
+ cappuccino:{n:'Cappuccino',sizes:['Regular','Large'],sh:[2,2],milk:[200,260]},
+ mocha:{n:'Mocha',sizes:['Regular','Large'],sh:[2,2],milk:[250,330],choc:1},
+ iced:{n:'Iced latte',sizes:[''],sh:[2],milk:[220]},
+ filter:{n:'Filter coffee',sizes:[''],mg:[140],milk:[30],splash:1},
+ coldbrew:{n:'Cold brew',sizes:[''],mg:[200],milk:[0],splash:1},
+ instant:{n:'Instant coffee',sizes:[''],mg:[60],milk:[30],splash:1},
+ tea:{n:'Black tea',sizes:['Regular','Large'],mg:[45,60],milk:[30,35],splash:1},
+ green:{n:'Green tea',sizes:[''],mg:[30],milk:[0]},
+ matcha:{n:'Matcha latte',sizes:['Regular','Large'],mg:[70,100],milk:[280,360]}});
+const DW={1:'single',2:'double',3:'triple',4:'quad'};
+daNew=function(cat){const r=CAFP().reg;DA=r&&(cat==='coffee'||cat==='tea'&&r.cat==='tea')?{...r,cat:r.cat,t:hhmm(nowMin()),name:'',mg:'',kcal:''}:{cat:cat||'coffee',type:cat==='tea'?'tea':'flatwhite',size:0,shots:2,milk:cat==='tea'?'semi':'whole',sugar:0,syrup:0,t:hhmm(nowMin()),name:'',mg:'',kcal:''};return DA};
+daCalc=function(a){a=a||DA;if(a.cat!=='coffee'&&a.cat!=='tea')return{mg:+a.mg||0,k:+a.kcal||0,p:0,f:0,c:+a.carbs||0,n:a.name||'Caffeine'};
+ const D=DRK[a.type],si=Math.min(a.size||0,D.sizes.length-1),ml=a.milk==='none'?0:D.milk[si],M=MILK[a.milk]||MILK.none;
+ let mg=D.mg?D.mg[si]:SHOT*a.shots,k=M[1]*ml/100,p=M[2]*ml/100,f=M[3]*ml/100,c=M[4]*ml/100;
+ if(D.choc){k+=70*(si?1.35:1);p+=1;f+=2;c+=12*(si?1.35:1)}k+=a.sugar*16+a.syrup*20;c+=a.sugar*4+a.syrup*5;
+ const sz=D.sizes[si],extra=D.sh&&a.shots!==D.sh[si]?DW[a.shots]+' ':'',base=(sz?sz+' ':'')+extra+D.n.toLowerCase(),name=base.charAt(0).toUpperCase()+base.slice(1)+(ml?`, ${M[0].toLowerCase()} milk`:'');
+ return{mg:Math.round(mg),k:Math.round(k),p:Math.round(p*10)/10,f:Math.round(f*10)/10,c:Math.round(c*10)/10,n:name,short:D.n}};
+const regKey=a=>a?[a.cat,a.type,a.size,a.shots,a.milk,a.sugar,a.syrup].join('|'):'';
+daSheet=function(){const a=DA,v=daCalc(),D=DRK[a.type]||DRK.latte,isReg=regKey(CAFP().reg)===regKey(a),cats=[['coffee','Coffee'],['tea','Tea'],['energy','Energy drink'],['other','Other']];let body='';
+ if(a.cat==='coffee'||a.cat==='tea'){const types=a.cat==='coffee'?['espresso','americano','flatwhite','latte','cappuccino','mocha','iced','filter','coldbrew','instant']:['tea','green','matcha'];
+  body=`<div class="dsel"><p class="sm" style="margin:10px 2px 6px">Drink</p><div class="chips">${types.map(k=>`<button class="chip ${a.type===k?'on':''}" data-a="dat" data-i="${k}">${DRK[k].n}</button>`).join('')}</div>
+  ${D.sizes.length>1?`<p class="sm" style="margin:4px 2px 6px">Size</p><div class="chips">${D.sizes.map((n,i)=>`<button class="chip ${a.size===i?'on':''}" data-a="das" data-i="${i}">${n}</button>`).join('')}</div>`:''}
+  ${D.sh?`<div class="npr" style="border:0;padding:4px 2px"><div><b>Shots</b><small>${SHOT} mg each</small></div><div class="dstep"><button data-a="dash" data-i="-1" aria-label="One less shot">−</button><b>${a.shots}</b><button data-a="dash" data-i="1" aria-label="One more shot">+</button></div></div>`:''}
+  ${D.milk.some(Boolean)?`<p class="sm" style="margin:4px 2px 6px">Milk</p><div class="chips">${Object.entries(MILK).filter(([k])=>k!=='none'||D.splash).map(([k,m])=>`<button class="chip ${a.milk===k?'on':''}" data-a="dam" data-i="${k}">${m[0]}</button>`).join('')}</div>`:''}
+  <div class="npr" style="border:0;padding:4px 2px"><div><b>Sugar</b><small>Teaspoons</small></div><div class="dstep"><button data-a="dasu" data-i="-1" aria-label="Less sugar">−</button><b>${a.sugar}</b><button data-a="dasu" data-i="1" aria-label="More sugar">+</button></div></div>
+  ${a.cat==='coffee'?`<div class="npr" style="border:0;padding:4px 2px"><div><b>Syrup</b><small>Pumps</small></div><div class="dstep"><button data-a="dasy" data-i="-1" aria-label="Less syrup">−</button><b>${a.syrup}</b><button data-a="dasy" data-i="1" aria-label="More syrup">+</button></div></div>`:''}
+  <div class="dreg"><span>My regular<small>${isReg?'This is your regular. It’s one tap from the Caffeine widget.':'Save this so it’s one tap next time.'}</small></span><button class="tg ${isReg||a.mkreg?'on':''}" data-a="dareg" role="switch" aria-checked="${!!(isReg||a.mkreg)}" aria-label="My regular coffee"></button></div></div>`}
+ else if(a.cat==='energy')body=`<button class="btn" data-a="bcgo" data-i="caf" style="width:100%;margin:10px 0">${ico('<path d="M4 6v12M7 6v12M10.5 6v12M14 6v12M16.5 6v12M20 6v12"/>')} Scan the can</button>
+  <div class="chips">${[['Energy drink, 250 ml can','250 ml can',80,110],['Energy drink, 500 ml can','500 ml can',160,220],['Sugar-free energy drink, 500 ml','Sugar-free 500 ml',160,10]].map(([n,l,mg,k])=>`<button class="chip" data-a="dapre" data-n="${n}" data-mg="${mg}" data-k="${k}">${l}</button>`).join('')}</div>
+  <input placeholder="Name, like Monster Ultra" data-da="name" value="${esc(a.name)}"><div class="row"><label>Caffeine (mg)<input type="number" inputmode="numeric" data-da="mg" value="${esc(a.mg)}"></label><label>Calories<input type="number" inputmode="numeric" data-da="kcal" value="${esc(a.kcal)}"></label></div>`;
+ else body=`<div class="chips" style="margin-top:10px">${[['Pre-workout scoop',200,5],['Caffeine tablet',200,0],['Half a caffeine tablet',100,0],['Cola, 330 ml',32,139],['Diet cola, 330 ml',42,1],['Dark chocolate, 25 g',20,150]].map(([n,mg,k])=>`<button class="chip" data-a="dapre" data-n="${n}" data-mg="${mg}" data-k="${k}">${n}</button>`).join('')}</div>
+  <input placeholder="What was it?" data-da="name" value="${esc(a.name)}"><div class="row"><label>Caffeine (mg)<input type="number" inputmode="numeric" data-da="mg" value="${esc(a.mg)}"></label><label>Calories<input type="number" inputmode="numeric" data-da="kcal" value="${esc(a.kcal)}"></label></div>`;
+ sheet(`<h2>Add caffeine</h2><div class="chips">${cats.map(([k,n])=>`<button class="chip ${a.cat===k?'on':''}" data-a="dac" data-i="${k}">${n}</button>`).join('')}</div>${body}
+ <label class="sm" style="display:flex;flex-direction:column;gap:6px;margin-top:10px">Time<input type="time" data-da="t" value="${a.t}" style="margin:0"></label>
+ <div class="dstk"><div class="dsum" style="margin:0"><div><b data-dv="mg">${v.mg} mg</b><br><span>caffeine</span></div><div style="text-align:right"><b data-dv="k">${v.k} kcal</b><br><span data-dv="m">${v.k>=5?'Also added to today’s food':'Nothing added to food'}</span></div></div>
+ <button class="btn big on" data-a="daadd">Add</button><button class="btn big" data-a="shx">Cancel</button></div>`)};
+
+/* ---------- the cup: a surface that gently moves, a ripple when something lands, and a level that rises ---------- */
+cupSVG=function(f,id,size){f=Math.max(0,Math.min(1,f||0));const lv=78-f*48,s=size||60,w='M0 3 Q10 0 20 3 T40 3 T60 3 T80 3 T100 3 T120 3';
+ return`<svg class="cup" data-cf="${f.toFixed(3)}" viewBox="0 0 80 90" width="${s}" height="${(s*90/80).toFixed(1)}" aria-hidden="true"><defs><clipPath id="cc${id}"><path d="M10 26h48v34a16 16 0 0 1-16 16H26a16 16 0 0 1-16-16z"/></clipPath><linearGradient id="cg${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c98a55"/><stop offset="1" stop-color="#6b3b1f"/></linearGradient></defs>
+ <g clip-path="url(#cc${id})"><rect x="0" y="0" width="80" height="90" fill="rgba(255,255,255,.08)"/>
+ <g class="cfill" style="transform:translateY(${lv.toFixed(1)}px)${f?'':';opacity:0'}"><g class="cwv"><path d="${w} V95 H0Z" fill="url(#cg${id})"/><path d="${w}" fill="none" stroke="#e8c39e" stroke-width="2.2" opacity=".85"/></g>
+ <ellipse class="crp" cx="34" cy="3" rx="5" ry="1.6" fill="none" stroke="#f6dfc4" stroke-width="1.6" opacity="0" style="transform-box:fill-box;transform-origin:center"/></g></g>
+ <path d="M10 26h48v34a16 16 0 0 1-16 16H26a16 16 0 0 1-16-16z" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="3"/><path d="M58 34h5a10 10 0 0 1 0 20h-5" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="3"/>
+ ${f>0?'<path d="M26 8c0 5 5 5 5 10M38 6c0 5 5 5 5 10" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="3" stroke-linecap="round"/>':''}</svg>`};
+function cupLand(svg,from){if(!svg||MRM())return;const to=+svg.dataset.cf,g=svg.querySelector('.cfill'),r=svg.querySelector('.crp');if(!g)return;
+ const ly=x=>78-Math.max(0,Math.min(1,x))*48;g.style.opacity=1;
+ g.animate([{transform:`translateY(${ly(from).toFixed(1)}px)`},{transform:`translateY(${(ly(to)-2).toFixed(1)}px)`,offset:.7},{transform:`translateY(${ly(to).toFixed(1)}px)`}],{duration:700,easing:'cubic-bezier(.3,1.2,.5,1)'});
+ if(r){r.animate([{opacity:.95,transform:'scale(1)'},{opacity:0,transform:'scale(5.5)'}],{duration:900,easing:'cubic-bezier(.2,.7,.3,1)'});setTimeout(()=>r.animate([{opacity:.7,transform:'scale(1)'},{opacity:0,transform:'scale(4)'}],{duration:800,easing:'cubic-bezier(.2,.7,.3,1)'}),180)}}
+// the drink becomes a droplet, glides to the cup and drops in
+function cafDrop(v,fromRect){const tgt=()=>FS==='caf'?$('#fs svg.cup'):$('#app .wd[data-id=caf] svg.cup');let t=tgt();const lim=cafLim(),before=cafLog(today()).reduce((a,x)=>a+x.mg,0)/lim;
+ const go=()=>{cafAdd(v);requestAnimationFrame(()=>cupLand(tgt(),before))};
+ if(!t||MRM())return go();let tr=t.getBoundingClientRect();if(tr.bottom<0||tr.top>innerHeight)return go();
+ const x0=fromRect.left+fromRect.width/2,y0=fromRect.top+fromRect.height/2,x1=tr.left+tr.width*.42,y1=tr.top+tr.height*.42;
+ const d=document.createElement('div');d.className='cdrp';d.innerHTML='<svg viewBox="0 0 40 52" width="40" height="52"><defs><linearGradient id="cdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3a874"/><stop offset="1" stop-color="#7a4424"/></linearGradient></defs><path d="M20 2C20 2 36 22 36 33a16 16 0 0 1-32 0C4 22 20 2 20 2Z" fill="url(#cdg)"/><ellipse cx="14" cy="30" rx="3.5" ry="6" fill="#fff" opacity=".35" transform="rotate(20 14 30)"/></svg>';document.body.appendChild(d);
+ const mx=(x0+x1)/2,my=Math.min(y0,y1)-80;
+ const a=d.animate([{transform:`translate(${x0}px,${y0}px) scale(.3)`,opacity:0},{transform:`translate(${x0}px,${y0-10}px) scale(1.1)`,opacity:1,offset:.18},{transform:`translate(${mx}px,${my}px) scale(.9) rotate(-8deg)`,offset:.6},{transform:`translate(${x1}px,${y1}px) scale(.42)`,opacity:1}],{duration:820,easing:'cubic-bezier(.45,.05,.55,.95)'});
+ a.onfinish=()=>{d.remove();go()}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;const H={
+ dat:()=>{DA.type=i;const D=DRK[i];DA.size=0;if(D.sh)DA.shots=D.sh[0];if(!D.milk.some(Boolean))DA.milk='none';else if(DA.milk==='none'&&!D.splash)DA.milk='whole';daRefresh()},
+ das:()=>{DA.size=+i;const D=DRK[DA.type];if(D.sh)DA.shots=D.sh[DA.size];daRefresh()},
+ dareg:()=>{if(regKey(CAFP().reg)===regKey(DA)){CAFP().reg=null;DA.mkreg=0;save();render();if(FS==='caf')fsr()}else DA.mkreg=!DA.mkreg;daRefresh()},
+ daadd:()=>{const v=daCalc();if(!v.mg){toast('Add how much caffeine it had first.');return}const t=toMin(DA.t||hhmm(nowMin()));
+  if(DA.mkreg){CAFP().reg={cat:DA.cat,type:DA.type,size:DA.size,shots:DA.shots,milk:DA.milk,sugar:DA.sugar,syrup:DA.syrup};save()}
+  const m=$('#sheet .mwc'),r=m?m.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};DA=null;
+  if(m&&!MRM()){m.style.pointerEvents='none';m.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.6)'}],{duration:220,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}).onfinish=()=>sheet(null);const bd=$('#sheet .mwb');bd&&bd.animate([{opacity:1},{opacity:0}],{duration:240,fill:'forwards'})}else sheet(null);
+  setTimeout(()=>cafDrop({...v,t},{left:r.left+r.width/2-30,top:r.top+r.height/2-30,width:60,height:60}),m&&!MRM()?150:0)},
+ careg:()=>{const r=CAFP().reg;if(!r)return;const v=daCalc({...r});cafDrop({...v,t:nowMin()},el.getBoundingClientRect())}};
+ if(H[a]){e.stopImmediatePropagation();e.preventDefault();H[a]()}},true);
+// one tap for your regular, on the widget and on the page
+{const _nw=newW;newW=function(l){let h=_nw.apply(this,arguments);if(l.id!=='caf')return h;const r=CAFP().reg;if(!r)return h;const nm=DRK[r.type]?DRK[r.type].n:'Coffee';
+ return h.replace('<button class="btn on" data-a="dago" data-i="coffee">+ Coffee</button>',`<button class="btn on" data-a="careg">+ ${esc(nm)}</button>`).replace('<span>Last caffeine by ','<span>Last by ')}}
+{const _cv=cafV;cafV=function(){let h=_cv.apply(this,arguments);const r=CAFP().reg;
+ if(r){const v=daCalc({...r});h=h.replace('<div class="row2" style="margin-top:14px"><button class="btn on" data-a="dago" data-i="coffee">+ Coffee</button><button class="btn" data-a="dago" data-i="energy">+ Energy drink</button></div><button class="glink" data-a="dago" data-i="other" style="margin-top:6px">Tea, pre-workout or something else</button>',
+  `<div class="row2" style="margin-top:14px"><button class="btn on" data-a="careg">+ ${esc(DRK[r.type].n)}</button><button class="btn" data-a="dago" data-i="coffee">Other drink</button></div><p class="sm" style="margin:8px 2px 0">Your regular: ${esc(v.n.toLowerCase())}, ${v.mg} mg. Tea and energy drinks are under Other drink.</p>`)}
+ // the sleep-friendly label sits inside its band instead of over the line
+ return h}}
+
+/* ---------- reminder switches only ask about themselves ---------- */
+function pushNeed(){const st=pushState();if(st==='on')return;const msg={off:'Allow notifications so Swell can send this reminder.',blocked:'Notifications are switched off for Swell in your phone’s settings. Turn them on there and this reminder will start.',home:'Add Swell to your Home Screen and open it from there to get reminders.',none:'This phone or browser can’t show notifications. iPhones need iOS 16.4 or later.'}[st];
+ sheet(`<h2 data-pn="1">One more step</h2><p class="sm">${msg}${st==='off'?' Your choice is saved either way.':''}</p>${st==='off'?'<button class="btn big on" data-a="pushask">Allow notifications</button>':''}<button class="btn big" data-a="shx">${st==='off'?'Not now':'OK'}</button>`)}
+
+/* ---------- the plan counts drinks you've had against the right slot ---------- */
+{const _cp=cafPlan;cafPlan=function(d){d=d||today();const L=cafLog(d),lim=cafLim(),now=d===realToday()?nowMin():(d<realToday()?1e9:-1);
+ // build the plan as if nothing had been drunk, then match what was
+ const save0=S.cafl&&S.cafl[d];if(S.cafl)S.cafl[d]=[];let P;try{P=_cp.call(this,d)}finally{if(S.cafl)S.cafl[d]=save0}
+ const used=new Set();P.forEach(p=>{const k=L.findIndex((x,j)=>!used.has(j)&&Math.abs(x.t-p.t)<120);if(k>=0){used.add(k);p.done=1;p.mg=L[k].mg}});
+ let left=lim-L.reduce((a,x)=>a+x.mg,0);
+ P.forEach(p=>{if(p.done||p.skip)return;if(p.t<now-60){p.missed=1;return}p.mg=Math.min(p.mg,Math.max(0,left));if(p.mg<40){p.skip=1;p.why='You’ve already had most of today’s caffeine, so skip this one.'}else left-=p.mg});
+ return P}}
+{const _cv=cafV;cafV=function(){let h=_cv.apply(this,arguments);return h.replace(/<text x="4" y="[\d.-]+" font-size="9.5" fill="rgba\(199,214,255,.75\)">Sleep-friendly level<\/text>/,'').replace('Solid line: what you’ve had. Dashed: your plan for the rest of the day.','Solid line: what you’ve had. Dashed: your plan for the rest of the day. Below the blue band is little enough not to affect sleep.')}}
+
+{const _ns=notifSheet;notifSheet=function(){if($('#sheet [data-pn]')){sheet(null);toast('Notifications are on, so your reminder is set.');return}return _ns.apply(this,arguments)}}
+
+/* ---------- pages open from their widget on iPhone too ---------- */
+// Safari doesn't animate clip-path through the Web Animations API, so this uses a CSS transition, which it does animate.
+// The page itself stays fully opaque the whole time, so Home never shows through it.
+function fsCT(o,from,to,ms,cb){const set=v=>{o.style.clipPath=v;o.style.webkitClipPath=v};o.style.transition='none';set(from);void o.offsetWidth;
+ o.style.transition=`clip-path ${ms}ms ${FSE},-webkit-clip-path ${ms}ms ${FSE}`;requestAnimationFrame(()=>set(to));let fin=0;const end=()=>{if(fin++)return;o.style.transition='';cb&&cb()};o.addEventListener('transitionend',end,{once:true});setTimeout(end,ms+80)}
+fsOpen=function(k){const w=$(`#app .grid .wd[data-id="${k}"]`);FSO=k;FS=k;fsr();const o=$('#fs');if(!o)return;const wr=o.querySelector('.fsw');
+ if(MRM())return;const r=w&&w.getBoundingClientRect();
+ if(!r||r.bottom<0||r.top>innerHeight){o.animate([{transform:'translateY(24px)',opacity:0},{transform:'none',opacity:1}],{duration:300,easing:'cubic-bezier(.16,1,.3,1)'});return}
+ fsCT(o,fsClip(r),'inset(0px 0px 0px 0px round 0px)',440,()=>{o.style.clipPath=o.style.webkitClipPath=''});
+ wr&&wr.animate([{opacity:0,transform:'translateY(14px) scale(.985)'},{opacity:1,transform:'none'}],{duration:400,delay:60,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})};
+fsClose=function(){const o=$('#fs'),k=FS;FS=null;if(!o)return;const done=()=>{o.remove();lockOff();try{render()}catch(_){}};o.style.pointerEvents='none';
+ if(MRM())return done();const w=$(`#app .grid .wd[data-id="${k}"]`),r=w&&w.getBoundingClientRect(),vis=r&&r.bottom>0&&r.top<innerHeight;
+ const wr=o.querySelector('.fsw');wr&&wr.animate([{opacity:1},{opacity:0}],{duration:180,easing:'ease-in',fill:'forwards'});
+ if(!vis){o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(24px)'}],{duration:260,easing:'ease-in',fill:'forwards'}).onfinish=done;return}
+ fsCT(o,'inset(0px 0px 0px 0px round 0px)',fsClip(r),360,done);
+ // fade only in the last moment, when the page is already the size of the widget
+ o.animate([{opacity:1},{opacity:1,offset:.75},{opacity:0}],{duration:360,fill:'forwards'});
+ setTimeout(()=>w.animate&&w.animate([{transform:'scale(.97)'},{transform:'scale(1.015)',offset:.6},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.2,.5,1)'}),250)};
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
