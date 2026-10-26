@@ -3979,7 +3979,11 @@ document.addEventListener('scroll',()=>btGo(),{capture:true,passive:true});
 // leave with ease-in and faster than you came in, stagger related things by 40 to 60 ms, hold the finished icon for
 // about 300 ms so it registers, and let a tap skip it at any point.
 function splash(){if(document.getElementById('splash'))return;
- if(performance.now()>8000)return;
+ // shows when Swell was fully closed (a fresh launch), or the first time it's opened on a new day.
+ // Not while sleep mode is on: then End sleep is the first thing you should see.
+ let last=null,day=null;try{last=localStorage.getItem('swDay');day=realToday();localStorage.setItem('swDay',day)}catch(_){}
+ const fresh=performance.now()<8000,newDay=!!(last&&day&&last!==day);if(!fresh&&!newDay)return;
+ try{const z=S.slp;if(z&&z.on&&Date.now()-z.on<20*36e5)return}catch(_){}
  const d=document.createElement('div');d.id='splash';d.className='sw';d.setAttribute('aria-label','Swell');d.setAttribute('role','img');
  const tone=(window.S&&S.tone)||'#080b13';
  d.innerHTML=`<div class="qbg" style="background:${tone}"></div><div class="qglo" style="position:absolute;inset:0;opacity:0;background:radial-gradient(42% 26% at 50% 46%,rgba(255,79,123,.30),rgba(138,63,252,.10) 55%,transparent 75%)"></div><svg xmlns="http://www.w3.org/2000/svg"></svg>`;
@@ -3990,6 +3994,8 @@ function splash(){if(document.getElementById('splash'))return;
  const go=()=>{if(d.isConnected&&!d.dataset.done)spRun2(d,finish,rm)};
  setTimeout(()=>{(document.fonts&&document.fonts.load?Promise.race([document.fonts.load('italic 700 80px "Fraunces"'),new Promise(r=>setTimeout(r,1000))]):Promise.resolve()).then(go,go)},0);
 }
+// coming back to Swell after midnight counts as a new day
+document.addEventListener('visibilitychange',()=>{try{if(document.hidden){localStorage.setItem('swDay',realToday());return}if(localStorage.getItem('swDay')!==realToday())splash()}catch(_){}});
 function spRun2(d,finish,rm){
  const W=innerWidth,H=innerHeight,CX=W/2,CY=Math.round(H*.46),NS='http://www.w3.org/2000/svg',svg=d.querySelector('svg');
  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
