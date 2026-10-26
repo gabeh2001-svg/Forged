@@ -15,6 +15,10 @@ Single-file web app: everything lives in `index.html` (HTML, CSS, JS, LocalStora
 - Update the full guided tour (`TOUR`) if the feature changes how a screen works.
 - If a new piece of user info becomes essential, add it to `REQS` so existing users get the one-time required pop-up.
 
+## Research-backed changes
+- The owner wants changes grounded in real-world research. For any UX or behaviour change, look up the relevant studies or guidance (or recall them and verify), cite them in the reply, and note them in a comment at the top of the code block.
+- The research write-up "Swell: what brings people back" (claude.ai Docs) holds the principles and plan.
+
 ## Code conventions
 - New behaviour is appended as a new versioned block before the final `render();...</script>`, overriding earlier function declarations where needed.
 - Test headlessly with Playwright (Chromium at /opt/pw-browsers/chromium) before committing; check `node --check` on the extracted script.
