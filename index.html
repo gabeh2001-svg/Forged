@@ -3794,7 +3794,7 @@ TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
  {i:'<path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>',h:'Caffeine, if you want it',p:'An optional widget: log coffees by type, shots and milk, with sizes the way cafés serve them, and the milk counts towards your food. Save your usual as My regular, or just have the same drink twice in a row and Swell learns it, and it’s one tap. Change it any time on the Caffeine page. Swell plans your caffeine around when you wake, train and sleep. Hold a widget and tap + Caffeine to add it.'},
  {i:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',h:'A bedtime that meets you halfway',p:'If you’re falling asleep later than your goal, your bedtime reminder starts near where you are and moves 15 minutes earlier each week.'},
  {i:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="8"/>',h:'Reminders that fit your day',p:'Swell learns when you actually use it. Log your meals in one go in the evening? You get one reminder then, not one per meal. You can turn this off in Notifications.'},
- {i:'<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M9 15c1.2 1 4.8 1 5-1s-5-2-5-4 3.6-2 5-1"/>',h:'A new icon and opening',p:'Swell has a new icon, and the opening now fills the name with water and settles into it. To see it, first back up in Settings, then remove Swell from your Home Screen, add it again from Safari, and tap Restore my backup.'})}}
+ {i:'<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M9 15c1.2 1 4.8 1 5-1s-5-2-5-4 3.6-2 5-1"/>',h:'A new icon and opening',p:'Swell has a new icon, and a new opening where the name fills with water. To see it, first back up in Settings, then remove Swell from your Home Screen, add it again from Safari, and tap Restore my backup.'})}}
 
 /* preview: show the caffeine widget with a coffee already logged, and an evening training time */
 if(PREVIEW&&!S.v50demo){S.v50demo=1;const t=realToday();S.lay=S.lay||[];if(!S.lay.some(l=>l.id==='caf'))S.lay.push({id:'caf',w:2,h:1});S.trainAt=S.trainAt||'evening';
@@ -3975,7 +3975,7 @@ document.addEventListener('scroll',()=>btGo(),{capture:true,passive:true});
 {const _r=render;render=function(){_r.apply(this,arguments);btGo()}}
 
 /* ---------- the opening: the word fills with water, settles into the icon, and hands over to the app ---------- */
-// Timing follows the usual motion rules for launch screens: get to the app in about 3.3 seconds, enter with ease-out,
+// Timing follows the usual motion rules for launch screens: get to the app in about 3 seconds, enter with ease-out,
 // leave with ease-in and faster than you came in, stagger related things by 40 to 60 ms, hold the finished icon for
 // about 300 ms so it registers, and let a tap skip it at any point.
 function splash(){if(document.getElementById('splash'))return;
@@ -3997,60 +3997,34 @@ function splash(){if(document.getElementById('splash'))return;
 // coming back to Swell after midnight counts as a new day
 document.addEventListener('visibilitychange',()=>{try{if(document.hidden){localStorage.setItem('swDay',realToday());return}if(localStorage.getItem('swDay')!==realToday())splash()}catch(_){}});
 function spRun2(d,finish,rm){
+ // Just the written logo: the letters arrive, fill halfway with water that keeps a gentle wave, hold, then lift away as Home rises in.
+ // Each letter is drawn twice, white and then blue clipped to the water, instead of using a mask: iPhone redraws masked
+ // text only inside the letter's normal height, which chopped the tops off the curly l's.
  const W=innerWidth,H=innerHeight,CX=W/2,CY=Math.round(H*.46),NS='http://www.w3.org/2000/svg',svg=d.querySelector('svg');
- svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
- const clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eo=k=>1-Math.pow(1-k,3),ei=k=>k*k*k,eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,
-  back=k=>{const c=1.5;return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2)},seg=(t,a,b)=>clamp((t-a)/(b-a));
- const Z=Math.round(Math.min(W*.34,136)),FS=Math.round(Math.min(W*.21,88));
- const SP='M163.3 78 C172.4 70 171.3 58 161.0 47 C149.6 40 120.0 40 120.0 40 C93.8 40 77.8 54 79.0 71 C80.1 90 98.3 99 120.0 106 C143.9 113 163.3 125 163.3 148 C163.3 172 142.8 188 117.7 188 C94.9 188 77.8 180 67.6 167';
- svg.innerHTML=`<defs>
-  <linearGradient id="spSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fdcff"/><stop offset="1" stop-color="#3b82ff"/></linearGradient>
-  <linearGradient id="spSea2" x1="0" y1="122" x2="0" y2="200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a8ecff"/><stop offset="1" stop-color="#4fb8ff"/></linearGradient>
-  <linearGradient id="spBg" x1="0" y1="0" x2=".55" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".5" stop-color="#ff4f7b"/><stop offset="1" stop-color="#8a3ffc"/></linearGradient>
-  <radialGradient id="spTl" cx=".3" cy="0" r="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient>
-  <filter id="spSh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000" flood-opacity=".22"/></filter>
-  <filter id="spIc" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#2a0b3a" flood-opacity=".45"/></filter>
-  <mask id="spW" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#000"/><g id="spLet" fill="#fff" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="700" font-size="${FS}" style="font-variation-settings:'SOFT' 100,'WONK' 1,'opsz' 144"></g></mask>
-  <mask id="spS" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240"><path d="${SP}" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
- <g id="spIcon" opacity="0" filter="url(#spIc)"><rect width="240" height="240" rx="54" fill="url(#spBg)"/><rect width="240" height="240" rx="54" fill="url(#spTl)"/>
-  <g id="spSg" opacity="0" filter="url(#spSh)"><g transform="translate(12 12) scale(.9)"><g mask="url(#spS)"><rect width="240" height="240" fill="#fff"/><path id="spIa" fill="url(#spSea2)"/><path id="spIf" fill="none" stroke="#fff" stroke-width="5"/></g></g></g></g>
- <g mask="url(#spW)"><rect width="${W}" height="${H}" fill="#f4f6fb"/><path id="spWa" fill="url(#spSea)"/><path id="spWf" fill="none" stroke="#fff" stroke-width="2.4"/></g>`;
- const q=s=>svg.querySelector(s),gL=q('#spLet');
- // lay out "swell" as one word, then split it so each letter can move on its own without the spacing changing
+ svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('overflow','visible');d.querySelector('.qglo').remove();
+ const clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eo=k=>1-Math.pow(1-k,3),ei=k=>k*k*k,seg=(t,a,b)=>clamp((t-a)/(b-a));
+ const FS=Math.round(Math.min(W*.24,104)),font=`font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="700" font-size="${FS}" style="font-variation-settings:'SOFT' 100,'WONK' 1,'opsz' 144"`;
+ svg.innerHTML=`<defs><linearGradient id="spSea" gradientUnits="userSpaceOnUse" x1="0" y1="${CY-FS*.5}" x2="0" y2="${CY+FS*.5}"><stop offset="0" stop-color="#8fe3ff"/><stop offset="1" stop-color="#3b82ff"/></linearGradient>
+  <clipPath id="spWc" clipPathUnits="userSpaceOnUse"><path id="spWp"/></clipPath></defs><g id="spLet" ${font}></g>`;
+ const gL=svg.querySelector('#spLet'),wp=svg.querySelector('#spWp');
  const tmp=document.createElementNS(NS,'text');tmp.textContent='swell';tmp.setAttribute('text-anchor','middle');tmp.setAttribute('x',CX);const base=CY+FS*.32;tmp.setAttribute('y',base);gL.appendChild(tmp);
- const L=[];for(let i=0;i<5;i++){const p=tmp.getStartPositionOfChar(i),e=document.createElementNS(NS,'text');e.textContent='swell'[i];e.setAttribute('x',p.x);e.setAttribute('y',p.y);L.push(e)}
- const wb=tmp.getBBox();tmp.remove();L.forEach(e=>gL.appendChild(e));
- const sb=L[0].getBBox(),sCx=sb.x+sb.width/2,sCy=sb.y+sb.height/2,sTo=(148/240*Z*.9)/sb.height;
- const lvBot=base+6,lvMid=base-FS*.4,x0=wb.x-20,x1=wb.x+wb.width+20;
- const surf=(lv,A,ph,a,b)=>{let s='';for(let x=a;x<=b+4;x+=4){const y=lv+A*Math.sin(x*.055+ph)+A*.4*Math.sin(x*.12-ph*1.3);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
- const iconAt=(sc)=>`translate(${CX} ${CY}) scale(${(sc*Z/240).toFixed(4)}) translate(-120 -120)`;
+ const X=[0,1,2,3,4].map(i=>tmp.getStartPositionOfChar(i).x),wb=tmp.getBBox();tmp.remove();
+ const L=X.map((x,i)=>{const g=document.createElementNS(NS,'g');g.innerHTML=`<text x="${x}" y="${base}" fill="#f4f6fb">${'swell'[i]}</text><text x="${x}" y="${base}" fill="url(#spSea)" clip-path="url(#spWc)">${'swell'[i]}</text>`;gL.appendChild(g);return g});
+ const lvBot=base+8,lvMid=base-FS*.22,x0=wb.x-30,x1=wb.x+wb.width+30;
+ const surf=(lv,A,ph)=>{let s='';for(let x=x0;x<=x1+4;x+=4){const y=lv+A*Math.sin(x*.05+ph)+A*.4*Math.sin(x*.11-ph*1.3);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
  const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false;
- // the timeline, in milliseconds
- const IN0=150,FILL0=320,FILL1=1350,OUT0=1380,S0=1480,S1=2040,IC0=1780,IC1=2420,X0=1940,X1=2200,RISE0=2020,RISE1=2800,EXIT=3150,END=3700;
- if(rm){svg.querySelector('g[mask]').setAttribute('opacity',0);q('#spIcon').setAttribute('opacity',1);q('#spSg').setAttribute('opacity',1);q('#spIcon').setAttribute('transform',iconAt(1));
-  q('#spIa').setAttribute('d','M0 122 H240 V260 H0Z');d.querySelector('.qglo').style.opacity=1;
-  setTimeout(()=>{document.body.classList.remove('spon');d.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=finish},900);return}
+ // timeline in ms: letters in 60 ms apart, water fills, a hold so the name registers, then a quicker exit than entrance
+ const IN0=160,FILL0=380,FILL1=1650,EXIT=2600,END=3500;
+ if(rm){L.forEach(g=>g.setAttribute('opacity',1));wp.setAttribute('d',`M${x0} ${lvMid}H${x1}V${H}H${x0}Z`);
+  setTimeout(()=>{document.body.classList.remove('spon');d.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=finish},1000);return}
  const t0=performance.now();
- const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0,ph=t/1000*3.4;
-  // 1. the word arrives: each letter rises a few pixels and fades in, 45 ms apart
-  L.forEach((e,i)=>{const a=eo(seg(t,IN0+i*60,IN0+i*60+560));let o=a,dy=(1-a)*10,dx=0,sc=1;
-   if(i>0){const b=ei(seg(t,OUT0+(4-i)*55,OUT0+(4-i)*55+280));o*=1-b;dy+=b*16}
-   else{const m=eio(seg(t,S0,S1));dx=(CX-sCx)*m;dy+=(CY-sCy)*m;sc=lerp(1,sTo,m);o*=1-eio(seg(t,X0,X1))}
-   e.setAttribute('opacity',o.toFixed(3));e.setAttribute('transform',i?`translate(0 ${dy.toFixed(2)})`:`translate(${(sCx+dx).toFixed(2)} ${(sCy+dy).toFixed(2)}) scale(${sc.toFixed(4)}) translate(${-sCx} ${-sCy})`)});
-  // 2. water fills the letters to halfway, the same level as the icon
-  const f=eo(seg(t,FILL0,FILL1)),lv=lerp(lvBot,lvMid,f),A=lerp(5,1.8,f);
-  q('#spWa').setAttribute('d',surf(lv,A,ph,x0,x1)+`L${x1} ${H}L${x0} ${H}Z`);q('#spWf').setAttribute('d',surf(lv,A,ph,x0,x1));q('#spWf').setAttribute('opacity',f>0?.9:0);
-  // 3. the icon grows in behind the s with a small overshoot, and the s becomes the icon's S
-  const ic=seg(t,IC0,IC1),sc=ic>0?lerp(.5,1,back(ic)):.5;q('#spIcon').setAttribute('transform',iconAt(sc*(1+.14*ei(seg(t,EXIT,EXIT+300)))));
-  q('#spIcon').setAttribute('opacity',(eo(seg(t,IC0,IC0+200))*(1-eio(seg(t,EXIT,EXIT+280)))).toFixed(3));
-  q('#spSg').setAttribute('opacity',eo(seg(t,X0+40,X1+40)).toFixed(3));
-  d.querySelector('.qglo').style.opacity=(eo(seg(t,IC0,IC1+200))*(1-seg(t,EXIT,EXIT+260))).toFixed(3);
-  // 4. the water in the icon's S rises to halfway and keeps a gentle wave
-  const r=eo(seg(t,RISE0,RISE1)),il=lerp(196,122,r),iA=lerp(10,7,r);
-  q('#spIa').setAttribute('d',surf(il,iA,ph,-4,244)+'L244 260L-4 260Z');q('#spIf').setAttribute('d',surf(il,iA,ph,-4,244));
-  // 5. hand over: the background fades and Home rises in, 50 ms per section
-  d.querySelector('.qbg').style.opacity=(1-eo(seg(t,EXIT+140,EXIT+520))).toFixed(3);
-  if(t>EXIT+140&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(22px) scale(.985)'},{opacity:1,transform:'none'}],{duration:620,delay:i*50,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
+ const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0,ph=t/1000*3.2;
+  L.forEach((g,i)=>{const a=eo(seg(t,IN0+i*60,IN0+i*60+600)),b=ei(seg(t,EXIT+i*30,EXIT+i*30+260)),dy=(1-a)*12-b*14;
+   g.setAttribute('opacity',(a*(1-b)).toFixed(3));g.querySelectorAll('text').forEach(e=>e.setAttribute('y',(base+dy).toFixed(2)))});
+  const f=eo(seg(t,FILL0,FILL1)),lv=lerp(lvBot,lvMid,f),A=lerp(6,2.2,f);
+  wp.setAttribute('d',surf(lv,A,ph)+`L${x1} ${H}L${x0} ${H}Z`);
+  d.querySelector('.qbg').style.opacity=(1-eo(seg(t,EXIT+360,EXIT+760))).toFixed(3);
+  if(t>EXIT+400&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(22px) scale(.985)'},{opacity:1,transform:'none'}],{duration:640,delay:i*50,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
   if(t>END){d.dataset.done=1;d.remove();return}
   requestAnimationFrame(frame)};
  requestAnimationFrame(frame);
