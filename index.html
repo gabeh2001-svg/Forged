@@ -3724,7 +3724,7 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
  dash:()=>{DA.shots=Math.max(1,Math.min(4,DA.shots+ +i));daRefresh()},dam:()=>{DA.milk=i;daRefresh()},
  dasu:()=>{DA.sugar=Math.max(0,Math.min(4,DA.sugar+ +i));daRefresh()},dasy:()=>{DA.syrup=Math.max(0,Math.min(4,DA.syrup+ +i));daRefresh()},
  dapre:()=>{DA.name=el.dataset.n;DA.mg=el.dataset.mg;DA.kcal=el.dataset.k;daRefresh()},
- cdel:()=>{const d=today(),L=cafLog(d),x=L[+i];if(!x)return;L.splice(+i,1);save();render();fsr();toastUndo(`${x.n} removed from caffeine.`,()=>{(S.cafl[d]=S.cafl[d]||[]).splice(+i,0,x);if(FS==='caf')setTimeout(fsr,0)})},
+ cdel:()=>cafRemove(+i),
  cgoal:()=>{CAFP().goal=i;save();fsr();render();try{remSync(true)}catch(_){}},
  csens:()=>{CAFP().sens=i;save();fsr();render()},
  cfirst:()=>{CAFP().first=i==='set'?(CAFP().first||hhmm(wakeMin()+60)):null;save();fsr();try{remSync(true)}catch(_){}},
@@ -3896,7 +3896,7 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
   let learnt=0;if(DA.cat==='coffee'||DA.cat==='tea'){const c=CAFP(),rec=regRec(DA),k=regKey(rec);if(DA.mkreg){c.reg=rec;c.regOff=0}else if(!c.reg&&!c.regOff&&c.lastR===k){c.reg=rec;learnt=1}c.lastR=k;save()}
   if(learnt)setTimeout(()=>toast(`${DRK[DA0.type].n} is now your regular, so it’s one tap from the Caffeine widget. You can change it on the Caffeine page.`),2900);
   DA=null;sheet(null);cafDrop({...v,t})},
- careg:()=>{const r=CAFP().reg;if(!r)return;CAFP().lastR=regKey(r);const v=daCalc({...r});try{if(!el.classList.contains('wq'))fxBurst(el)}catch(_){}try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}cafDrop({...v,t:nowMin()})}};
+ careg:()=>{const r=CAFP().reg;if(!r)return;CAFP().lastR=regKey(r);const v=daCalc({...r});try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}cafDrop({...v,t:nowMin()})}};
  if(H[a]){e.stopImmediatePropagation();e.preventDefault();H[a]()}},true);
 const regRec=a=>({cat:a.cat,type:a.type,size:a.size||0,shots:a.shots,milk:a.milk,sugar:a.sugar||0,syrup:a.syrup||0});
 function regEdit(){const r=CAFP().reg;DA=r?{...r,t:hhmm(nowMin()),name:'',mg:'',kcal:''}:daNew('coffee');DA.edit=1;daSheet()}
@@ -4216,6 +4216,49 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cafw]');i
 /* ---------- the right moment for each: after the opening, one at a time, never over something else ---------- */
 setInterval(()=>{if(!S.user||!S.setup||!S.setup.done||document.hidden||$('#splash,#sheet,#wn,#req,#lx2,#wr,#aw,#fs,#tour,#bed,#imp,#sc')||ED||AW||TU!=null)return;
  if(wbShow())return;wkSheet()},2500);
+/* ===== v56: pages shrink back into their widget, and taking things off is one tap ===== */
+// Closing: the page itself scales down to the widget's width and slides into it while its outline closes in, so the eye can follow
+// where it went (object constancy: Apple HIG on motion, "help people stay oriented"; Material's container transform).
+(function(){const st=document.createElement('style');st.textContent=`
+.rowm{display:flex;gap:10px;align-items:stretch}.rowm>.btn{flex:1;margin:0}
+.rowm>.mbtn{flex:none;width:52px;padding:0;font-size:26px;font-weight:500;line-height:1;display:flex;align-items:center;justify-content:center}
+.rowm>.mbtn:disabled{opacity:.35}
+.wtop .rowm{width:100%}`;document.head.appendChild(st)})();
+function fsMap(o,r){const W=innerWidth,H=innerHeight,s=r.width/W,st=o.scrollTop,tx=r.left,ty=r.top+st*(1-s);
+ return`translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale(${s.toFixed(4)})`}
+fsOpen=function(k){const w=$(`#app .grid .wd[data-id="${k}"]`);FSO=k;FS=k;fsr();const o=$('#fs');if(!o)return;const wr=o.querySelector('.fsw');
+ if(MRM())return;const r=w&&w.getBoundingClientRect();
+ if(!r||r.bottom<0||r.top>innerHeight){o.animate([{transform:'translateY(24px)',opacity:0},{transform:'none',opacity:1}],{duration:300,easing:'cubic-bezier(.16,1,.3,1)'});return}
+ fsCT(o,fsClip(r),'inset(0px 0px 0px 0px round 0px)',460,()=>{o.style.clipPath=o.style.webkitClipPath=''});
+ if(wr){wr.style.transformOrigin='0 0';const a=wr.animate([{transform:fsMap(o,r),opacity:0},{opacity:1,offset:.45},{transform:'none',opacity:1}],{duration:460,easing:FSE});a.onfinish=()=>{wr.style.transformOrigin=''}}};
+fsClose=function(){const o=$('#fs'),k=FS;FS=null;if(!o)return;const done=()=>{o.remove();lockOff();try{render()}catch(_){}};o.style.pointerEvents='none';
+ if(MRM())return done();const w=$(`#app .grid .wd[data-id="${k}"]`),r=w&&w.getBoundingClientRect(),vis=r&&r.bottom>0&&r.top<innerHeight&&r.width;
+ const wr=o.querySelector('.fsw');
+ if(!vis){o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(24px)'}],{duration:260,easing:'ease-in',fill:'forwards'}).onfinish=done;return}
+ const D=400;fsCT(o,'inset(0px 0px 0px 0px round 0px)',fsClip(r),D,done);
+ if(wr){wr.style.transformOrigin='0 0';wr.animate([{transform:'none',opacity:1},{opacity:1,offset:.35},{transform:fsMap(o,r),opacity:0}],{duration:D,easing:FSE,fill:'forwards'})}
+ // the outline fades only as it lands, so the widget appears to take the page back in
+ o.animate([{opacity:1},{opacity:1,offset:.8},{opacity:0}],{duration:D,fill:'forwards'});
+ setTimeout(()=>w.animate&&w.animate([{transform:'scale(.97)'},{transform:'scale(1.015)',offset:.6},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.2,.5,1)'}),D-80)};
+
+/* ---------- caffeine: remove the last drink with one tap ---------- */
+function cafRemove(i){const d=today(),L=cafLog(d);if(!L.length)return;if(i==null){i=0;L.forEach((x,j)=>{if(x.t>=L[i].t)i=j})}const x=L[i];if(!x)return;L.splice(i,1);
+ // the milk's food goes with it
+ const M=(S.meals||{})[d]||[];let mi=-1;for(let j=M.length-1;j>=0;j--)if(M[j].caf&&M[j].n===x.n&&Math.round(M[j].k)===Math.round(x.k||0)){mi=j;break}const m=mi>=0?M.splice(mi,1)[0]:null;if(m&&d===today())addTot({k:m.k,p:m.p||0,f:m.f||0,c:m.c||0},-1);
+ save();render();if(FS==='caf')fsr();
+ toastUndo(`${x.n} removed.`,()=>{(S.cafl[d]=S.cafl[d]||[]).splice(i,0,x);if(m){(S.meals[d]=S.meals[d]||[]).splice(mi,0,m);addTot({k:m.k,p:m.p||0,f:m.f||0,c:m.c||0},1)}save();render();if(FS==='caf')setTimeout(fsr,0)})}
+{const _cv=cafV;cafV=function(){const h=_cv.apply(this,arguments),n=cafLog(today()).length;
+ return h.replace('<div class="row2" style="margin-top:14px">',`<div class="rowm" style="margin-top:14px"><button class="btn mbtn" data-a="cafrm" aria-label="Remove the last drink" ${n?'':'disabled'}>−</button>`)}}
+
+/* ---------- water: take some off, or empty it ---------- */
+{const _wv=waterV;waterV=function(){let h=_wv.apply(this,arguments);const w=WAT(),raw=+((S.water||{})[today()]||0);
+ h=h.replace(`<div class="row2"><button class="btn on" data-a="wadd" data-i="${w.glass}">+ Glass</button>`,`<div class="rowm"><button class="btn mbtn" data-a="wadd" data-i="-${Math.min(w.glass,raw)||w.glass}" aria-label="Take off a glass" ${raw?'':'disabled'}>−</button><button class="btn on" data-a="wadd" data-i="${w.glass}">+ Glass</button>`);
+ h=h.replace(/<button class="chip" data-a="wadd" data-i="-\d+">Take off a glass<\/button>/,raw?`<button class="chip" data-a="wempty">Empty it</button>`:'');
+ return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cafrm],[data-a=wempty]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ if(el.dataset.a==='cafrm')return cafRemove();
+ const d=today(),was=+((S.water||{})[d]||0);if(!was)return;S.water[d]=0;save();try{btKick(-1)}catch(_){}render();if(FS==='water')fsr();
+ toastUndo(`Water emptied for ${dLbl(d)}.`,()=>{S.water[d]=was;save();try{btKick(1)}catch(_){}render();if(FS==='water')setTimeout(fsr,0)})},true);
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
