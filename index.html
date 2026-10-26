@@ -3794,7 +3794,7 @@ TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
  {i:'<path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>',h:'Caffeine, if you want it',p:'An optional widget: log coffees by type, shots and milk, with sizes the way cafés serve them, and the milk counts towards your food. Save your usual as My regular, or just have the same drink twice in a row and Swell learns it, and it’s one tap. Change it any time on the Caffeine page. Swell plans your caffeine around when you wake, train and sleep. Hold a widget and tap + Caffeine to add it.'},
  {i:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',h:'A bedtime that meets you halfway',p:'If you’re falling asleep later than your goal, your bedtime reminder starts near where you are and moves 15 minutes earlier each week.'},
  {i:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="8"/>',h:'Reminders that fit your day',p:'Swell learns when you actually use it. Log your meals in one go in the evening? You get one reminder then, not one per meal. You can turn this off in Notifications.'},
- {i:'<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M9 15c1.2 1 4.8 1 5-1s-5-2-5-4 3.6-2 5-1"/>',h:'A new icon',p:'Swell has a new icon. To see it, first back up in Settings, then remove Swell from your Home Screen, add it again from Safari, and tap Restore my backup.'})}}
+ {i:'<rect x="4" y="4" width="16" height="16" rx="5"/><path d="M9 15c1.2 1 4.8 1 5-1s-5-2-5-4 3.6-2 5-1"/>',h:'A new icon and opening',p:'Swell has a new icon, and the opening now fills the name with water and settles into it. To see it, first back up in Settings, then remove Swell from your Home Screen, add it again from Safari, and tap Restore my backup.'})}}
 
 /* preview: show the caffeine widget with a coffee already logged, and an evening training time */
 if(PREVIEW&&!S.v50demo){S.v50demo=1;const t=realToday();S.lay=S.lay||[];if(!S.lay.some(l=>l.id==='caf'))S.lay.push({id:'caf',w:2,h:1});S.trainAt=S.trainAt||'evening';
@@ -3873,7 +3873,6 @@ function cupLand(svg,from){if(!svg||MRM())return;const to=+svg.dataset.cf,g=svg.
  const ly=x=>78-Math.max(0,Math.min(1,x))*48;g.style.opacity=1;
  g.animate([{transform:`translateY(${ly(from).toFixed(1)}px)`},{transform:`translateY(${(ly(to)-2).toFixed(1)}px)`,offset:.7},{transform:`translateY(${ly(to).toFixed(1)}px)`}],{duration:700,easing:'cubic-bezier(.3,1.2,.5,1)'});
  if(r){r.animate([{opacity:.95,transform:'scale(1)'},{opacity:0,transform:'scale(5.5)'}],{duration:900,easing:'cubic-bezier(.2,.7,.3,1)'});setTimeout(()=>r.animate([{opacity:.7,transform:'scale(1)'},{opacity:0,transform:'scale(4)'}],{duration:800,easing:'cubic-bezier(.2,.7,.3,1)'}),180)}}
-// the drink becomes a droplet, glides to the cup and drops in
 function cafDrop(v,fromRect){const tgt=()=>FS==='caf'?$('#fs svg.cup'):$('#app .wd[data-id=caf] svg.cup');let t=tgt();const lim=cafLim(),before=cafLog(today()).reduce((a,x)=>a+x.mg,0)/lim;
  const go=()=>{cafAdd(v);requestAnimationFrame(()=>cupLand(tgt(),before))};
  if(!t||MRM())return go();let tr=t.getBoundingClientRect();if(tr.bottom<0||tr.top>innerHeight)return go();
@@ -3889,10 +3888,8 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
  daadd:()=>{const v=daCalc();if(!v.mg){toast('Add how much caffeine it had first.');return}const t=toMin(DA.t||hhmm(nowMin())),DA0=DA;
   let learnt=0;if(DA.cat==='coffee'||DA.cat==='tea'){const c=CAFP(),rec=regRec(DA),k=regKey(rec);if(DA.mkreg){c.reg=rec;c.regOff=0}else if(!c.reg&&!c.regOff&&c.lastR===k){c.reg=rec;learnt=1}c.lastR=k;save()}
   if(learnt)setTimeout(()=>toast(`${DRK[DA0.type].n} is now your regular, so it’s one tap from the Caffeine widget. You can change it on the Caffeine page.`),2900);
-  const m=$('#sheet .mwc'),r=m?m.getBoundingClientRect():{left:innerWidth/2,top:innerHeight/2,width:0,height:0};DA=null;
-  if(m&&!MRM()){m.style.pointerEvents='none';m.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.6)'}],{duration:220,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}).onfinish=()=>sheet(null);const bd=$('#sheet .mwb');bd&&bd.animate([{opacity:1},{opacity:0}],{duration:240,fill:'forwards'})}else sheet(null);
-  setTimeout(()=>cafDrop({...v,t},{left:r.left+r.width/2-30,top:r.top+r.height/2-30,width:60,height:60}),m&&!MRM()?150:0)},
- careg:()=>{const r=CAFP().reg;if(!r)return;CAFP().lastR=regKey(r);const v=daCalc({...r});cafDrop({...v,t:nowMin()},el.getBoundingClientRect())}};
+  DA=null;sheet(null);cafDrop({...v,t})},
+ careg:()=>{const r=CAFP().reg;if(!r)return;CAFP().lastR=regKey(r);const v=daCalc({...r});try{fxBurst(el)}catch(_){}try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}cafDrop({...v,t:nowMin()})}};
  if(H[a]){e.stopImmediatePropagation();e.preventDefault();H[a]()}},true);
 const regRec=a=>({cat:a.cat,type:a.type,size:a.size||0,shots:a.shots,milk:a.milk,sugar:a.sugar||0,syrup:a.syrup||0});
 function regEdit(){const r=CAFP().reg;DA=r?{...r,t:hhmm(nowMin()),name:'',mg:'',kcal:''}:daNew('coffee');DA.edit=1;daSheet()}
@@ -3944,6 +3941,114 @@ fsClose=function(){const o=$('#fs'),k=FS;FS=null;if(!o)return;const done=()=>{o.
  // fade only in the last moment, when the page is already the size of the widget
  o.animate([{opacity:1},{opacity:1,offset:.75},{opacity:0}],{duration:360,fill:'forwards'});
  setTimeout(()=>w.animate&&w.animate([{transform:'scale(.97)'},{transform:'scale(1.015)',offset:.6},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.2,.5,1)'}),250)};
+/* ===== v52: coffee lands in the cup itself, water and coffee move together, a new opening built around the new icon ===== */
+
+/* ---------- coffee: no flying droplet; the cup takes the drink like the water bottle does ---------- */
+cafDrop=function(v){const tgt=()=>FS==='caf'?$('#fs svg.cup'):$('#app .wd[data-id=caf] svg.cup');const before=cafLog(today()).reduce((a,x)=>a+x.mg,0)/cafLim();
+ cafAdd(v);requestAnimationFrame(()=>cupLand(tgt(),before))};
+
+/* ---------- one shared tide: the coffee and the water rise and fall on the same beat ---------- */
+// one wave every 3.6 seconds, timed from the clock, so every cup and bottle on screen is in step
+const TIDE=3600,tidePh=()=>(Date.now()%TIDE)/TIDE;
+function tideSync(root){(root||document).querySelectorAll('.cup .cwv:not([data-ts])').forEach(g=>{g.dataset.ts=1;g.style.animationDelay=`-${Date.now()%TIDE}ms`})}
+new MutationObserver(()=>{if(document.querySelector('.cup .cwv:not([data-ts])'))tideSync()}).observe(document.body,{childList:true,subtree:true});
+btPaint=function(svg,b,t){const ph=tidePh()*Math.PI*2,k=Math.PI*2/48,sl=Math.max(0,b.amp-.6);
+ // the resting wave matches the coffee (same speed, same direction); a splash adds the original slosh on top
+ const pts=(off,a)=>{let s='';for(let x=-2;x<=64;x+=4){const y=b.lv+(x-31)/31*b.tilt*2.2+Math.sin(x*k+ph+off)*1.1*a+(Math.sin(x*.22+t*5+off)+Math.sin(x*.5-t*3.4+off)*.3)*sl*a;s+=(s?' L':'M')+x+' '+y.toFixed(2)}return s};
+ const sf=pts(0,1);svg.querySelector('.sf').setAttribute('d',sf);svg.querySelector('.fr').setAttribute('d',sf+' V112 H-2Z');svg.querySelector('.bk').setAttribute('d',pts(.9,.8)+' V112 H-2Z');
+ svg.querySelector('.bb').innerHTML=b.bub.map(q=>`<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${q.r.toFixed(1)}" fill="rgba(255,255,255,.55)"/>`).join('')};
+let BTlast=0,BTto=0;
+btGo=function(){if(BTto){clearTimeout(BTto);BTto=0}if(!BTraf)BTraf=requestAnimationFrame(btLoop)};
+btLoop=function(now){BTraf=0;const t=now/1000,tg=btTarget(),rm=MRM();let busy=false,vis=false;
+ document.querySelectorAll('svg.btl').forEach(svg=>{const id=svg.dataset.b,b=BT[id]||(BT[id]={lv:tg,v:0,tilt:0,tv:0,amp:.6,bub:[]});
+  if(rm){b.lv=tg;b.v=b.tv=b.tilt=0;b.amp=.6;b.bub=[];btPaint(svg,b,0);return}
+  b.v+=(tg-b.lv)*.09;b.v*=.84;b.lv+=b.v;b.tv+=(-b.tilt)*.12;b.tv*=.93;b.tilt+=b.tv;b.amp+=(.6-b.amp)*.03;
+  const r=svg.getBoundingClientRect();if(r.bottom>0&&r.top<innerHeight&&r.width)vis=true;
+  const moving=Math.abs(b.v)>.01||Math.abs(tg-b.lv)>.05||Math.abs(b.tv)>.01||Math.abs(b.tilt)>.05||b.amp>.66||b.bub.length;if(moving)busy=true;
+  b.bub=b.bub.filter(q=>{q.y-=q.s;q.x+=Math.sin(q.y*.3)*.15;return q.y>b.lv+1});
+  // while it's only the gentle tide, 30 frames a second is plenty and easier on the battery
+  if(moving||now-BTlast>32)btPaint(svg,b,t)});
+ if(!busy&&now-BTlast>32)BTlast=now;
+ if(rm||document.hidden)return;if(busy||vis)BTraf=requestAnimationFrame(btLoop);else BTto=setTimeout(()=>{BTto=0;btGo()},1500)};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)btGo()});
+document.addEventListener('scroll',()=>btGo(),{capture:true,passive:true});
+{const _r=render;render=function(){_r.apply(this,arguments);btGo()}}
+
+/* ---------- the opening: the word fills with water, settles into the icon, and hands over to the app ---------- */
+// Timing follows the usual motion rules for launch screens: get to the app in about 2.5 seconds, enter with ease-out,
+// leave with ease-in and faster than you came in, stagger related things by 40 to 60 ms, hold the finished icon for
+// about 300 ms so it registers, and let a tap skip it at any point.
+function splash(){if(document.getElementById('splash'))return;
+ if(performance.now()>8000)return;
+ const d=document.createElement('div');d.id='splash';d.className='sw';d.setAttribute('aria-label','Swell');d.setAttribute('role','img');
+ const tone=(window.S&&S.tone)||'#080b13';
+ d.innerHTML=`<div class="qbg" style="background:${tone}"></div><div class="qglo" style="position:absolute;inset:0;opacity:0;background:radial-gradient(42% 26% at 50% 46%,rgba(255,79,123,.30),rgba(138,63,252,.10) 55%,transparent 75%)"></div><svg xmlns="http://www.w3.org/2000/svg"></svg>`;
+ document.body.appendChild(d);document.body.classList.add('spon');
+ const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const finish=()=>{if(!d.isConnected)return;d.dataset.done=1;d.remove();document.body.classList.remove('spon');try{render()}catch(_){}};
+ d.addEventListener('click',()=>{if(d.dataset.out)return;d.dataset.out=1;d.animate([{opacity:1},{opacity:0}],{duration:220,easing:'ease-in',fill:'forwards'}).onfinish=finish});
+ const go=()=>{if(d.isConnected&&!d.dataset.done)spRun2(d,finish,rm)};
+ setTimeout(()=>{(document.fonts&&document.fonts.load?Promise.race([document.fonts.load('italic 700 80px "Fraunces"'),new Promise(r=>setTimeout(r,1000))]):Promise.resolve()).then(go,go)},0);
+}
+function spRun2(d,finish,rm){
+ const W=innerWidth,H=innerHeight,CX=W/2,CY=Math.round(H*.46),NS='http://www.w3.org/2000/svg',svg=d.querySelector('svg');
+ svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+ const clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eo=k=>1-Math.pow(1-k,3),ei=k=>k*k*k,eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,
+  back=k=>{const c=1.5;return 1+(c+1)*Math.pow(k-1,3)+c*Math.pow(k-1,2)},seg=(t,a,b)=>clamp((t-a)/(b-a));
+ const Z=Math.round(Math.min(W*.34,136)),FS=Math.round(Math.min(W*.21,88));
+ const SP='M163.3 78 C172.4 70 171.3 58 161.0 47 C149.6 40 120.0 40 120.0 40 C93.8 40 77.8 54 79.0 71 C80.1 90 98.3 99 120.0 106 C143.9 113 163.3 125 163.3 148 C163.3 172 142.8 188 117.7 188 C94.9 188 77.8 180 67.6 167';
+ svg.innerHTML=`<defs>
+  <linearGradient id="spSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fdcff"/><stop offset="1" stop-color="#3b82ff"/></linearGradient>
+  <linearGradient id="spSea2" x1="0" y1="122" x2="0" y2="200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a8ecff"/><stop offset="1" stop-color="#4fb8ff"/></linearGradient>
+  <linearGradient id="spBg" x1="0" y1="0" x2=".55" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".5" stop-color="#ff4f7b"/><stop offset="1" stop-color="#8a3ffc"/></linearGradient>
+  <radialGradient id="spTl" cx=".3" cy="0" r="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <filter id="spSh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000" flood-opacity=".22"/></filter>
+  <filter id="spIc" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#2a0b3a" flood-opacity=".45"/></filter>
+  <mask id="spW" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><g id="spLet" fill="#fff" font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="700" font-size="${FS}" style="font-variation-settings:'SOFT' 100,'WONK' 1,'opsz' 144"></g></mask>
+  <mask id="spS" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="240"><path d="${SP}" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+ <g id="spIcon" opacity="0" filter="url(#spIc)"><rect width="240" height="240" rx="54" fill="url(#spBg)"/><rect width="240" height="240" rx="54" fill="url(#spTl)"/>
+  <g id="spSg" opacity="0" filter="url(#spSh)"><g transform="translate(12 12) scale(.9)"><g mask="url(#spS)"><rect width="240" height="240" fill="#fff"/><path id="spIa" fill="url(#spSea2)"/><path id="spIf" fill="none" stroke="#fff" stroke-width="5"/></g></g></g></g>
+ <g mask="url(#spW)"><rect width="${W}" height="${H}" fill="#f4f6fb"/><path id="spWa" fill="url(#spSea)"/><path id="spWf" fill="none" stroke="#fff" stroke-width="2.4"/></g>`;
+ const q=s=>svg.querySelector(s),gL=q('#spLet');
+ // lay out "swell" as one word, then split it so each letter can move on its own without the spacing changing
+ const tmp=document.createElementNS(NS,'text');tmp.textContent='swell';tmp.setAttribute('text-anchor','middle');tmp.setAttribute('x',CX);const base=CY+FS*.32;tmp.setAttribute('y',base);gL.appendChild(tmp);
+ const L=[];for(let i=0;i<5;i++){const p=tmp.getStartPositionOfChar(i),e=document.createElementNS(NS,'text');e.textContent='swell'[i];e.setAttribute('x',p.x);e.setAttribute('y',p.y);L.push(e)}
+ const wb=tmp.getBBox();tmp.remove();L.forEach(e=>gL.appendChild(e));
+ const sb=L[0].getBBox(),sCx=sb.x+sb.width/2,sCy=sb.y+sb.height/2,sTo=(148/240*Z*.9)/sb.height;
+ const lvBot=base+6,lvMid=base-FS*.4,x0=wb.x-20,x1=wb.x+wb.width+20;
+ const surf=(lv,A,ph,a,b)=>{let s='';for(let x=a;x<=b+4;x+=4){const y=lv+A*Math.sin(x*.055+ph)+A*.4*Math.sin(x*.12-ph*1.3);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
+ const iconAt=(sc)=>`translate(${CX} ${CY}) scale(${(sc*Z/240).toFixed(4)}) translate(-120 -120)`;
+ const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false;
+ // the timeline, in milliseconds
+ const IN0=120,FILL0=240,FILL1=980,OUT0=1000,S0=1100,S1=1500,IC0=1340,IC1=1860,X0=1460,X1=1660,RISE0=1520,RISE1=2060,EXIT=2300,END=2800;
+ if(rm){svg.querySelector('g[mask]').setAttribute('opacity',0);q('#spIcon').setAttribute('opacity',1);q('#spSg').setAttribute('opacity',1);q('#spIcon').setAttribute('transform',iconAt(1));
+  q('#spIa').setAttribute('d','M0 122 H240 V260 H0Z');d.querySelector('.qglo').style.opacity=1;
+  setTimeout(()=>{document.body.classList.remove('spon');d.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=finish},900);return}
+ const t0=performance.now();
+ const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0,ph=t/1000*3.4;
+  // 1. the word arrives: each letter rises a few pixels and fades in, 45 ms apart
+  L.forEach((e,i)=>{const a=eo(seg(t,IN0+i*45,IN0+i*45+420));let o=a,dy=(1-a)*10,dx=0,sc=1;
+   if(i>0){const b=ei(seg(t,OUT0+(4-i)*45,OUT0+(4-i)*45+220));o*=1-b;dy+=b*16}
+   else{const m=eio(seg(t,S0,S1));dx=(CX-sCx)*m;dy+=(CY-sCy)*m;sc=lerp(1,sTo,m);o*=1-eio(seg(t,X0,X1))}
+   e.setAttribute('opacity',o.toFixed(3));e.setAttribute('transform',i?`translate(0 ${dy.toFixed(2)})`:`translate(${(sCx+dx).toFixed(2)} ${(sCy+dy).toFixed(2)}) scale(${sc.toFixed(4)}) translate(${-sCx} ${-sCy})`)});
+  // 2. water fills the letters to halfway, the same level as the icon
+  const f=eo(seg(t,FILL0,FILL1)),lv=lerp(lvBot,lvMid,f),A=lerp(5,1.8,f);
+  q('#spWa').setAttribute('d',surf(lv,A,ph,x0,x1)+`L${x1} ${H}L${x0} ${H}Z`);q('#spWf').setAttribute('d',surf(lv,A,ph,x0,x1));q('#spWf').setAttribute('opacity',f>0?.9:0);
+  // 3. the icon grows in behind the s with a small overshoot, and the s becomes the icon's S
+  const ic=seg(t,IC0,IC1),sc=ic>0?lerp(.5,1,back(ic)):.5;q('#spIcon').setAttribute('transform',iconAt(sc*(1+.14*ei(seg(t,EXIT,EXIT+260)))));
+  q('#spIcon').setAttribute('opacity',(eo(seg(t,IC0,IC0+200))*(1-eio(seg(t,EXIT,EXIT+240)))).toFixed(3));
+  q('#spSg').setAttribute('opacity',eo(seg(t,X0+40,X1+40)).toFixed(3));
+  d.querySelector('.qglo').style.opacity=(eo(seg(t,IC0,IC1+200))*(1-seg(t,EXIT,EXIT+260))).toFixed(3);
+  // 4. the water in the icon's S rises to halfway and keeps a gentle wave
+  const r=eo(seg(t,RISE0,RISE1)),il=lerp(196,122,r),iA=lerp(10,7,r);
+  q('#spIa').setAttribute('d',surf(il,iA,ph,-4,244)+'L244 260L-4 260Z');q('#spIf').setAttribute('d',surf(il,iA,ph,-4,244));
+  // 5. hand over: the background fades and Home rises in, 50 ms per section
+  d.querySelector('.qbg').style.opacity=(1-eo(seg(t,EXIT+140,EXIT+520))).toFixed(3);
+  if(t>EXIT+140&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(22px) scale(.985)'},{opacity:1,transform:'none'}],{duration:620,delay:i*50,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
+  if(t>END){d.dataset.done=1;d.remove();return}
+  requestAnimationFrame(frame)};
+ requestAnimationFrame(frame);
+}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
