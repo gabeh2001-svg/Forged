@@ -2437,7 +2437,7 @@ if(GL.need){const once=()=>{removeEventListener('pointerup',once,true);if(S.glin
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(GL.raf);GL.raf=0}});
 {const _sh=sheet;sheet=function(h){if(h&&h.startsWith('<h2>Settings</h2>')&&h.includes('<button data-a="estopen">')){const on=GL.need?S.glint===true:S.glint!==false;
  h=h.replace('<button data-a="estopen">',`<button data-a="glint">${ico('<path d="M5 19L19 5"/><path d="M8 4h3M4 8v3M16 20h3M20 16v-3"/>')}<span>Light on widgets<small>${on?'On':'Off'}: widget edges catch the light as you tilt your phone</small></span></button><button data-a="estopen">`)}return _sh.call(this,h)}}
-window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;e.stopImmediatePropagation();
+window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;e.stopImmediatePropagation();if(window.glSheet){glSheet();return}
  const on=GL.need?S.glint===true:S.glint!==false;
  if(on&&GL.need&&!GL.seen&&!MRM()){const ok=await glAsk();toast(ok?'Motion allowed. Tilt your phone and watch the widget edges.':'Your phone didn’t allow motion access. Close Swell fully and open it again to be asked once more.')}else if(on){S.glint=false;glStop();save();toast('Light on widgets is off.')}
  else{if(MRM()){toast('Reduce Motion is on in your phone’s settings, so Swell keeps things still.');return}const ok=await glAsk();if(ok){S.glint=true;save();toast('On. Tilt your phone and watch the widget edges.')}else toast('Swell needs motion access for this. Tap again to allow it.')}
@@ -2564,7 +2564,7 @@ if(GL.on){removeEventListener('deviceorientation',glOrient0);addEventListener('d
 GLSIG='';try{glRefresh()}catch(_){}glPaint(GLS.a,.34);
 // iPhone only hands over motion after a tap; ask on the first tap of each visit if it's switched on
 if(GL.need){const once=()=>{removeEventListener('touchend',once,true);removeEventListener('click',once,true);if(S.glint===true&&glOn()&&!GL.seen)glAsk()};addEventListener('touchend',once,true);addEventListener('click',once,true)}
-const glStatus=()=>{const on=GL.need?S.glint===true:S.glint!==false;if(!on)return'Off: widget edges catch the light as you tilt your phone';if(MRM())return'Paused, because Reduce Motion is on in your phone’s settings';
+let glStatus=()=>{const on=GL.need?S.glint===true:S.glint!==false;if(!on)return'Off: widget edges catch the light as you tilt your phone';if(MRM())return'Paused, because Reduce Motion is on in your phone’s settings';
  if(!GL.seen)return GL.need?'On, but motion access isn’t allowed yet. Tap to allow it':'On, waiting for your phone’s motion sensor';return'On: tilt your phone and watch the widget edges'};
 {const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{const sm=document.querySelector('#sheet [data-a=glint] small');if(sm)sm.textContent=glStatus()}catch(_){}}}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=glint]');if(!el)return;
@@ -3975,7 +3975,7 @@ document.addEventListener('scroll',()=>btGo(),{capture:true,passive:true});
 {const _r=render;render=function(){_r.apply(this,arguments);btGo()}}
 
 /* ---------- the opening: the word fills with water, settles into the icon, and hands over to the app ---------- */
-// Timing follows the usual motion rules for launch screens: get to the app in about 2.5 seconds, enter with ease-out,
+// Timing follows the usual motion rules for launch screens: get to the app in about 3.3 seconds, enter with ease-out,
 // leave with ease-in and faster than you came in, stagger related things by 40 to 60 ms, hold the finished icon for
 // about 300 ms so it registers, and let a tap skip it at any point.
 function splash(){if(document.getElementById('splash'))return;
@@ -4026,23 +4026,23 @@ function spRun2(d,finish,rm){
  const iconAt=(sc)=>`translate(${CX} ${CY}) scale(${(sc*Z/240).toFixed(4)}) translate(-120 -120)`;
  const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false;
  // the timeline, in milliseconds
- const IN0=120,FILL0=240,FILL1=980,OUT0=1000,S0=1100,S1=1500,IC0=1340,IC1=1860,X0=1460,X1=1660,RISE0=1520,RISE1=2060,EXIT=2300,END=2800;
+ const IN0=150,FILL0=320,FILL1=1350,OUT0=1380,S0=1480,S1=2040,IC0=1780,IC1=2420,X0=1940,X1=2200,RISE0=2020,RISE1=2800,EXIT=3150,END=3700;
  if(rm){svg.querySelector('g[mask]').setAttribute('opacity',0);q('#spIcon').setAttribute('opacity',1);q('#spSg').setAttribute('opacity',1);q('#spIcon').setAttribute('transform',iconAt(1));
   q('#spIa').setAttribute('d','M0 122 H240 V260 H0Z');d.querySelector('.qglo').style.opacity=1;
   setTimeout(()=>{document.body.classList.remove('spon');d.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=finish},900);return}
  const t0=performance.now();
  const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0,ph=t/1000*3.4;
   // 1. the word arrives: each letter rises a few pixels and fades in, 45 ms apart
-  L.forEach((e,i)=>{const a=eo(seg(t,IN0+i*45,IN0+i*45+420));let o=a,dy=(1-a)*10,dx=0,sc=1;
-   if(i>0){const b=ei(seg(t,OUT0+(4-i)*45,OUT0+(4-i)*45+220));o*=1-b;dy+=b*16}
+  L.forEach((e,i)=>{const a=eo(seg(t,IN0+i*60,IN0+i*60+560));let o=a,dy=(1-a)*10,dx=0,sc=1;
+   if(i>0){const b=ei(seg(t,OUT0+(4-i)*55,OUT0+(4-i)*55+280));o*=1-b;dy+=b*16}
    else{const m=eio(seg(t,S0,S1));dx=(CX-sCx)*m;dy+=(CY-sCy)*m;sc=lerp(1,sTo,m);o*=1-eio(seg(t,X0,X1))}
    e.setAttribute('opacity',o.toFixed(3));e.setAttribute('transform',i?`translate(0 ${dy.toFixed(2)})`:`translate(${(sCx+dx).toFixed(2)} ${(sCy+dy).toFixed(2)}) scale(${sc.toFixed(4)}) translate(${-sCx} ${-sCy})`)});
   // 2. water fills the letters to halfway, the same level as the icon
   const f=eo(seg(t,FILL0,FILL1)),lv=lerp(lvBot,lvMid,f),A=lerp(5,1.8,f);
   q('#spWa').setAttribute('d',surf(lv,A,ph,x0,x1)+`L${x1} ${H}L${x0} ${H}Z`);q('#spWf').setAttribute('d',surf(lv,A,ph,x0,x1));q('#spWf').setAttribute('opacity',f>0?.9:0);
   // 3. the icon grows in behind the s with a small overshoot, and the s becomes the icon's S
-  const ic=seg(t,IC0,IC1),sc=ic>0?lerp(.5,1,back(ic)):.5;q('#spIcon').setAttribute('transform',iconAt(sc*(1+.14*ei(seg(t,EXIT,EXIT+260)))));
-  q('#spIcon').setAttribute('opacity',(eo(seg(t,IC0,IC0+200))*(1-eio(seg(t,EXIT,EXIT+240)))).toFixed(3));
+  const ic=seg(t,IC0,IC1),sc=ic>0?lerp(.5,1,back(ic)):.5;q('#spIcon').setAttribute('transform',iconAt(sc*(1+.14*ei(seg(t,EXIT,EXIT+300)))));
+  q('#spIcon').setAttribute('opacity',(eo(seg(t,IC0,IC0+200))*(1-eio(seg(t,EXIT,EXIT+280)))).toFixed(3));
   q('#spSg').setAttribute('opacity',eo(seg(t,X0+40,X1+40)).toFixed(3));
   d.querySelector('.qglo').style.opacity=(eo(seg(t,IC0,IC1+200))*(1-seg(t,EXIT,EXIT+260))).toFixed(3);
   // 4. the water in the icon's S rises to halfway and keeps a gentle wave
@@ -4055,6 +4055,27 @@ function spRun2(d,finish,rm){
   requestAnimationFrame(frame)};
  requestAnimationFrame(frame);
 }
+/* ===== v53: no more motion pop-up on every launch ===== */
+// iPhone Home Screen apps forget motion permission each time they're fully closed, so asking on the first tap of every
+// visit made the pop-up keep coming back. Now the light on widget edges drifts slowly by itself, which needs no permission,
+// and following your phone's tilt is a choice you make in Settings, knowing your iPhone will ask each time.
+GL.tap=0;
+window.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('[data-a=glset]'))GL.tap=Date.now()},true);
+{const _ga=glAsk;glAsk=function(){if(GL.need&&!S.glTilt&&Date.now()-GL.tap>4000)return Promise.resolve(false);return _ga.apply(this,arguments)}}
+const glWant=()=>(GL.need?S.glint===true:S.glint!==false)&&!MRM();
+if(!S.glTilt)glStop();
+setInterval(()=>{if(document.hidden||!glWant()||(S.glTilt&&GL.on&&GL.seen))return;const t=Date.now();
+ glPaint(GLS.a+16*Math.sin(t/16000*Math.PI*2),.36+.08*Math.sin(t/11000*Math.PI*2))},100);
+glStatus=function(){if(!glWant())return MRM()?'Paused, because Reduce Motion is on in your phone’s settings':'Off';
+ if(!S.glTilt)return'Drifts gently across the widget edges';return GL.seen||!GL.need?'Follows your phone’s tilt':'Follows tilt. Tap any button to allow motion access'};
+function glSheet(){const m=!glWant()?'off':S.glTilt?'tilt':'drift',o=[['off','Off','Widget edges stay plain.'],['drift','Drifts gently','The light moves slowly round the edges by itself.'],['tilt','Follows tilt',GL.need?'The light moves as you tilt your phone. iPhone asks for motion access each time you open Swell, so you’ll see that pop-up once per visit.':'The light moves as you tilt your phone.']];
+ sheet(`<h2>Light on widgets</h2>${o.map(([k,n,p])=>`<button class="npr" data-a="glset" data-i="${k}" style="width:100%;text-align:left;background:none;border:0;color:inherit;padding:12px 2px"><div><b>${n}</b><small>${p}</small></div><span class="tg ${m===k?'on':''}" aria-hidden="true"></span></button>`).join('')}<button class="btn big" data-a="shx" style="margin-top:8px">Done</button>`)}
+window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=glset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const k=el.dataset.i;
+ if(k!=='off'&&MRM()){toast('Reduce Motion is on in your phone’s settings, so Swell keeps things still.');return}
+ if(k==='off'){S.glint=false;S.glTilt=false;glStop();glPaint(GLS.a,.34)}
+ else if(k==='drift'){S.glint=true;S.glTilt=false;glStop()}
+ else{S.glint=true;S.glTilt=true;const ok=await glAsk();if(!ok&&GL.need){S.glTilt=false;toast('Motion access wasn’t allowed, so the light drifts instead.')}}
+ save();glSheet()},true);
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
