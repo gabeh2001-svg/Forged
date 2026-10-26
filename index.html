@@ -2229,6 +2229,13 @@ function wdDrag(e,w){const g=w.parentNode,r=w.getBoundingClientRect(),ox=e.clien
   w.animate([{transform:'none'},{transform:'scale(1.05)'}],{duration:180,easing:'cubic-bezier(.34,1.4,.64,1)',fill:'forwards'});loop()};
  const place=()=>{w.style.translate=`${last.x-ox-r.left}px ${last.y-oy-r.top}px`};
  const decide=()=>{const kids=[...g.children].filter(c=>c!==w&&c!==ph);let tgt=null;
+  // a full-width widget moves by rows: it goes above or below a whole row, judged by where its middle is,
+  // so dragging it up over two small widgets pushes both of them down
+  if(r.width>g.getBoundingClientRect().width*.75&&kids.length){const cy=last.y-oy+r.height/2,rows=[];
+   kids.forEach(c=>{const q=c.getBoundingClientRect(),row=rows.find(x=>Math.abs(x.top-q.top)<8);if(row){row.items.push(c);row.bottom=Math.max(row.bottom,q.bottom)}else rows.push({top:q.top,bottom:q.bottom,items:[c]})});
+   rows.sort((x,y)=>x.top-y.top);
+   for(const row of rows){if(cy<=row.bottom+7){const mid=(row.top+row.bottom)/2;if(cy<mid)return{ref:row.items[0]};let n=row.items[row.items.length-1].nextElementSibling;while(n===w)n=n.nextElementSibling;return{ref:n}}}
+   return{ref:null}}
   for(const c of kids){const q=c.getBoundingClientRect();if(last.x>=q.left-6&&last.x<=q.right+6&&last.y>=q.top-6&&last.y<=q.bottom+6){tgt=c;break}}
   if(!tgt){const lastK=kids[kids.length-1];if(lastK&&last.y>lastK.getBoundingClientRect().bottom)return{ref:null};return null}
   const q=tgt.getBoundingClientRect(),wide=q.width>g.getBoundingClientRect().width*.75,before=wide?last.y<q.top+q.height/2:last.x<q.left+q.width/2;
@@ -4058,12 +4065,19 @@ window.addEventListener('click',async e=>{const el=e.target.closest('[data-a=gls
 (function(){const st=document.createElement('style');st.textContent=`
 .wd .wbt.wq{pointer-events:auto;background:none;border:0;padding:8px;margin:0;right:4px;bottom:4px;color:inherit;-webkit-tap-highlight-color:transparent;transition:transform .18s var(--e-spring,cubic-bezier(.3,1.2,.5,1))}
 .wd .wbt.wq:active{transform:scale(.9)}
-.wq .wqp{position:absolute;right:2px;bottom:4px;width:19px;height:19px;border-radius:50%;background:#fff;color:#14172a;font:700 16px/19px system-ui,-apple-system,sans-serif;font-style:normal;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none}
-.grid.edit .wq{pointer-events:none}.grid.edit .wq .wqp{opacity:0}`;document.head.appendChild(st)})();
+.wd .wbt.wq{padding:14px 12px 12px 18px;right:0;bottom:0}
+.grid.edit .wq{pointer-events:none}
+/* no scroll bars anywhere: the pages are short, and on iPhone the bar could be grabbed by accident */
+html,body,*{scrollbar-width:none;-ms-overflow-style:none}
+::-webkit-scrollbar,*::-webkit-scrollbar{display:none;width:0;height:0;background:transparent}`;document.head.appendChild(st)})();
 {const _nw=newW;newW=function(l){let h=_nw.apply(this,arguments);if(l.w!==1||l.h!==1||(l.id!=='water'&&l.id!=='caf'))return h;
  let a,lab;if(l.id==='water'){const b=WAT().btl;a=`data-a="wadd" data-i="${b.ml}"`;lab=`Add your ${esc(b.n.toLowerCase())}`}
  else{const r=CAFP().reg;a=r?'data-a="careg"':'data-a="dago" data-i="coffee"';lab=r?`Add your ${esc(DRK[r.type].n.toLowerCase())}`:'Add a coffee'}
- return h.replace(/<span class="wbt">([\s\S]*)<\/span>$/,`<button class="wbt wq" ${a} aria-label="${lab}">$1<i class="wqp" aria-hidden="true">+</i></button>`)}}
+ return h.replace(/<span class="wbt">([\s\S]*)<\/span>$/,`<button class="wbt wq" ${a} aria-label="${lab}">$1</button>`)}}
+// tapping the bottle or the cup adds your usual (the bottle sloshes, the cup ripples), and a tip explains it once
+window.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#app .grid:not(.edit) .wq')&&!S.wqUsed){S.wqUsed=1;try{save()}catch(_){}document.querySelectorAll('.ftip').forEach(t=>t.remove())}},true);
+TIPS.push({id:'tap-wq',t:'home',q:'.wd .wq',w:3,u:1,ok:()=>!S.wqUsed&&!!document.querySelector('#app .wd .wq'),h:'One tap to add',p:'Tap the bottle to add your usual bottle of water, or the cup to add your regular coffee. Tap anywhere else on the widget to open it.'});
+TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
 // adding a widget: no water-fill on the chip (the chip moves away, so the fill was left floating); the new widget pulses blue instead
 {const t=FXADD.test.bind(FXADD);FXADD.test=s=>s!=='addw'&&t(s)}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=addw]');if(!el)return;const id=el.dataset.i;
