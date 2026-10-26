@@ -14,6 +14,9 @@ const MSG = {
   miss: () => ['Your plan’s still here', 'It’s been a few days. A quick log gets you back on track.'],
   week: () => ['Weekly check-in', 'Log your weight and see how your week went.'],
   wrap: p => [`Your ${clip(p.m, 12) || 'monthly'} Wrapped is ready`, 'Open Swell to see how your month went.'],
+  water: () => ['Time for some water', 'Top up your bottle and log it in Swell.'],
+  supp: p => [`Supplements: ${clip(p.n, 60) || 'time to take yours'}`, 'Tick them off in Swell once you’ve taken them.'],
+  bed: p => ['Time to wind down', p.n ? `Bedtime is ${clip(p.n, 10)}. Put the phone down soon.` : 'Bedtime is coming up. Put the phone down soon.'],
   test: () => ['Notifications are working', 'This is how Swell reminders will look.']
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });
