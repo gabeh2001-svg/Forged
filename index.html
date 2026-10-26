@@ -2865,7 +2865,7 @@ function waterV(){const w=WAT(),g=watGoal(),ml=watOn(),auto=!w.goal,wk=isWorkDay
 /* ---------- supplements ---------- */
 const SUP=()=>{S.sup=S.sup||{};S.sup.t=S.sup.t||'08:00';S.sup.list=S.sup.list||[];return S.sup};
 const supTime=x=>x.t||SUP().t;
-const supDue=d=>SUP().list.filter(x=>!x.days||!x.days.length||x.days.includes(new Date(d+'T12:00').getDay())).sort((a,b)=>supTime(a)<supTime(b)?-1:1);
+let supDue=d=>SUP().list.filter(x=>!x.days||!x.days.length||x.days.includes(new Date(d+'T12:00').getDay())).sort((a,b)=>supTime(a)<supTime(b)?-1:1);
 const supTaken=d=>((S.supl||{})[d]||[]);
 const daysTxt=x=>!x.days||!x.days.length||x.days.length===7?'Every day':x.days.length===5&&[1,2,3,4,5].every(n=>x.days.includes(n))?'Weekdays':x.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(n=>WK7[n].slice(0,3)).join(', ');
 function supToggle(id){S.supl=S.supl||{};const d=today(),l=S.supl[d]=supTaken(d).slice(),i=l.indexOf(id);if(i>=0)l.splice(i,1);else l.push(id);save();try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
@@ -3356,6 +3356,185 @@ if(PREVIEW&&!S.v48demo){S.v48demo=1;const t=realToday();S.water=S.water||{};S.sl
 /* starting again on a new phone, or after re-adding Swell: bring a backup straight back from the first screen */
 {const _o=onb;onb=function(){const h=_o.apply(this,arguments);if(S.user||!/class="card sgn"/.test(h))return h;
  return h+`<div class="card" style="margin-top:14px"><h2>Already use Swell?</h2><p class="sm" style="margin:0 0 10px">Swell keeps your data on your phone, not in an online account. If you saved a backup from Settings, restore it and everything comes back.</p><button class="btn big" data-a="rspick">Restore my backup</button></div>`}}
+
+/* ===== v49: large widgets sit centred, smooth supplement ticks and day picks, a missed-dose nudge, pages that grow out of their widget,
+   a tidier goal widget, number keypads everywhere, water-fill confirmations, and tips that earn their place ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+/* large widgets: content centred in the space between the label and the wave */
+.wbig{padding:4px 4px 14px}
+.wd.tall .wcen{flex:1;justify-content:center;padding-bottom:12px}
+.wd .w22{justify-content:center;padding-bottom:12px}
+.wd .w22.top{justify-content:flex-start}
+.wd .wsl{gap:0}.wd .wsl .sprow{padding:3px 0}.wd .wsl .spck{width:40px;height:40px}.wd .wsl .spck i{width:26px;height:26px}
+.wd .wsl .spn b{font-size:15px}.wd .wsl .spn small{font-size:12.5px}
+.smk{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:0 0 6px;border-radius:14px;background:rgba(255,197,61,.12);border:1px solid rgba(255,197,61,.28);text-align:left;width:100%}
+.smk span{flex:1;min-width:0;font-size:13px;line-height:1.3}.smk span b{display:block;font-size:14px}
+.smk .btn{margin:0;min-height:34px;padding:6px 12px;font-size:13px}
+.smk .x{flex:none;width:30px;height:30px;border:0;background:none;color:var(--dim);font-size:18px;line-height:1;cursor:pointer;padding:0}
+.ssl{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;width:100%}
+.ssl b.d{font-size:30px;font-variant-numeric:tabular-nums;line-height:1.15}
+.ssl .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;height:46px;width:min(100%,230px);margin-top:10px}
+.ssl .wk i{display:block;border-radius:5px 5px 3px 3px;background:rgba(199,214,255,.45);min-height:3px}.ssl .wk i.now{background:#c7d6ff}
+.ssl .wl7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:min(100%,230px);font-size:10.5px;color:rgba(255,255,255,.5)}
+.ssl .btn{margin-top:10px}
+/* goal, large */
+.gbig{display:flex;flex-direction:column;gap:10px;width:100%;height:100%;padding-bottom:14px;text-align:left}
+.gbig .gh{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.gbig>.wl{align-self:center}.gbig .gh .gt{font-size:20px;line-height:1.2;font-weight:700}.gbig .gh .gs{font-size:13px;margin-top:2px}
+.gbig .gpl{flex:none;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+.gbig .gn{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}.gbig .gn b{font-size:34px;line-height:1}.gbig .gn span{font-size:14px;color:var(--dim)}
+.gbig .gbar{height:8px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}.gbig .gbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--g1) 55%,#fff),#fff)}
+.gbig .gchart{width:100%;margin-top:auto}
+.gbig .g1{font-size:13px;color:rgba(255,255,255,.78);line-height:1.4}
+/* presses: a widget no longer shrinks when you tap a button inside it, and presses ease in and out */
+.grid:not(.edit) .wd:not(.lift){transition:transform .32s cubic-bezier(.3,1.35,.5,1)}
+.grid .wd:has(button:active,[data-a]:active,input:active){transform:none!important}
+.chip{transition:background-color .22s ease,color .22s ease,border-color .22s ease,transform .22s cubic-bezier(.3,1.4,.5,1)}
+.chip:active{transform:scale(.96)}
+/* supplement tick: the circle fills, then the check draws itself */
+.spck i{transition:background-color .26s ease,border-color .26s ease}
+.spck svg{opacity:1!important}.spck svg path{stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .28s cubic-bezier(.4,0,.2,1)}
+.spck.on svg path{stroke-dashoffset:0;transition-delay:.08s}
+/* full pages: a clear close button, and a handle you can pull down */
+#fs .fsh{position:sticky;top:0;z-index:3;justify-content:flex-end;margin:0 -4px;padding-top:2px;min-height:56px;touch-action:none;cursor:grab}
+#fs .fsx{width:44px;height:44px;border-radius:50%;padding:0;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#fs .fsx svg{width:18px;height:18px}
+#fs .fsh::before{content:'';position:absolute;left:50%;top:6px;width:38px;height:5px;margin-left:-19px;border-radius:99px;background:rgba(255,255,255,.28)}
+#fs h1{margin-top:-6px}
+/* water-fill confirmation */
+.wfx{position:fixed;z-index:121;pointer-events:none;overflow:hidden;isolation:isolate}
+.wfx .wv{position:absolute;left:-10%;right:-10%;bottom:0;height:120%;transform:translateY(100%);background:linear-gradient(180deg,#6a98ff,#2a55d6)}
+.wfx .wv svg{position:absolute;left:0;top:-9px;width:200%;height:10px;animation:wfxw .9s linear infinite}
+@keyframes wfxw{to{transform:translateX(-50%)}}
+.wfx .ck{position:absolute;inset:0;display:grid;place-items:center}
+.wfx .ck svg{height:62%;max-height:26px;aspect-ratio:1}
+.wfx .ck path{stroke-dasharray:24;stroke-dashoffset:24}
+/* tips */
+.ftip .tipa{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.ftip .tipa .btn{margin:0}
+.ftip .tipa .glink{margin:0 0 0 auto;padding:8px 2px}
+.ftip .tipq{font-size:13px;color:var(--dim);margin:8px 0 0}`;document.head.appendChild(st)})();
+
+/* ---------- 1. large widgets ---------- */
+const slpWeek=()=>{const k=slpKey(),o=[];for(let i=6;i>=0;i--){const d=addDays(k,-i),n=(S.sleep||{})[d];o.push({d,m:n?n.b-n.a:0})}return o};
+const shortSug=s=>{const t=String(s||'').split(/(?<=\.)\s+/).filter(Boolean);const pick=t.find(x=>/^(Aim|On track|You’re|You're|Ahead|Behind|Keep)/.test(x))||t[0]||'';return pick.length>110?pick.slice(0,107).replace(/\s+\S*$/,'')+'…':pick};
+{const _nw=newW;newW=function(l){const id=l.id;
+ if(l.w===2&&l.h===2&&id==='sleep'&&!SLP().on){const sl=SLP(),L=slpLast(),len=L?L.n.b-L.n.a:0,wk=slpWeek(),mx=Math.max(sl.goal+60,...wk.map(x=>x.m)),eve=new Date().getHours()>=19||new Date().getHours()<3;
+  return`<div class="w22">${wlab('bed','Sleep')}<div class="ssl"><b class="d">${L?durTxt(len):'Not logged'}</b><span class="sm" style="margin:0">${L?'Last night · '+gdTxt(len).replace(/^R/,'r'):'Tap to log last night'}</span>
+  <div class="wk">${wk.map((x,i)=>`<i class="${i===6?'now':''}" style="height:${Math.max(3,x.m/mx*46).toFixed(1)}px"></i>`).join('')}</div><div class="wl7">${wk.map(x=>`<span>${WK7[new Date(x.d+'T12:00').getDay()].slice(0,1)}</span>`).join('')}</div>
+  ${eve?'<button class="btn on" data-a="bedgo">Going to bed</button>':''}</div></div>`}
+ if(id==='supp'){const mk=supMissed();let h=_nw.apply(this,arguments);if(!h)return h;
+  if(mk&&l.w===2&&l.h===2){h=h.replace('<div class="wsl">',`<div class="wsl">${smkRow(mk)}`);const t=document.createElement('template');t.innerHTML=h;const rows=t.content.querySelectorAll('.wsl .sprow');for(let k=3;k<rows.length;k++)rows[k].remove();h=t.innerHTML}
+  else if(mk)h=h.replace(/<span>([^<]*)<\/span>(<\/div>)?$/,`<span style="color:var(--A)">Missed ${esc(mk.n)} yesterday</span>$2`);
+  return h.replace('<div class="w22" style="justify-content:flex-start">','<div class="w22">')}
+ return _nw.apply(this,arguments)}}
+// the goal widget at full size: name and time left, one big number, a progress bar, the chart, and one short line of advice
+{const _g=goalW;goalW=function(l){const G=S.goal2;if(!G||!(l&&l.w===2&&l.h===2)||(G.due&&G.due<=realToday()))return _g.apply(this,arguments);
+ let c;try{c=gCalc(G)}catch(_){return _g.apply(this,arguments)}const left=c.left!=null?`${c.left} day${c.left===1?'':'s'} left`:'Ongoing',pct=Math.max(0,Math.min(1,c.pct||0));
+ const sub=G.type==='Develop'?'Develop '+tidy(G.focus||''):G.type;
+ const num=G.type==='Custom'?`<b>${Math.round(pct*100)}%</b><span>of the way there</span>`:G.type==='Develop'?`<b>${c.now!=null?c.now:0}</b><span>of ${c.target} sessions</span>`:`<b>${c.now!=null?c.fmt(c.now):'-'}</b><span>${c.tol?'aim '+c.fmt(c.start)+' ±'+c.tol+c.u:'target '+c.fmt(c.target)}</span>`;
+ return`<div class="gbig" data-a="gopen">${wlab('flag','Goal')}<div class="gh"><div style="min-width:0"><div class="gt">${esc(G.name)}</div><div class="gs">${esc(sub)}</div></div><span class="gpl">${left}</span></div>
+ <div class="gn">${num}</div><div class="gbar"><i style="width:${(pct*100).toFixed(1)}%"></i></div>${G.type==='Custom'?'':gChart(G,c,300,70,true)}<div class="g1">${esc(shortSug(c.sugg))}</div></div>`}}
+// the goal sheet: tap a session count or a weight and you get the number pad
+const _gfx=()=>document.querySelectorAll('input[type=number]:not([inputmode])').forEach(i=>{const k=(i.dataset.b||i.dataset.k||i.name||'')+'';i.setAttribute('inputmode',/(^|\.)(ts|freq|age|thr|s|sets|reps|min|sec|ms|perWeek|cm|ft|in)$|sut|wbm/i.test(k)||i.step==='1'?'numeric':'decimal')});
+new MutationObserver(()=>_gfx()).observe(document.documentElement,{childList:true,subtree:true});_gfx();
+
+/* ---------- 3. supplements: smooth ticks, calm day picks, and a missed-dose nudge ---------- */
+let SPT=0;
+supToggle=function(id){S.supl=S.supl||{};const d=today(),l=S.supl[d]=supTaken(d).slice(),i=l.indexOf(id),on=i<0;if(on)l.push(id);else l.splice(i,1);save();try{navigator.vibrate&&navigator.vibrate(on?[6,30,10]:6)}catch(_){}
+ // change the ticks where they are, let the animation play, then refresh the counts
+ document.querySelectorAll(`.spck[data-i="${id}"]`).forEach(b=>{b.classList.toggle('on',on);b.setAttribute('aria-checked',on);if(!MRM()&&b.animate)b.querySelector('i').animate(on?[{transform:'scale(.82)'},{transform:'scale(1.08)',offset:.55},{transform:'scale(1)'}]:[{transform:'scale(.9)'},{transform:'scale(1)'}],{duration:on?420:240,easing:'cubic-bezier(.3,1.2,.5,1)'})});
+ clearTimeout(SPT);SPT=setTimeout(()=>{render();if(FS==='supp')fsr()},560);
+ const due=supDue(d);if(on&&due.length&&due.every(x=>S.supl[d].includes(x.id)))setTimeout(()=>toast('All your supplements are done for today.'),500)};
+// supplements on certain days only: if yesterday's was missed, offer it today, once, quietly, in the widget
+function supMissed(){const t=realToday();if(today()!==t)return null;const y=addDays(t,-1),dy=new Date(y+'T12:00').getDay(),dt=new Date(t+'T12:00').getDay(),tk=supTaken(y),skip=(S.supx||{})[t]||[];
+ return SUP().list.find(x=>x.days&&x.days.length&&x.days.length<7&&x.days.includes(dy)&&!x.days.includes(dt)&&!tk.includes(x.id)&&!skip.includes(x.id)&&!((S.supmk||{})[t]||[]).includes(x.id))||null}
+const smkRow=x=>`<div class="smk"><span><b>Missed ${esc(x.n)} yesterday</b>Take it today instead?</span><button class="btn on" data-a="smktake" data-i="${x.id}">Take today</button><button class="x" data-a="smkskip" data-i="${x.id}" aria-label="No thanks">×</button></div>`;
+{const _sd=supDue;supDue=function(d){const L=_sd.apply(this,arguments),mk=(S.supmk||{})[d]||[];SUP().list.forEach(x=>{if(mk.includes(x.id)&&!L.includes(x))L.push(x)});return L}}
+{const _sv=suppV;suppV=function(){const h=_sv.apply(this,arguments),mk=supMissed();return mk?h.replace('<div class="card">',`<div class="card">${smkRow(mk)}`):h}}
+// days and own-time switch change in place, so the sheet doesn't jump
+function seRefresh(){const c=$('#sheet .mwc');if(!c||!SE)return seSheet();const tmp=document.createElement('div');const _s=sheet;
+ sheet=h=>{tmp.innerHTML=h};try{seSheet()}finally{sheet=_s}c.innerHTML=tmp.innerHTML}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;
+ if(a==='seday'&&SE){e.stopImmediatePropagation();e.preventDefault();if(i==='all')SE.x.days=[];else{const n=+i,d=SE.x.days||[],k=d.indexOf(n);if(k>=0)d.splice(k,1);else d.push(n);SE.x.days=d.length===7?[]:d}
+  const dd=SE.x.days;document.querySelectorAll('#sheet [data-a=seday]').forEach(b=>b.classList.toggle('on',b.dataset.i==='all'?!dd.length:dd.includes(+b.dataset.i)));return}
+ if(a==='seown'&&SE){e.stopImmediatePropagation();e.preventDefault();SE.x.t=SE.x.t?null:SUP().t;seRefresh();return}
+ if(a==='smktake'){e.stopImmediatePropagation();e.preventDefault();const t=realToday();S.supmk=S.supmk||{};(S.supmk[t]=S.supmk[t]||[]).push(i);save();render();if(FS==='supp')fsr();setTimeout(()=>supToggle(i),60);toast('Added to today. Nice catch.');return}
+ if(a==='smkskip'){e.stopImmediatePropagation();e.preventDefault();const t=realToday();S.supx=S.supx||{};(S.supx[t]=S.supx[t]||[]).push(i);save();render();if(FS==='supp')fsr();return}},true);
+
+/* ---------- pages grow out of their widget and settle back into it ---------- */
+let FSO=null;const FSE='cubic-bezier(.32,.72,0,1)';
+const fsClip=r=>`inset(${Math.max(0,r.top)}px ${Math.max(0,innerWidth-r.right)}px ${Math.max(0,innerHeight-r.bottom)}px ${Math.max(0,r.left)}px round 26px)`;
+{const _o=fsOpen;fsOpen=function(k){const w=$(`#app .grid .wd[data-id="${k}"]`);FSO=k;FS=k;fsr();const o=$('#fs');if(!o)return;
+ if(MRM()||!w){if(!MRM())o.animate([{opacity:0},{opacity:1}],{duration:260});return}
+ const r=w.getBoundingClientRect();o.animate([{clipPath:fsClip(r),opacity:.4},{clipPath:'inset(0px 0px 0px 0px round 0px)',opacity:1}],{duration:460,easing:FSE});
+ const wr=o.querySelector('.fsw');wr&&wr.animate([{opacity:0,transform:'translateY(14px) scale(.985)'},{opacity:1,transform:'none'}],{duration:420,delay:70,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})}}
+fsClose=function(){const o=$('#fs'),k=FS;FS=null;if(!o)return;const done=()=>{o.remove();lockOff();try{render()}catch(_){}};o.style.pointerEvents='none';
+ if(MRM())return done();const w=$(`#app .grid .wd[data-id="${k}"]`),r=w&&w.getBoundingClientRect(),vis=r&&r.bottom>0&&r.top<innerHeight;
+ const wr=o.querySelector('.fsw');wr&&wr.animate([{opacity:1},{opacity:0}],{duration:200,easing:'ease-in',fill:'forwards'});
+ const a=vis?o.animate([{clipPath:'inset(0px 0px 0px 0px round 0px)',opacity:1},{clipPath:fsClip(r),opacity:0}],{duration:380,easing:FSE,fill:'forwards'}):o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(24px)'}],{duration:260,easing:'ease-in',fill:'forwards'});
+ a.onfinish=done;if(vis&&w.animate)setTimeout(()=>w.animate([{transform:'scale(.97)'},{transform:'scale(1.015)',offset:.6},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.2,.5,1)'}),250)};
+{const _f=fsr;fsr=function(){_f.apply(this,arguments);const b=$('#fs .fsx');if(b&&!b.querySelector('svg')){b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';b.setAttribute('aria-label','Close')}}}
+// pull down from the top of a page to close it
+{let st=null;window.addEventListener('pointerdown',e=>{const o=e.target.closest('#fs');if(!o||!e.target.closest('.fsh')||e.target.closest('button'))return;st={y:e.clientY,o,dy:0}},true);
+ window.addEventListener('pointermove',e=>{if(!st)return;st.dy=Math.max(0,e.clientY-st.y);if(st.dy>6){const k=Math.min(1,st.dy/260);st.o.style.transform=`translateY(${st.dy*.55}px) scale(${1-k*.04})`;st.o.style.borderRadius=Math.min(26,st.dy/4)+'px'}},true);
+ const end=()=>{if(!st)return;const {o,dy}=st;st=null;if(dy>110){o.style.transition='';fsClose();return}if(dy>6){o.animate([{transform:o.style.transform},{transform:'none'}],{duration:320,easing:'cubic-bezier(.3,1.3,.5,1)'});o.style.transform='';o.style.borderRadius=''}};
+ window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true)}
+
+/* ---------- 6. confirmations: the button fills with water, a tick draws in, then the label comes back ---------- */
+fxBurst=function(el,x,y){if(MRM())return;let b=el&&el.isConnected?el:null;
+ if(!b&&FXT2){b=document.querySelector(`[data-a="${FXT2.a}"]${FXT2.i!=null?`[data-i="${CSS.escape(FXT2.i)}"]`:''}`)}
+ let r=b&&b.getBoundingClientRect();if(!r||!r.width||r.bottom<0||r.top>innerHeight){r=FXT2&&FXT2.r}if(!r||!r.width)return;
+ const cs=b?getComputedStyle(b):null,rad=cs?cs.borderRadius:'999px',o=document.createElement('div');o.className='wfx';
+ Object.assign(o.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',borderRadius:rad});
+ o.innerHTML=`<div class="wv"><svg viewBox="0 0 200 10" preserveAspectRatio="none"><path d="M0 6 Q12.5 0 25 6 T50 6 T75 6 T100 6 T125 6 T150 6 T175 6 T200 6 V10 H0Z" fill="#6a98ff"/></svg></div><div class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>`;
+ document.body.appendChild(o);const wv=o.querySelector('.wv'),ck=o.querySelector('.ck path');
+ wv.animate([{transform:'translateY(100%)'},{transform:'translateY(8%)'}],{duration:440,easing:'cubic-bezier(.3,.7,.3,1)',fill:'forwards'});
+ ck.animate([{strokeDashoffset:24},{strokeDashoffset:0}],{duration:300,delay:380,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});
+ o.animate([{opacity:1},{opacity:0}],{duration:320,delay:1060,easing:'ease-in',fill:'forwards'}).onfinish=()=>o.remove()};
+let FXT2=null;
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||!FXADD.test(el.dataset.a))return;FXT2={a:el.dataset.a,i:el.dataset.i,r:el.getBoundingClientRect()}},true);
+
+/* ---------- 7. tips that earn their place ---------- */
+// bigger features first; small ones once people are finding them useful. Usage tips show up when someone is doing
+// something the long way, round about the time it would help
+const TW={water:3,sleep:3,barcode:3,paste:3,goal:3,supp:2,move:2,saved:2,body:2,eat:2,share:2,timer:2,stimer:1,wkend:1};
+TIPS.forEach(t=>t.w=TW[t.id]||2);
+const mealCount=()=>Object.values(S.meals||{}).reduce((a,l)=>a+(l||[]).length,0);
+const repeatMeal=()=>{const c={};Object.values(S.meals||{}).forEach(l=>(l||[]).forEach(m=>{const k=(m.n||'').trim().toLowerCase();if(k)c[k]=(c[k]||0)+1}));const s=new Set((S.saved||[]).map(x=>(x.n||'').trim().toLowerCase()));return Object.entries(c).find(([k,n])=>n>=3&&!s.has(k))};
+TIPS.push(
+ {id:'u-scan',t:'diet',q:'.sctiles',w:2,u:1,ok:()=>mealCount()>=6&&!S.scanned&&!Object.keys(S.bc||{}).length,h:'Typing it all in?',p:'Scan a label or barcode and Swell fills in the numbers for you. It’s usually quicker than typing.'},
+ {id:'u-save',t:'diet',q:'[data-a=msv]',w:2,u:1,ok:()=>!!repeatMeal(),h:'Same meal again?',p:'You’ve logged this one a few times. Turn on Save for later when you add it, and next time it’s one tap.'},
+ {id:'u-bed',t:'home',q:'.wd[data-id=sleep]',w:2,u:1,ok:()=>Object.keys(S.sleep||{}).length>=3&&!S.bedUsed,h:'Let Swell time your night',p:'Tap Going to bed on the Sleep screen at night and I’m awake in the morning. Swell logs it for you.'},
+ {id:'u-rest',t:'timer',q:'[data-a=tal]',w:2,u:1,ok:()=>Object.keys(S.tal||{}).length>=3&&!S.restAuto,h:'Rest that starts itself',p:'Turn on Auto-start rest and your rest timer begins the moment you tap +1 set.'});
+TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
+{const _sc=scanFx;scanFx=function(){S.scanned=1;save();return _sc.apply(this,arguments)}}
+{const _bg=bedGo;bedGo=function(){S.bedUsed=1;return _bg.apply(this,arguments)}}
+const TIPOPT=3; // on the third tip, ask whether they're wanted
+tipCheck=function(){if(S.tipsOff||!S.user||!S.setup||!S.setup.done||!S.tourDone||TU!=null||ED||AW||FS||$('.ftip')||$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#splash,#imp,#tour,#fs,#bed,#bcs'))return;
+ if(Date.now()-TIPT<(PREVIEW?9000:20000)||Date.now()-(S.tourAt||0)<TIPGAP)return;
+ if(!PREVIEW&&S.tipD===realToday()&&(S.tipN||0)>=2)return;
+ S.tips=S.tips||{};const tp=TIPS.find(x=>!S.tips[x.id]&&x.t===tab&&!(S.fullTour&&!x.u)&&(()=>{try{return x.ok()&&document.querySelector(x.q)}catch(_){return false}})());if(!tp)return;
+ setTimeout(()=>{if(tab!==tp.t||$('.ftip')||$('#sheet,#wn,#req,#lx2,#wr,#aw,#sc,#tour,#fs,#bed,#bcs')||TU!=null||ED||S.tipsOff)return;TIPT=Date.now();S.tips[tp.id]=1;S.tipTot=(S.tipTot||0)+1;save();
+  const n=S.tipTot,ask=n===TIPOPT&&!S.tipsLiked,later=n>TIPOPT||S.tipsLiked;
+  const d=document.createElement('div');d.className='ftip';d.setAttribute('role','status');
+  d.innerHTML=`<b>${esc(tp.h)}</b><p>${esc(tp.p)}</p>${ask?'<p class="tipq">Are these tips useful?</p>':''}<div class="tipa">${ask?'<button class="btn on" type="button" data-t="like">These are helpful!</button>':'<button class="btn on" type="button" data-t="ok">'+(later?'Done':'Got it')+'</button>'}${ask||later?'<button class="glink" type="button" data-t="off">Stop receiving tips</button>':''}</div>`;
+  const off=()=>{if(!d.isConnected)return;d.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(10px)'}],{duration:220,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}).onfinish=()=>d.remove()};
+  d.addEventListener('click',ev=>{const b=ev.target.closest('[data-t]');if(!b)return;const k=b.dataset.t;
+   if(k==='like'){S.tipsLiked=1;save();off();toast('Great, Swell will keep pointing things out.')}
+   else if(k==='off'){S.tipsOff=1;save();off();toast('No more tips. You can turn them back on in Settings.')}else off()});
+  document.body.appendChild(d);setTimeout(off,ask?20000:14000)},1200)};
+// Settings: tips on or off
+{const _ss=settingsSheet;settingsSheet=function(){_ss.apply(this,arguments);const L=$('#sheet .setl');if(!L||L.querySelector('[data-a=tipst]'))return;
+ const t=L.querySelector('[data-a=tour]'),h=`<button data-a="tipst">${ico('<circle cx="12" cy="11" r="7"/><path d="M12 8v3.5M12 14.5v.01M9.5 20h5"/>')}<span>Tips<small>${S.tipsOff?'Off. Tap to get helpful tips again.':'On. Swell points out features as you need them.'}</small></span></button>`;t?t.insertAdjacentHTML('afterend',h):L.insertAdjacentHTML('beforeend',h)}}
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=tipst]'))return;e.stopImmediatePropagation();S.tipsOff=!S.tipsOff;if(!S.tipsOff)TIPT=0;save();settingsSheet();toast(S.tipsOff?'Tips are off.':'Tips are back on.')},true);
+// the short tour ends by pointing to the full one; ending early lands on that same last card
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=tskip2]');if(!el||typeof MINI!=='undefined'&&MINI||TU==null||TU>=TOUR.length)return;e.stopImmediatePropagation();e.preventDefault();TU=TOUR.length;tourShow()},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=tdone2]');if(!el||typeof MINI!=='undefined'&&MINI)return;if(!TOURESS){S.fullTour=1;save()}},true);
+{const _sw=swapCard;swapCard=function(cd,pos,html,k){if(k==='end'&&!(typeof MINI!=='undefined'&&MINI))html=TOURESS
+  ?`<h2>That’s the essentials</h2><p>Want to see everything? Settings has a full guided tour of every feature. Until then, Swell will point out handy things as you go.</p><button class="btn big on" data-a="tdone2">Let’s go</button>`
+  :`<h2>You’ve seen it all</h2><p>That’s every feature. You can replay this tour any time from Settings.</p><button class="btn big on" data-a="tdone2">Let’s go</button>`;
+ return _sw.call(this,cd,pos,html,k)}}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
