@@ -4043,6 +4043,11 @@ function spRun2(d,finish,rm){
 {const _fk=fxKey;fxKey=function(el){if(el.matches&&el.matches('.wd[data-id]'))return'wd|'+el.dataset.id;return _fk.apply(this,arguments)}}
 // paint water bottles straight after each render, so a new bottle never shows empty for a frame
 {const _r=render;render=function(){_r.apply(this,arguments);try{const tg=btTarget();document.querySelectorAll('svg.btl').forEach(svg=>{const id=svg.dataset.b,b=BT[id]||(BT[id]={lv:tg,v:0,tilt:0,tv:0,amp:.6,bub:[]});btPaint(svg,b,performance.now()/1000)})}catch(_){}}}
+// every caffeine log can be undone from its toast, like water
+{const _ca=cafAdd;cafAdd=function(x){const d=today(),nm=(S.meals&&S.meals[d]||[]).length;_ca.apply(this,arguments);const L=cafLog(d),e=L[L.length-1],tot=L.reduce((a,y)=>a+y.mg,0),lim=cafLim();
+ document.querySelectorAll('.toast:not(.tu2)').forEach(t=>t.remove());
+ toastUndo(tot>lim?`${x.n} added. ${tot} mg today, over your ${lim} mg guide.`:`${x.n} added. ${tot} of ${lim} mg today.`,()=>{const L2=cafLog(d),i=L2.lastIndexOf(e);if(i>=0)L2.splice(i,1);
+  const M=S.meals&&S.meals[d];if(M&&M.length>nm){const m=M.pop();if(m&&m.caf&&d===today())addTot({k:m.k,p:m.p,f:m.f,c:m.c},-1)}save();render();if(FS==='caf')fsr()})}}
 /* ===== v53: no more motion pop-up on every launch ===== */
 // iPhone Home Screen apps forget motion permission each time they're fully closed, so asking on the first tap of every
 // visit made the pop-up keep coming back. Now the light on widget edges drifts slowly by itself, which needs no permission,
