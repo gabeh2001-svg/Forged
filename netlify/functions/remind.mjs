@@ -17,6 +17,10 @@ const MSG = {
   water: () => ['Time for some water', 'Top up your bottle and log it in Swell.'],
   supp: p => [`Supplements: ${clip(p.n, 60) || 'time to take yours'}`, 'Tick them off in Swell once you’ve taken them.'],
   bed: p => ['Time to wind down', p.n ? `Bedtime is ${clip(p.n, 10)}. Put the phone down soon.` : 'Bedtime is coming up. Put the phone down soon.'],
+  cafw: p => ['Coffee time', `Your caffeine window is open. Plan: ${clip(p.n, 12) || 'one coffee'}.`],
+  cafp: p => ['Pre-workout caffeine', `Have it now and it peaks for your session${p.n ? ` (${clip(p.n, 12)})` : ''}.`],
+  cafl: p => ['Last call for caffeine', p.n ? `Anything after ${clip(p.n, 10)} will still be in you at bedtime.` : 'Anything later will still be in you at bedtime.'],
+  mealb: () => ['Log today’s meals', 'A quick catch-up keeps your totals right.'],
   test: () => ['Notifications are working', 'This is how Swell reminders will look.']
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });

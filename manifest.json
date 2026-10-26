@@ -7,12 +7,12 @@
   "theme_color": "#07080d",
   "icons": [
     {
-      "src": "swell-icon-180.png",
+      "src": "swell-icon-180.png?v=3",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "swell-icon-512.png",
+      "src": "swell-icon-512.png?v=3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
