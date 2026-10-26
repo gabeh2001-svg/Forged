@@ -4385,6 +4385,100 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dscgo],[d
   M={...M,n:t.charAt(0).toUpperCase()+t.slice(1),k:Math.round(tot.k),p:Math.round(tot.p),f:Math.round(tot.f),c:Math.round(tot.c)};DSC=null;render();
   setTimeout(()=>{const b=$('#app [data-a=addm]');if(b){b.scrollIntoView({block:'center',behavior:MRM()?'auto':'smooth'});b.animate&&b.animate([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}],{duration:500,delay:250})}toast('Filled in. Check it over, then tap Add meal.')},60)}},true);
 {const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<path d="M4 6h16M4 12h10M4 18h13"/>',h:'Describe a meal',p:'Type something like “large bowl of spaghetti bolognese” in Log a meal. Swell estimates the macros from UK food tables, asks how big it was if you don’t say, and can search shop-bought products too.'})}
+/* ===== v58: steadier taps, calmer tab changes, a dock that stays put, no accidental text selection, Looks and living lights ===== */
+// Research notes for this block:
+// - Tab changes: Apple's tab bars switch instantly, and Material's guidance for moving between top-level pages is a short
+//   "fade through" or a shared-axis slide (about 250 ms), never fading the screen to empty first. So the page now shifts a
+//   few points in the direction of travel and fades from 40%, with no stagger.
+// - The dock: 49% of phone use is one-handed (Hoober 2013, 1,333 observations), so the bottom bar is the anchor the thumb
+//   returns to. It should never move with the page.
+// - Selection: native apps don't let interface text be selected; only things you type into can be. Long-press is reserved
+//   for moving widgets.
+(function(){const st=document.createElement('style');st.textContent=`
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.swgh .card,.swgh .wd,.swgh *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.swgh .card{background-color:rgba(255,255,255,.075)!important}
+.nav{will-change:translate}
+#bgl{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;transition:opacity 1.2s ease}
+#bgl i{position:absolute;border-radius:50%;will-change:transform}
+#bgl.drift i{animation:bgd var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s)}
+@keyframes bgd{0%{transform:translate(0,0) scale(1)}33%{transform:translate(var(--dx1),var(--dy1)) scale(1.05)}66%{transform:translate(var(--dx2),var(--dy2)) scale(.96)}100%{transform:translate(var(--dx3),var(--dy3)) scale(1.03)}}
+@media (prefers-reduced-motion:reduce){#bgl.drift i{animation:none}}
+body.hcompact .grid{gap:10px}body.hcompact .grid .wd{padding:12px;border-radius:24px}body.hcompact #app .card{margin-bottom:10px}
+#lx2 .look{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;color:#fff;font:500 13px/1.2 inherit;font-family:inherit;padding:2px}
+#lx2 .look i{width:62px;height:84px;border-radius:16px;border:1.5px solid rgba(255,255,255,.25);display:block}
+#lx2 .look.on i{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+#lx2 .tgrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 6px}
+#lx2 .tgrow small{display:block;color:var(--dim);font-size:12px;margin-top:2px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. adding coffee or water no longer makes Home jump ---------- */
+// the weekly focus bar was added after each refresh, which pushed everything down for a frame; it's now part of the page itself
+{const _h=home;home=function(){const h=_h.apply(this,arguments);if(ED)return h;let fb='';try{fb=focusBar()}catch(_){}return fb?h.replace('<div class="grid ',fb+'<div class="grid '):h}}
+// one message at a time, so toasts never stack on top of each other
+{const _t=toast;toast=function(m){document.querySelectorAll('.toast').forEach(t=>t.remove());return _t.apply(this,arguments)}}
+{const _tu=toastUndo;toastUndo=function(){document.querySelectorAll('.toast:not(.tu2)').forEach(t=>t.remove());return _tu.apply(this,arguments)}}
+// totals are kept to one decimal place, so they never show as 45.9000001
+{const _a=addTot;addTot=function(x,s){_a.apply(this,arguments);const m=(S.macros||{})[today()];if(m)SZ.forEach(k=>{if(m[k]!=null)m[k]=Math.round(+m[k]*10)/10})}}
+try{Object.values(S.macros||{}).forEach(m=>SZ.forEach(k=>{if(m&&m[k]!=null&&String(m[k]).length>6)m[k]=Math.round(+m[k]*10)/10}))}catch(_){}
+
+/* ---------- 2. tab changes: a short slide in the direction you're going, never a blank screen ---------- */
+let TABFROM=null;
+window.addEventListener('click',e=>{const b=e.target.closest('#app .nav [data-a=tab]');if(b&&b.dataset.i!==tab)TABFROM=tab},true);
+{const _fa=fxApply;fxApply=function(root,pre,same){if(!same&&root&&root.id==='app'&&TABFROM!=null&&!MRM()){const o=[...document.querySelectorAll('#app .nav button[data-i]')].map(b=>b.dataset.i),dir=Math.sign(o.indexOf(tab)-o.indexOf(TABFROM))||1;TABFROM=null;
+  [...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;c.animate([{opacity:.4,transform:`translateX(${dir*18}px)`},{opacity:1,transform:'none'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})});return}
+ TABFROM=null;return _fa.apply(this,arguments)}}
+
+/* ---------- 3. the dock stays where your thumb expects it ---------- */
+// iPhone rubber-bands the whole page past the top and bottom, fixed bar included; this cancels that movement for the dock only
+{let raf=0;const fix=()=>{raf=0;const n=$('#app .nav');if(!n)return;const max=Math.max(0,document.documentElement.scrollHeight-innerHeight),y=scrollY,over=y<0?y:y>max?y-max:0;n.style.translate=over?`0 ${over.toFixed(1)}px`:''};
+ addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(fix)},{passive:true});addEventListener('touchend',()=>setTimeout(fix,0),{passive:true})}
+
+/* ---------- 4. Customise look: designed Looks, living lights, and Home spacing ---------- */
+// Customisation research: fewer than 5% of people change any default (Spool, UIE), so the defaults must already be great;
+// people customise mainly to feel it's theirs (Marathe & Sundar, CHI 2011) and value what they made, but only when they
+// finish it (Norton, Mochon & Ariely 2012); "too many options" barely matters on average (Scheibehenne et al. 2010, d = 0.02)
+// except when there's no obvious best choice. So: a handful of complete Looks made by us, one tap each, with the detailed
+// controls kept for the few who want them.
+const LOOKS=[['night','Night sea','#1f5fff','#0b2a6b','#080b13','topbot','med'],['sunset','Sunset','#ff6a3d','#7a1fa8','#0d0814','corners','med'],['ember','Ember','#b3001b','#2a0008','#080b13','halo','med'],
+ ['forest','Forest','#10b981','#0e7490','#06130e','sides','soft'],['dusk','Dusk','#8b5cf6','#ec4899','#130a1c','flip','med'],['mono','Mono','#9aa3b2','#2a2f3a','#000000','halo','soft']];
+const lookOn=()=>LOOKS.find(L=>S.p===L[2]&&S.s===L[3]&&(S.tone||'#080b13')===L[4]&&(S.lxl||'corners')===L[5]&&(S.lxs||'med')===L[6]&&S.lxm!==1);
+function lookPv(L){const lay=LAY.find(x=>x[0]===L[5])||LAY[0];return`background:${lay[2].map(([x,y,c])=>`radial-gradient(95% 70% at ${x}% ${y}%,${c==='p'?L[2]:L[3]},transparent 72%)`).join(',')},${L[4]}`}
+// the lights now live on their own layer: it stays put while the page scrolls (iPhone ignores fixed backgrounds) and can drift
+function bglPaint(){const LS=S.lights&&S.lights.length?S.lights:defLights();let o=$('#bgl');if(!o){o=document.createElement('div');o.id='bgl';o.setAttribute('aria-hidden','true');document.body.prepend(o)}
+ const W=innerWidth,H=innerHeight,sig=JSON.stringify([LS,S.p,S.s,W,H]);o.classList.toggle('drift',S.lxdrift!==false);
+ const h=new Date().getHours(),dim=S.lxnight===false?1:(h>=22||h<6)?.6:(h>=20||h<7)?.8:1;o.style.opacity=dim;
+ if(o.dataset.sig===sig)return;o.dataset.sig=sig;
+ o.innerHTML=LS.map((l,i)=>{const rx=l.r/100*W,ry=l.r*.7/100*H,cx=l.x/100*W,cy=l.y/100*H,a=Math.min(W,H)*.06,ph=i*7.3;
+  const v=(k,m)=>`${(Math.sin(ph+k)*a*m).toFixed(0)}px`;
+  return`<i style="left:${(cx-rx).toFixed(0)}px;top:${(cy-ry).toFixed(0)}px;width:${(rx*2).toFixed(0)}px;height:${(ry*2).toFixed(0)}px;background:radial-gradient(closest-side,color-mix(in srgb,${lcol(l.c)} ${l.a}%,transparent),transparent 62%);--d:${(28+i*9)}s;--dl:-${(i*11)}s;--dx1:${v(1,1)};--dy1:${v(2,.8)};--dx2:${v(3,-1)};--dy2:${v(4,.9)};--dx3:${v(5,.7)};--dy3:${v(6,-.8)}"></i>`}).join('')}
+{const _al=applyLights;applyLights=function(){_al.apply(this,arguments);try{const R=document.documentElement.style;R.setProperty('--g1',lcol('p'));R.setProperty('--g2',lcol('s'));document.documentElement.style.background=S.tone||'#080b13';document.body.style.background='transparent';document.body.style.backgroundAttachment='';bglPaint()}catch(_){}return true}}
+addEventListener('resize',()=>{try{bglPaint()}catch(_){}});setInterval(()=>{try{bglPaint()}catch(_){}},10*60e3);
+document.addEventListener('visibilitychange',()=>{const o=$('#bgl');if(o)o.style.animationPlayState=document.hidden?'paused':'';if(!document.hidden)try{bglPaint()}catch(_){}});
+const homeSp=()=>document.body.classList.toggle('hcompact',S.hsp==='compact');
+{const _r=render;render=function(){_r.apply(this,arguments);try{homeSp()}catch(_){}}}
+// the Customise look bar gains a Looks tab first, and Background moves into "More" with Home spacing
+{const _r2=lx2r;lx2r=function(){if(!LX2.tab||LX2.tab==='col'&&!LX2.seen){LX2.tab='look';LX2.seen=1}
+ if(LX2.tab!=='look'&&LX2.tab!=='more'){_r2.apply(this,arguments);const o=$('#lx2');if(!o)return;
+  const tabs=o.querySelector('.tabs');if(tabs)tabs.innerHTML=lxTabs();
+  if(LX2.tab==='lit'){const b=o.querySelector('.lxb>div');if(b)b.insertAdjacentHTML('beforeend',`<div class="tgrow"><span>Drift slowly<small>The lights move very gently, like daylight</small></span><button class="tg ${S.lxdrift!==false?'on':''}" data-a="lxdrift" role="switch" aria-checked="${S.lxdrift!==false}" aria-label="Drift slowly"></button></div><div class="tgrow"><span>Softer at night<small>Dims a little in the evening and overnight</small></span><button class="tg ${S.lxnight!==false?'on':''}" data-a="lxnight" role="switch" aria-checked="${S.lxnight!==false}" aria-label="Softer at night"></button></div>`)}
+  return}
+ let o=$('#lx2');if(!o){_r2.apply(this,arguments);o=$('#lx2')}const cur=lookOn();let body='';
+ if(LX2.tab==='look')body=`<p class="lab">Looks made for Swell. Tap one to try it.</p><div class="rowx">${LOOKS.map(L=>`<button class="look ${cur&&cur[0]===L[0]?'on':''}" data-a="lxlook" data-i="${L[0]}"><i style="${lookPv(L)}"></i>${esc(L[1])}</button>`).join('')}</div>`;
+ else body=`<p class="lab">Background</p><div class="rowx">${TONES.map(t=>`<button class="ch ${(S.tone||'#080b13')===t[1]?'on':''}" data-a="lx2tone" data-i="${t[1]}"><span class="dot" style="background:${t[1]}"></span>${t[0]}</button>`).join('')}</div>
+  <p class="lab">Home spacing</p><div class="rowx">${[['comfy','Comfortable'],['compact','Compact']].map(([k,n])=>`<button class="ch ${(S.hsp||'comfy')===k?'on':''}" data-a="lxsp" data-i="${k}" style="padding-left:14px">${n}</button>`).join('')}</div>`;
+ const keepMin=o.classList.contains('min');o.innerHTML=`<div class="lxh"><div class="tabs" role="tablist">${lxTabs()}</div><button class="mini" data-a="lx2exp"><i style="background:linear-gradient(135deg,${lcol('p')},${lcol('s')})"></i><span>Customise look<small>Scroll to preview. Tap here to keep editing.</small></span></button><button class="dn" data-a="lx2done">Done</button></div><div class="lxb"><div>${body}</div></div>`;if(keepMin)o.classList.add('min');applyBg()}}
+function lxTabs(){return[['look','Looks'],['col','Colours'],['lit','Lights'],['more','More']].map(x=>`<button role="tab" aria-selected="${LX2.tab===x[0]}" class="${LX2.tab===x[0]?'on':''}" data-a="lx2tab" data-i="${x[0]}">${x[1]}</button>`).join('')}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lxlook],[data-a=lxsp],[data-a=lxdrift],[data-a=lxnight]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='lxlook'){const L=LOOKS.find(x=>x[0]===el.dataset.i);if(!L)return;S.p=L[2];S.s=L[3];S.tone=L[4];S.lxl=L[5];S.lxs=L[6];S.lxm=0;LX2.cust=false;lx2Lights();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
+ if(a==='lxsp'){S.hsp=el.dataset.i}
+ if(a==='lxdrift'){S.lxdrift=S.lxdrift===false}
+ if(a==='lxnight'){S.lxnight=S.lxnight===false}
+ save();render();applyBg();try{bglPaint()}catch(_){}lx2r()},true);
+try{applyBg();homeSp()}catch(_){}
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push(
+ {i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z"/>',h:'Looks, and lights that drift',p:'Customise look now starts with six Looks made for Swell. The lights stay put as you scroll, drift very slowly, and soften at night. Compact spacing is under More.'},
+ {i:'<path d="M5 12h14M13 6l6 6-6 6"/>',h:'Smoother all round',p:'Tabs slide gently instead of blinking, the bottom bar stays still when you pull past the end of a page, and holding the screen no longer selects text.'})}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
