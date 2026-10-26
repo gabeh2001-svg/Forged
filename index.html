@@ -3998,31 +3998,35 @@ function splash(){if(document.getElementById('splash'))return;
 document.addEventListener('visibilitychange',()=>{try{if(document.hidden){localStorage.setItem('swDay',realToday());return}if(localStorage.getItem('swDay')!==realToday())splash()}catch(_){}});
 function spRun2(d,finish,rm){
  // Just the written logo: the letters arrive, fill halfway with water that keeps a gentle wave, hold, then lift away as Home rises in.
- // Each letter is drawn twice, white and then blue clipped to the water, instead of using a mask: iPhone redraws masked
- // text only inside the letter's normal height, which chopped the tops off the curly l's.
- const W=innerWidth,H=innerHeight,CX=W/2,CY=Math.round(H*.46),NS='http://www.w3.org/2000/svg',svg=d.querySelector('svg');
- svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('overflow','visible');d.querySelector('.qglo').remove();
+ // The word is ordinary page text, not SVG: iPhone only repaints moving SVG text inside the letters' normal height, which chopped
+ // the tops off the curly l's. Each letter also gets generous padding so the water and the curls always have room.
+ const W=innerWidth,H=innerHeight,FS=Math.round(Math.min(W*.24,104)),PAD=Math.round(FS*.5);
+ d.querySelector('svg').remove();d.querySelector('.qglo').remove();
  const clamp=v=>v<0?0:v>1?1:v,lerp=(a,b,k)=>a+(b-a)*k,eo=k=>1-Math.pow(1-k,3),ei=k=>k*k*k,seg=(t,a,b)=>clamp((t-a)/(b-a));
- const FS=Math.round(Math.min(W*.24,104)),font=`font-family="Fraunces, Georgia, serif" font-style="italic" font-weight="700" font-size="${FS}" style="font-variation-settings:'SOFT' 100,'WONK' 1,'opsz' 144"`;
- svg.innerHTML=`<defs><linearGradient id="spSea" gradientUnits="userSpaceOnUse" x1="0" y1="${CY-FS*.5}" x2="0" y2="${CY+FS*.5}"><stop offset="0" stop-color="#8fe3ff"/><stop offset="1" stop-color="#3b82ff"/></linearGradient>
-  <clipPath id="spWc" clipPathUnits="userSpaceOnUse"><path id="spWp"/></clipPath></defs><g id="spLet" ${font}></g>`;
- const gL=svg.querySelector('#spLet'),wp=svg.querySelector('#spWp');
- const tmp=document.createElementNS(NS,'text');tmp.textContent='swell';tmp.setAttribute('text-anchor','middle');tmp.setAttribute('x',CX);const base=CY+FS*.32;tmp.setAttribute('y',base);gL.appendChild(tmp);
- const X=[0,1,2,3,4].map(i=>tmp.getStartPositionOfChar(i).x),wb=tmp.getBBox();tmp.remove();
- const L=X.map((x,i)=>{const g=document.createElementNS(NS,'g');g.innerHTML=`<text x="${x}" y="${base}" fill="#f4f6fb">${'swell'[i]}</text><text x="${x}" y="${base}" fill="url(#spSea)" clip-path="url(#spWc)">${'swell'[i]}</text>`;gL.appendChild(g);return g});
- const lvBot=base+8,lvMid=base-FS*.22,x0=wb.x-30,x1=wb.x+wb.width+30;
- const surf=(lv,A,ph)=>{let s='';for(let x=x0;x<=x1+4;x+=4){const y=lv+A*Math.sin(x*.05+ph)+A*.4*Math.sin(x*.11-ph*1.3);s+=(s?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}return s};
+ // one wave tile: transparent above the surface, sea gradient below; repeated sideways and slid along for movement
+ const PER=Math.round(FS*1.1),TH=FS*4,wave=A=>{let p=`M0 ${A*2}`;for(let x=0;x<=PER;x+=PER/16)p+=` L${x.toFixed(1)} ${(A*2+A*Math.sin(x/PER*Math.PI*2)).toFixed(2)}`;
+  return`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${PER}' height='${TH}' viewBox='0 0 ${PER} ${TH}' preserveAspectRatio='none'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#8fe3ff'/><stop offset='.11' stop-color='#3b82ff'/><stop offset='1' stop-color='#2a5fe0'/></linearGradient></defs><path d='${p} L${PER} ${TH} L0 ${TH}Z' fill='url(#g)'/></svg>`)}")`};
+ const WV=[wave(FS*.07),wave(FS*.03)];
+ const w=document.createElement('div');w.className='spw';w.setAttribute('aria-hidden','true');
+ Object.assign(w.style,{position:'absolute',left:0,right:0,top:Math.round(H*.46-FS*.62)+'px',display:'flex',justifyContent:'center',pointerEvents:'none',
+  font:`italic 700 ${FS}px/1.2 Fraunces, Georgia, serif`,fontVariationSettings:"'SOFT' 100,'WONK' 1,'opsz' 144",whiteSpace:'pre'});
+ w.innerHTML=[...'swell'].map(c=>`<span style="display:inline-block;padding:${PAD}px ${Math.round(PAD*.5)}px;margin:-${PAD}px -${Math.round(PAD*.5)}px;color:transparent;-webkit-background-clip:text;background-clip:text;background-repeat:repeat-x,no-repeat;will-change:transform,opacity;opacity:0">${c}</span>`).join('');
+ d.appendChild(w);const L=[...w.children],box0=w.getBoundingClientRect();
+ const lx=L.map(s=>s.getBoundingClientRect().left-box0.left),sh=L[0].getBoundingClientRect().height;
+ // where the water sits inside each letter box: the baseline is about 78% down a 1.2 line height, then the padding
+ const base=PAD+FS*.96,lvBot=base+FS*.06,lvMid=base-FS*.24;
+ const paint=(lv,ph,A)=>{L.forEach((s,i)=>{const x=-(lx[i]+ph*PER)%PER;s.style.backgroundImage=`${WV[A]},linear-gradient(#f4f6fb,#f4f6fb)`;
+  s.style.backgroundSize=`${PER}px ${TH}px,100% 100%`;s.style.backgroundPosition=`${x.toFixed(1)}px ${(lv-FS*.14).toFixed(1)}px,0 0`})};
  const kids=()=>[...document.querySelectorAll('#app > *')];let shown=false;
  // timeline in ms: letters in 60 ms apart, water fills, a hold so the name registers, then a quicker exit than entrance
  const IN0=160,FILL0=380,FILL1=1650,EXIT=2600,END=3500;
- if(rm){L.forEach(g=>g.setAttribute('opacity',1));wp.setAttribute('d',`M${x0} ${lvMid}H${x1}V${H}H${x0}Z`);
+ if(rm){L.forEach(s=>s.style.opacity=1);paint(lvMid,0,1);
   setTimeout(()=>{document.body.classList.remove('spon');d.animate([{opacity:1},{opacity:0}],{duration:400,fill:'forwards'}).onfinish=finish},1000);return}
  const t0=performance.now();
- const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0,ph=t/1000*3.2;
-  L.forEach((g,i)=>{const a=eo(seg(t,IN0+i*60,IN0+i*60+600)),b=ei(seg(t,EXIT+i*30,EXIT+i*30+260)),dy=(1-a)*12-b*14;
-   g.setAttribute('opacity',(a*(1-b)).toFixed(3));g.querySelectorAll('text').forEach(e=>e.setAttribute('y',(base+dy).toFixed(2)))});
-  const f=eo(seg(t,FILL0,FILL1)),lv=lerp(lvBot,lvMid,f),A=lerp(6,2.2,f);
-  wp.setAttribute('d',surf(lv,A,ph)+`L${x1} ${H}L${x0} ${H}Z`);
+ const frame=now=>{if(!d.isConnected||d.dataset.out)return;const t=now-t0;
+  L.forEach((s,i)=>{const a=eo(seg(t,IN0+i*60,IN0+i*60+600)),b=ei(seg(t,EXIT+i*30,EXIT+i*30+260)),dy=(1-a)*12-b*14;
+   s.style.opacity=(a*(1-b)).toFixed(3);s.style.transform=`translate3d(0,${dy.toFixed(2)}px,0)`});
+  const f=eo(seg(t,FILL0,FILL1));paint(lerp(lvBot,lvMid,f),t/2600,f<.6?0:1);
   d.querySelector('.qbg').style.opacity=(1-eo(seg(t,EXIT+360,EXIT+760))).toFixed(3);
   if(t>EXIT+400&&!shown){shown=true;document.body.classList.remove('spon');kids().forEach((e,i)=>e.animate&&e.animate([{opacity:0,transform:'translateY(22px) scale(.985)'},{opacity:1,transform:'none'}],{duration:640,delay:i*50,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))}
   if(t>END){d.dataset.done=1;d.remove();return}
