@@ -4988,6 +4988,14 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wutog]');
  {i:'<path d="M4 20h16M6 20V10a6 6 0 0 1 12 0v10"/><path d="M9 14h6"/>',h:'Recipes',p:'Build a meal from its ingredients once, then log a serving in one tap.'},
  {i:'<path d="M12 21c-4-3-7-7-7-11a7 7 0 0 1 14 0c0 4-3 8-7 11z"/><path d="M12 7v9"/>',h:'Fibre',p:'Fibre now comes through from the food tables, barcodes and your own entries, with the UK’s 30 g a day on the Today card.'})}
 
+/* ---------- v65: Customise look keeps one height, so the tabs never move ---------- */
+// web.dev (Cumulative Layout Shift): unexpected shifts lead people "to click the wrong link or button". The panel sits on the
+// bottom edge, so a shorter tab used to pull the tab row down under your finger. Every tab now gets the height of the tallest.
+{const _l=lx2r;lx2r=function(){_l.apply(this,arguments);const o=$('#lx2');if(!o||!o.querySelector('.lxb>div'))return;
+ if(!LX2.hm||LX2.hmW!==innerWidth){const cur=LX2.tab;LX2.seen=1;let m=0;LX2.hm=1;
+  for(const id of ['look','col','lit','more']){LX2.tab=id;_l.apply(this,arguments);const bb=$('#lx2 .lxb>div');if(bb){bb.style.minHeight='';m=Math.max(m,bb.scrollHeight)}}
+  LX2.tab=cur;_l.apply(this,arguments);LX2.hm=m;LX2.hmW=innerWidth}
+ const bb=$('#lx2 .lxb>div');if(bb){bb.style.minHeight=LX2.hm+'px';if(bb.scrollHeight>LX2.hm+1)LX2.hm=bb.scrollHeight}}}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
