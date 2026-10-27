@@ -4996,6 +4996,26 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wutog]');
   for(const id of ['look','col','lit','more']){LX2.tab=id;_l.apply(this,arguments);const bb=$('#lx2 .lxb>div');if(bb){bb.style.minHeight='';m=Math.max(m,bb.scrollHeight)}}
   LX2.tab=cur;_l.apply(this,arguments);LX2.hm=m;LX2.hmW=innerWidth}
  const bb=$('#lx2 .lxb>div');if(bb){bb.style.minHeight=LX2.hm+'px';if(bb.scrollHeight>LX2.hm+1)LX2.hm=bb.scrollHeight}}}
+/* ---------- v66: Customise look shows every option at once, in tidy grids, instead of rows that scroll sideways ---------- */
+// With a fixed height (v65) the short tabs looked empty. Laying the options out as grids uses that space and shows everything
+// without swiping; items off the edge of a sideways row are easily missed (Queensland Government design system, "The case
+// against carousels": 89% of clicks go to the first item, later ones are "easily overlooked").
+(function(){const st=document.createElement('style');st.textContent=`
+#lx2 .lxb .rowx{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:8px;overflow:visible;padding:10px 2px 4px}
+#lx2 .lxb .rowx:has(.look){--cols:3;gap:10px}
+#lx2 .lxb .rowx:has([data-a=lx2str]),#lx2 .lxb .rowx:has([data-a=lx2tone]){--cols:3}
+#lx2 .lxb .rowx .ch{min-width:0;width:100%;justify-content:flex-start;overflow:hidden}
+#lx2 .lxb .rowx:has([data-a=lx2str]) .ch{justify-content:center;padding:10px 8px!important}
+#lx2 .lxb .rowx .ch>:not(.dot):not(.pv):not(input){overflow:hidden;text-overflow:ellipsis}
+#lx2 .lxb .look{width:100%;padding:0}
+#lx2 .lxb .look i{width:100%;height:auto;aspect-ratio:1/1.05;border-radius:18px}
+#lx2 .lxb .rowx:has([data-a=lx2pre]),#lx2 .lxb .rowx:has([data-a=lx2tone]){--cols:3}
+#lx2 .lxb .rowx:has([data-a=lx2lay]){--cols:5;gap:6px}
+#lx2 .lxb .rowx:is(:has([data-a=lx2pre]),:has([data-a=lx2tone]),:has([data-a=lx2lay])) .ch{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;padding:6px 6px 8px!important;border-radius:16px;white-space:normal;text-align:center;font-size:13px;line-height:1.15}
+#lx2 .lxb .rowx:is(:has([data-a=lx2pre]),:has([data-a=lx2tone])) .ch .dot{width:100%;height:40px;border-radius:11px}
+#lx2 .lxb .rowx:has([data-a=lx2lay]) .ch{font-size:11.5px;padding:5px 4px 7px!important;border-radius:14px}
+#lx2 .lxb .rowx:has([data-a=lx2lay]) .ch .pv{width:100%;height:auto;aspect-ratio:3/4;border-radius:9px}
+`;document.head.appendChild(st)})();
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
