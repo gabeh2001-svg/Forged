@@ -398,7 +398,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  else if(a==='edone')ED=false;
  else if(a==='editp'){const p=S.plans.find(q=>q.id===i);D=JSON.parse(JSON.stringify(p));D.total=D.days.length;D.sel=0;D.eid=p.id;X={eq:'Bar',t:'Target Reps',bar:20}}
  else if(a==='xedit'){X={...D.days[D.sel].ex[+i],ei:+i}}
- else if(a==='addx2'){if(X.t==='Rep Range')X.v=(X.v1&&X.v2)?X.v1+'-'+X.v2:'';if(X.t==='Until Failure')X.v='';if(!X.n||!X.s||(!X.v&&X.t!=='Until Failure')){X.err='Exercise name, sets and '+(X.t==='Time Under Tension'?'seconds':'reps')+' are all required.'}else{const ex={n:X.n,t:X.t,s:X.s,v:X.v,eq:X.eq,bar:X.bar,w:X.w,o:X.o,ro:X.ro,g:X.g,act:X.act,mode:X.mode,dist:X.dist,int:X.int,wk:X.wk,rs:X.rs,rd:X.rd},L=D.days[D.sel].ex;X.ei!=null?L[X.ei]=ex:L.push(ex);X={eq:X.eq,t:X.t,bar:X.bar}}}
+ else if(a==='addx2'){if(X.t==='Rep Range')X.v=(X.v1&&X.v2)?X.v1+'-'+X.v2:'';if(X.t==='Until Failure')X.v='';if(!X.n||!X.s||(!X.v&&X.t!=='Until Failure')){X.err='Exercise name, sets and '+(X.t==='Time Under Tension'?'seconds':'reps')+' are all required.'}else{const ex={n:X.n,t:X.t,s:X.s,v:X.v,eq:X.eq,bar:X.bar,w:X.w,o:X.o,ro:X.ro,g:X.g,act:X.act,mode:X.mode,dist:X.dist,int:X.int,wk:X.wk,rs:X.rs,rd:X.rd,eff:X.eff,laps:X.laps,pool:X.pool},L=D.days[D.sel].ex;X.ei!=null?L[X.ei]=ex:L.push(ex);X={eq:X.eq,t:X.t,bar:X.bar}}}
  else if(a==='conf2'){if(!D.name||!D.days.some(d=>d.ex.length)){D.err='Name the plan and add at least one exercise.'}else{D.err='';const old=D.eid&&S.plans.find(p=>p.id===D.eid),plan={id:D.eid||'p'+Date.now(),name:D.name,perWeek:D.perWeek||1,days:D.days,cur:old?Math.min(old.cur,D.days.length-1):0},ov=$('#ov'),q=$('#q');ov.classList.add('on');let n=Math.floor(Math.random()*QUOTES.length);q.textContent=QUOTES[n];const tm=setInterval(()=>{q.textContent=QUOTES[++n%QUOTES.length]},30000);setTimeout(()=>{clearInterval(tm);ov.classList.remove('on');old?S.plans.splice(S.plans.indexOf(old),1,plan):S.plans.push(plan);if(!S.active)S.active=plan.id;D=null;save();render()},3600);return}}
  else return;save();render()});
 /* ---------- v3: Diet, Timer, widget remove/add ---------- */
@@ -2183,17 +2183,17 @@ async function budCheck(force){if(!BUD_SITE||BUDBUSY||!navigator.onLine)return;c
   swTell({t:'metered',b:met.b,r:met.r});S.budFn=0;S.budOpens=0;const before=lv;
   S.bud={lv:Math.max(0,Math.min(3,j.lv|0)),t:Date.now(),m:j.month||monthNow(),left:j.left,err:j.err?1:0};save();swTell({t:'lv',lv:S.bud.lv});
   if(S.bud.lv>before&&S.bud.lv>=1&&!S.budSeen)S.budSeen=S.bud.m+':'+S.bud.lv;
-  if(S.bud.lv<2&&S.remHold){S.remHold=0;save();try{remSync(true)}catch(_){}}}
+  if(S.bud.lv<3&&S.remHold){S.remHold=0;save();try{remSync(true)}catch(_){}}}
  catch(_){}finally{BUDBUSY=false}}
 setTimeout(()=>budCheck(),4000);setInterval(()=>budCheck(),6*36e5);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)budCheck()});
 // the brakes
-if(typeof remSync==='function'){const _rs=remSync;remSync=function(){if(budLv()>=2){S.remHold=1;save();return Promise.resolve()}return _rs.apply(this,arguments)}}
-if(typeof restPush==='function'){const _rp=restPush;restPush=function(){if(budLv()>=1)return Promise.resolve();return _rp.apply(this,arguments)}}
+if(typeof remSync==='function'){const _rs=remSync;remSync=function(){if(budLv()>=3){S.remHold=1;save();return Promise.resolve()}return _rs.apply(this,arguments)}}
+if(typeof restPush==='function'){const _rp=restPush;restPush=function(){if(budLv()>=3)return Promise.resolve();return _rp.apply(this,arguments)}}
 {const _sf=scanFx;scanFx=function(src){if(budLv()<2)return _sf.apply(this,arguments);
  Promise.resolve(window.caches?caches.match(new URL('ocr/eng.traineddata',location.href).href):null).then(hit=>{if(hit||OCRW)return _sf.call(this,src);toast('Label scanning is resting until the new month to keep Swell online. You can type the numbers in for now.')}).catch(()=>_sf.call(this,src))}}
 const NEXT1=()=>{const st=new Date(monthNow()+'T12:00:00Z');return new Date(Date.UTC(st.getUTCFullYear(),st.getUTCMonth()+1,RESET_DAY,12)).toLocaleDateString('en-GB',{day:'numeric',month:'short'})};
-const budNote=()=>{const lv=budLv();if(!lv)return'';const what=['','rest-timer alerts are off and updates arrive a little slower','new reminders are paused and updates arrive a little slower','reminders and updates are paused'][lv];
+const budNote=()=>{const lv=budLv();if(!lv)return'';const what=['','updates arrive a little slower','updates arrive a little slower and label scanning rests on phones that haven’t used it yet','reminders and updates are paused'][lv];
  return`<div class="npst budn"><i style="background:var(--A)"></i><span>Saver mode is on until ${NEXT1()}: ${what}, so Swell stays online. Everything else works as normal.</span></div>`};
 {const _sh=sheet;sheet=function(h){_sh.apply(this,arguments);try{if(!h||!budLv())return;const o=$('#sheet .mwc'),t=o&&o.querySelector('h2');if(t&&/^(Settings|Notifications)$/.test(t.textContent.trim())&&!o.querySelector('.budn'))t.insertAdjacentHTML('afterend',budNote())}catch(_){}}}
 /* ===== v39: clearer widget moving and resizing, a bar behind the status bar, tidier totals, delete anything with undo ===== */
@@ -5090,6 +5090,101 @@ document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||!/^X\.(dur
   if(AW.ph==='begin'||AW.ph==='set'){const k=cKcal(e),sm=o.querySelector('.big2+small');if(k!=null&&sm&&!sm.dataset.k){sm.dataset.k=1;sm.insertAdjacentHTML('afterend',`<small class="awlt">About ${k} kcal for you</small>`)}}}catch(_){}}}
 {const _c=completeSet;completeSet=function(now){const x=AW&&AW.d.ex[AW.e];const r=_c.apply(this,arguments);try{if(x&&x.eq==='Cardio'){const k=cKcal(x);if(k!=null){const d=today();(S.burn=S.burn||{})[d]=(+S.burn[d]||0)+k;save();setTimeout(()=>toast(`Nice. About ${k} kcal burned on that ${x.act==='Horse riding'?'ride':(x.act||'session').toLowerCase()}.`),400)}}}catch(_){}return r}}
 {const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<path d="M4 20c2-6 6-9 11-9l3-4 2 1-1 4c0 4-2 7-5 8"/><path d="M8 20v-4M15 20v-3"/>',h:'Horse riding, and calories for cardio',p:'Horse riding and walking are now in cardio. Just add how long you rode and your pace. Every cardio session shows roughly how many calories it burns for you.'})}
+/* ---------- v71: effort for every cardio activity, swim laps, log a session afterwards, burned today, and the new-icon guide ---------- */
+// Effort levels use Compendium of Physical Activities values (Ainsworth et al., 2011 and 2024 updates) for light, moderate and
+// vigorous versions of each activity, e.g. swimming leisurely 6.0, freestyle moderate 8.3, vigorous 9.8; stationary bike 4.8 / 6.8 / 8.8;
+// rowing machine 4.8 / 7.0 / 8.5; elliptical 4.0 / 5.0 / 6.8. kcal ≈ MET × kg × hours (1 MET ≈ 1 kcal/kg/h).
+// When a distance and time are given for running, walking or cycling, real speed is used instead (ACSM equations, as in v70).
+// New icon: iPhone keeps the icon a Home Screen app was added with, and each Home Screen app has its own storage
+// (WebKit bug 181849), so the guide walks through back up, re-add, restore. "x-safari-https://" opens Safari itself from a
+// Home Screen app (tested on iOS 15, 17 and 18). Android updates installed app icons by itself (web.dev, manifest updates), so it isn't shown there.
+(function(){const st=document.createElement('style');st.textContent=`
+#sheet .clg .fopt button{padding:10px 14px}#sheet .clg .row{gap:10px}
+#sheet .nis ol{padding-left:0;list-style:none;margin:10px 0}#sheet .nis li{display:flex;gap:12px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
+#sheet .nis li:first-child{border-top:0}#sheet .nis li span.n{flex:none;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;font-weight:700;font-size:13px}
+#sheet .nis li b{display:block}#sheet .nis li small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+#sheet .nis .btn{margin:8px 0 0}#sheet .nis a.btn{display:inline-flex;text-decoration:none;justify-content:center}
+.clr{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.08);font-size:14px}.clr:first-of-type{border-top:0}.clr small{color:var(--dim)}`;document.head.appendChild(st)})();
+
+/* --- 1. effort for every activity --- */
+const EFF=[['Easy','Easy, could chat'],['Moderate','Moderate, a bit out of breath'],['Hard','Hard, can’t talk much']];
+const EMET={Treadmill:[7,9,11],'Exercise bike':[4.8,6.8,8.8],Rower:[4.8,7,8.5],'Cross trainer':[4,5,6.8],'Stair climber':[6,8.8,10],'Ski erg':[5,7,9],'Outdoor run':[7,9,11],'Outdoor cycle':[5.8,7.5,10],Swim:[6,8.3,9.8],Skipping:[8.8,11.8,12.3],Walk:[2.8,3.5,5],Other:[3.5,5,7]};
+const effI=e=>Math.max(0,EFF.findIndex(x=>x[0]===(e.eff||'Moderate')));
+{const _m=cMet;cMet=function(e){const a=e.act||'Other';if(a==='Horse riding')return _m.apply(this,arguments);
+ const min=+e.v||0,km=+e.dist||(e.act==='Swim'&&+e.laps?(+e.laps)*(+e.pool||25)/1000:0);
+ if(km>0&&min>0&&/Treadmill|Outdoor run|Walk|Outdoor cycle/.test(a))return _m.call(this,{...e,dist:km});
+ return(EMET[a]||EMET.Other)[effI(e)]}}
+// swim: laps and pool length instead of km; every other activity gets an effort choice
+{const _cf=cardioFields;cardioFields=function(){let h=_cf.apply(this,arguments);const act=X.act||'Treadmill',iv=(X.mode||'Steady')==='Intervals';if(act==='Horse riding')return h;
+ const eff=`<label>How hard?<select data-b="X.eff" data-r>${EFF.map(([k,l])=>`<option value="${k}" ${(X.eff||'Moderate')===k?'selected':''}>${l}</option>`).join('')}</select></label>`;
+ if(act==='Swim')h=h.replace(/<label>Distance \(km, optional\)<input[^>]*><\/label>/,`<label>Laps (optional)<input type="number" inputmode="numeric" data-b="X.laps" value="${esc(X.laps??'')}"></label></div><div class="row"><label>Pool<select data-b="X.pool" data-r>${[25,33,50,20].map(p=>`<option value="${p}" ${(+X.pool||25)===p?'selected':''}>${p} m</option>`).join('')}</select></label><label style="visibility:hidden"> <input disabled></label>`);
+ if(act==='Swim')h=h.replace(/<label>Speed, incline or level \(optional\)<input[^>]*><\/label>/,'');if(!iv)h=h.replace('<p class="sm cfk"',eff+'<p class="sm cfk"');
+ if(!X.eff)X.eff='Moderate';return h.replace(/<p class="sm cfk"[^>]*>[^<]*<\/p>/,`<p class="sm cfk" style="margin:6px 2px 12px">${cKcalTxt({...X,v:X.dur??X.v,act})}</p>`)}}
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||t.dataset.b!=='X.laps')return;setTimeout(()=>{const c=$('.cfk');if(c)c.textContent=cKcalTxt({...X,v:X.dur??X.v,act:X.act||'Treadmill'})},0)});
+{const _eb=exBlock;exBlock=function(e){let h=_eb.apply(this,arguments);if(e.eq!=='Cardio'||e.act==='Horse riding'||e.mode==='Intervals')return h;
+ const add=[];if(e.act==='Swim'&&+e.laps)add.push(['Laps',`${e.laps} × ${+e.pool||25} m (${(+e.laps*(+e.pool||25)/1000).toFixed(2).replace(/0$/,'')} km)`]);add.push(['Effort',(EFF[effI(e)]||EFF[1])[0]]);
+ return h.replace('<dt>Burns</dt>',add.map(x=>`<dt>${x[0]}</dt><dd>${x[1]}</dd>`).join('')+'<dt>Burns</dt>')}}
+
+/* --- 2. log a session you've already done (swimming, a ride, a run without your phone) --- */
+let CL=null;
+function clSheet(){const c=CL,iv=false,act=c.act,ride=act==='Horse riding',swim=act==='Swim',k=cKcal({...c,eq:'Cardio',v:c.min});
+ sheet(`<div class="clg"><h2>Log a session</h2><p class="sm" style="margin:0 0 8px">For workouts you did without your phone. Roughly is fine.</p>
+ <label>Activity<select data-cl="act">${CARDIO.map(x=>`<option ${x===act?'selected':''}>${x}</option>`).join('')}</select></label>
+ <div class="row"><label>How long (min)<input type="number" inputmode="numeric" data-cl="min" value="${esc(c.min??'')}" placeholder="40"></label>
+ ${swim?`<label>Laps (optional)<input type="number" inputmode="numeric" data-cl="laps" value="${esc(c.laps??'')}"></label>`:`<label>Distance (km, optional)<input type="number" inputmode="decimal" step="0.1" data-cl="dist" value="${esc(c.dist??'')}"></label>`}</div>
+ ${swim?`<div class="chips" style="padding:0 0 4px">${[25,33,50].map(p=>`<button class="chip ${(+c.pool||25)===p?'on':''}" data-a="clpool" data-i="${p}">${p} m pool</button>`).join('')}</div>`:''}
+ <p class="sm" style="margin:10px 2px 0"><b>${ride?'Pace':'How hard was it?'}</b></p><div class="fopt">${(ride?RIDE.map(r=>[r[0],r[1]]):EFF).map(([key,l])=>{const on=(ride?(c.int||'Mixed'):(c.eff||'Moderate'))===key;return`<button class="${on?'on':''}" data-a="cleff" data-i="${key}"><span><b>${esc(l)}</b></span>${on?'<span aria-hidden="true">✓</span>':''}</button>`}).join('')}</div>
+ <p class="sm clk" style="margin:0 2px 10px">${k!=null?`About <b>${k} kcal</b> burned`:cKcalTxt({act,v:0})||'Add how long it lasted.'}</p>
+ <button class="btn big on" data-a="clsave" ${+c.min>0?'':'disabled'}>Log it</button><button class="btn big" data-a="shx">Cancel</button></div>`)}
+const clUpd=()=>{const c=CL;if(!c)return;const k=cKcal({...c,eq:'Cardio',v:c.min}),p=$('#sheet .clk'),b=$('#sheet [data-a=clsave]');if(p)p.innerHTML=k!=null?`About <b>${k} kcal</b> burned`:(cKcalTxt({act:c.act,v:0})||'Add how long it lasted.');if(b)b.disabled=!(+c.min>0)};
+document.addEventListener('input',e=>{const t=e.target;if(!CL||!t.dataset||!t.dataset.cl)return;CL[t.dataset.cl]=t.dataset.cl==='act'?t.value:t.value;if(t.dataset.cl==='act'){CL.eff=CL.eff||'Moderate';return clSheet()}clUpd()});
+document.addEventListener('change',e=>{const t=e.target;if(CL&&t.dataset&&t.dataset.cl==='act'){CL.act=t.value;clSheet()}});
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=clopen],[data-a=cleff],[data-a=clpool],[data-a=clsave],[data-a=cldel]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='clopen'){CL={act:'Swim',eff:'Moderate',pool:25};return clSheet()}
+ if(a==='cleff'){if(CL.act==='Horse riding')CL.int=el.dataset.i;else CL.eff=el.dataset.i;return clSheet()}
+ if(a==='clpool'){CL.pool=+el.dataset.i;return clSheet()}
+ if(a==='cldel'){const d=today(),L=(S.clog||{})[d]||[],x=L[+el.dataset.i];if(x){L.splice(+el.dataset.i,1);S.burn[d]=Math.max(0,(+S.burn[d]||0)-(+x.k||0));save();render()}return}
+ const c=CL,min=+c.min;if(!(min>0))return;const ex={eq:'Cardio',act:c.act,v:min,dist:+c.dist||0,laps:+c.laps||0,pool:+c.pool||25,eff:c.eff,int:c.int};const k=cKcal(ex)||0,d=today();
+ ((S.clog=S.clog||{})[d]=S.clog[d]||[]).push({act:c.act,min,dist:ex.dist||undefined,laps:ex.laps||undefined,pool:ex.laps?ex.pool:undefined,eff:c.act==='Horse riding'?(c.int||'Mixed'):(c.eff||'Moderate'),k});
+ (S.burn=S.burn||{})[d]=(+S.burn[d]||0)+k;CL=null;save();sheet(null);render();try{fxBurst(null,innerWidth/2,innerHeight/2)}catch(_){}toast(k?`Logged. About ${k} kcal burned.`:'Logged.')},true);
+{const _s=showed;showed=function(d){return _s.apply(this,arguments)||!!((S.clog||{})[d]||[]).length}}
+// Workout tab: a small card to log one, and today's logged sessions
+function clCard(){const d=today(),L=(S.clog||{})[d]||[];
+ return`<div class="card"><h2>Did a workout without your phone?</h2>${L.map((x,i)=>`<div class="clr"><span><b>${esc(x.act)}</b>, ${x.min} min${x.laps?`, ${x.laps} laps`:x.dist?`, ${x.dist} km`:''}<br><small>${esc(x.eff||'')}${x.k?` · about ${x.k} kcal`:''}</small></span><button class="glink" data-a="cldel" data-i="${i}">Remove</button></div>`).join('')}<button class="btn" data-a="clopen" style="width:100%;margin-top:${L.length?10:0}px">Log a session</button></div>`}
+{const _p=planner;planner=function(){const h=_p.apply(this,arguments);if(D)return h;return h.replace('<h2 style="font-size:22px;margin:22px 2px 10px">Your plans</h2>',clCard()+'<h2 style="font-size:22px;margin:22px 2px 10px">Your plans</h2>')}}
+
+/* --- 3. burned today, alongside calories on the Today card --- */
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);try{const b=+((S.burn||{})[today()])||0;if(!b)return h;return h.replace(/(<b>Today so far<\/b><div class="sm">)([^<]*)(<\/div>)/,(m,a,t,c)=>`${a}${t} <span style="white-space:nowrap">· ${b} kcal burned in workouts</span>${c}`)}catch(_){return h}}}
+
+/* --- 4. the new icon: a one-time guide for people who added Swell before it changed (iPhone only) --- */
+const NI_STANDALONE=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true,NI_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const NI_URL=(BUD_SITE?location.origin:'https://everythings-swell.netlify.app')+'/?newicon=1';
+if(S.iconV==null){S.iconV=S.user?1:2;save()}
+function niSheet(){sheet(`<div class="nis"><h2>Swell has a new icon</h2><p class="sm" style="margin:0">Your Home Screen keeps the icon Swell had when you added it. To get the new one, add Swell again. It takes about a minute, and a backup brings all your data across.</p>
+ <ol><li><span class="n">1</span><div><b>Back up your data</b><small>Save the file to Files or iCloud Drive.</small><button class="btn" data-a="bkup">Back up now</button></div></li>
+ <li><span class="n">2</span><div><b>Open Swell in Safari</b><small>Then tap Share, then Add to Home Screen. Swell will show you how.</small><a class="btn on" href="${NI_URL.replace(/^https:/,'x-safari-https:')}" data-ni="go">Click here</a><small style="margin-top:8px">Didn’t open? <button class="glink" data-a="nicopy" style="display:inline;padding:0">Copy the address</button> and paste it into Safari.</small></div></li>
+ <li><span class="n">3</span><div><b>Restore in the new Swell</b><small>Open the new icon, go to Settings, then Restore from a backup, and pick your file.</small></div></li>
+ <li><span class="n">4</span><div><b>Remove the old one</b><small>Hold the old icon, then Remove App.</small></div></li></ol>
+ <button class="btn big" data-a="nilater">Remind me later</button><button class="glink" data-a="nidone" style="display:block;margin:6px auto 0">I’ve done it, don’t show this again</button></div>`)}
+function niGuide(){const ios=NI_IOS,and=/Android/.test(navigator.userAgent);
+ sheet(`<div class="nis"><h2>Add Swell to your Home Screen</h2><ol>${ios?`<li><span class="n">1</span><div><b>Tap Share</b><small>The square with an arrow, in Safari’s toolbar (or in the ••• menu).</small></div></li><li><span class="n">2</span><div><b>Tap Add to Home Screen</b><small>Scroll down the list if you can’t see it.</small></div></li><li><span class="n">3</span><div><b>Tap Add</b><small>Then open Swell from the new icon and restore your backup in Settings.</small></div></li>`
+ :and?`<li><span class="n">1</span><div><b>Tap the ⋮ menu</b><small>Top right in Chrome.</small></div></li><li><span class="n">2</span><div><b>Tap Add to Home screen or Install app</b></div></li>`:`<li><span class="n">1</span><div><b>Use your browser’s menu</b><small>Look for Add to Home Screen or Install.</small></div></li>`}</ol><button class="btn big on" data-a="shx">Got it</button></div>`)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=nilater],[data-a=nidone],[data-a=nicopy],[data-a=niopen],[data-ni=go]');if(!el)return;const a=el.dataset.a||'go';
+ if(a==='go'){S.niGo=Date.now();save();return}
+ e.stopImmediatePropagation();e.preventDefault();
+ if(a==='niopen')return niSheet();
+ if(a==='nicopy'){try{navigator.clipboard.writeText(NI_URL.replace('?newicon=1',''));toast('Address copied. Paste it into Safari.')}catch(_){toast(NI_URL.replace('?newicon=1',''))}return}
+ if(a==='nilater'){S.niLater=Date.now();save();sheet(null);return}
+ S.iconV=2;save();sheet(null);toast('Got it.')},true);
+// when to show it: on a Home Screen copy from before the change, iPhone only, once things are quiet, then every few days if put off
+setTimeout(()=>{try{if(!NI_STANDALONE||!NI_IOS||S.iconV>=2||!S.user)return;if(S.niLater&&Date.now()-S.niLater<3*864e5)return;if($('#sheet,#wn,#req,#splash,#aw,#tour,.ftip')||ED)return;niSheet()}catch(_){}},6000);
+// opened from that link in Safari: show how to add it
+setTimeout(()=>{try{if(/[?&]newicon=1/.test(location.search)&&!NI_STANDALONE){history.replaceState(null,'',location.pathname);if(!$('#sheet'))niGuide()}}catch(_){}},1500);
+// it stays in Settings for anyone on an old copy
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{if(NI_STANDALONE&&NI_IOS&&S.iconV<2){const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=niopen]')){L.insertAdjacentHTML('beforeend',`<button data-a="niopen">${ico('<rect x="5" y="5" width="14" height="14" rx="4"/><path d="M9 12h6M12 9v6"/>')}<span>Get the new icon<small>Add Swell to your Home Screen again</small></span></button>`);try{const g=SETG.find(x=>x[0]==='Help');if(g&&!g[1].includes('niopen'))g[1].push('niopen');setGroup()}catch(_){}}}}catch(_){}return r}}
+
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<path d="M2 16c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 20c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/>',h:'Log a session afterwards',p:'Swam, rode or ran without your phone? On Workout, tap Log a session, say how long and how hard, and Swell works out roughly what you burned. Swims can use laps.'})}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>

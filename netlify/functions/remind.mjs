@@ -34,9 +34,9 @@ export default async (req, context) => {
   const cancel = (Array.isArray(b.cancel) ? b.cancel : []).filter(x => /^[0-9a-f-]{36}$/.test(x)).slice(0, 60);
   const add = (Array.isArray(b.add) ? b.add : []).slice(0, 40);
   const H = { Authorization: 'Key ' + KEY, 'Content-Type': 'application/json' };
-  // saving credits: rest-timer pushes stop first, then new reminders pause (cancelling still works)
+  // saving credits: reminders and rest-timer pushes keep going until the full stop (10 credits left); cancelling always works
   const L = await currentLevel(context && context.deploy && context.deploy.id);
-  const paused = L.lv >= 2, noRest = L.lv >= 1;
+  const paused = L.lv >= 3, noRest = L.lv >= 3;
   await Promise.all(cancel.map(id => fetch(`https://api.onesignal.com/notifications/${id}?app_id=${APP}`, { method: 'DELETE', headers: H }).catch(() => null)));
   const now = Date.now(), ids = [];
   for (const it of add) {
