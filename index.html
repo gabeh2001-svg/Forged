@@ -2514,7 +2514,7 @@ if(typeof fxApply==='function'){const _fx=fxApply;fxApply=function(root){if(NOFX
   if(Math.abs(dx)>10&&e.cancelable)e.preventDefault();
   if(Math.abs(dx)>=TRIG&&Math.abs(dx)>Math.abs(dy)*1.8){const dir=g.side==='r'?1:-1;g=null;go(dir)}},{passive:false});
  addEventListener('touchend',()=>{g=null},{passive:true});addEventListener('touchcancel',()=>{g=null},{passive:true})}
-RELEASES.push({v:'2026.11.23',date:'Next update',items:[]});RELEASES.find(r=>r.v==='2026.11.23').items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/><path d="M4 4v16"/>',h:'Swipe between tabs',p:'Swipe in from the very edge of the screen and the next tab slides in. Swipes anywhere else work as normal, so it only happens when you mean it.'});
+RELEASES.push({v:'2026.11.23',date:'27 Oct',items:[]});RELEASES.find(r=>r.v==='2026.11.23').items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/><path d="M4 4v16"/>',h:'Swipe between tabs',p:'Swipe in from the very edge of the screen and the next tab slides in. Swipes anywhere else work as normal, so it only happens when you mean it.'});
 /* ===== v45: a short first-run tour of the essentials; everything else appears as a one-off tip when it becomes useful ===== */
 (function(){const st=document.createElement('style');st.textContent=`
 .ftip{position:fixed;left:16px;right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px));max-width:520px;margin:0 auto;z-index:55;padding:14px 16px;border-radius:20px;background:rgba(22,26,40,.94);border:1px solid var(--edge);box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:fxtoast .42s var(--e-spring) both}
