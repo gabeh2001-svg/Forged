@@ -4510,7 +4510,7 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wk],[data
  return _fa.apply(this,arguments)}}
 // swipe the week card left or right to move a week at a time; dragging a workout pill still moves the workout
 {let sw=null;
- document.addEventListener('touchstart',e=>{const c=e.target.closest('#app .cal');if(!c||e.touches.length!==1||e.target.closest('.chipw,button'))return sw=null;const t=e.touches[0];sw={x:t.clientX,y:t.clientY,t:Date.now()}},{passive:true});
+ document.addEventListener('touchstart',e=>{return sw=null;/* replaced by the gliding swipe in v61 */const c=e.target.closest('#app .cal');if(!c||e.touches.length!==1||e.target.closest('.chipw,button'))return sw=null;const t=e.touches[0];sw={x:t.clientX,y:t.clientY,t:Date.now()}},{passive:true});
  document.addEventListener('touchmove',e=>{if(!sw)return;const t=e.touches[0],dx=t.clientX-sw.x,dy=t.clientY-sw.y;if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>10){sw=null;return}
   if(Math.abs(dx)>12&&e.cancelable)e.preventDefault();if(Math.abs(dx)>46&&Math.abs(dx)>Math.abs(dy)*1.5){const b=$(`#app .cal [data-a=wk][data-i="${dx<0?7:-7}"]`);sw=null;if(b){try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}b.click()}}},{passive:false});
  document.addEventListener('touchend',()=>{sw=null},{passive:true})}
@@ -4616,6 +4616,117 @@ document.addEventListener('pointerdown',e=>{const c=e.target.closest('#sheet .mw
  {i:'<path d="M9 5h6"/><rect x="4" y="3" width="16" height="18" rx="4"/>',h:'Pull down to close',p:'Pop-ups like Settings now have a handle at the top. Pull it down to close, or keep using Close. Settings is grouped into sections too.'})}
 // stop the page underneath from scrolling while a pop-up is being pulled
 document.addEventListener('touchmove',e=>{if(document.querySelector('#sheet .mwc.drag'))e.preventDefault()},{passive:false});
+
+/* ---------- v61: calendar glide, hold anywhere in the widget area, calmer dock, one Today card, smoother tab pill ---------- */
+// Research behind this block:
+// - Dock: Apple HIG Materials: "Thicker materials, which are more opaque, can provide better contrast for text"; the regular glass
+//   "blurs and adjusts the luminosity of background content to maintain legibility" (developer.apple.com/design/human-interface-guidelines/materials).
+// - Tab pill: Material motion guidance puts mobile transitions at about 300 ms, large ones at 375 ms, and warns over 400 ms can feel slow
+//   (m1.material.io/motion/duration-easing.html); Val Head's survey suggests 200 to 500 ms, citing NN/g's 0.1 s / 1 s limits (valhead.com).
+//   The jitter came from work, not length: the pill was rebuilt on every render and animated width on the main thread, and iOS drew
+//   its grey tap highlight on the button. The pill now lives on one kept dock, moves by transform only, and starts on the tap itself.
+// - Calendar: the week follows your finger (direct manipulation) and snaps to the next week past a distance or flick speed, like a paged scroller.
+(function(){const st=document.createElement('style');st.textContent=`
+*{-webkit-tap-highlight-color:transparent}
+#app .nav.nav{background:linear-gradient(180deg,color-mix(in srgb,var(--tone0,#080b13) 70%,transparent),color-mix(in srgb,var(--tone0,#080b13) 86%,transparent))!important;
+ backdrop-filter:blur(44px) saturate(120%) brightness(.8)!important;-webkit-backdrop-filter:blur(44px) saturate(120%) brightness(.8)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 -10px 30px rgba(0,0,0,.18)}
+#app .nav .navhl3{position:absolute;top:0;left:0;border-radius:16px;background:rgba(255,255,255,.16);pointer-events:none;z-index:0;will-change:transform}
+#app .nav .navhl2,#app .nav .navhl{display:none}
+.cal{overflow:hidden}.cal .cw7{will-change:transform;touch-action:pan-y}
+.sctiles button{display:block}.sctiles button svg{display:block;margin-bottom:8px}.sctiles button b{display:block;margin-bottom:3px}.sctiles button small{display:block}
+#sheet .wks .wkr{margin:10px 0 8px}#sheet .wks .wkr div{padding:10px 6px}#sheet .wks .fopt{gap:6px;margin:8px 0 10px}#sheet .wks .fopt button{padding:10px 14px}
+#sheet .wks>p.sm{margin:6px 0 0}#sheet .wks .glink[data-a=wkno]{min-height:44px;padding:10px 16px;margin:4px auto 0!important}
+#sheet .mwc{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+#sheet .wks .wkft{position:sticky;bottom:calc(-14px - env(safe-area-inset-bottom,0px));z-index:2;margin:0 -18px calc(-14px - env(safe-area-inset-bottom,0px));padding:22px 18px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(rgba(22,26,40,0),rgba(22,26,40,.97) 22px)}#sheet .wks .wkft .btn{margin:0}
+.dpa{display:flex;gap:8px;margin-top:14px}.dpa .btn{flex:1;margin:0;padding:11px 10px;font-size:15px}
+#sheet .gtl{display:grid;grid-template-columns:1fr 1fr;gap:10px}#sheet .gtl label{margin:0}
+`;document.head.appendChild(st)})();
+
+/* 1. tab pill: one dock that stays, moved by transform only */
+let NAVK=null;
+const navSig=n=>n.innerHTML.replace(/<i class="navhl\d?"[^>]*><\/i>/g,'').replace(/ class="[^"]*"/g,'').replace(/ aria-current="[^"]*"/g,'');
+function navPill(n,b,anim){let hl=n.querySelector(':scope > .navhl3');const nr=n.getBoundingClientRect(),br=b.getBoundingClientRect(),x=br.left-nr.left,y=br.top-nr.top;
+ if(!hl){hl=document.createElement('i');hl.className='navhl3';n.prepend(hl);anim=false}
+ hl.style.width=br.width+'px';hl.style.height=br.height+'px';const key=b.dataset.i;if(hl.__to===key&&hl.__x===x)return;
+ const cur=new DOMMatrix(getComputedStyle(hl).transform);hl.getAnimations().forEach(a=>a.cancel());hl.style.transform=`translate(${x}px,${y}px)`;hl.__to=key;hl.__x=x;
+ if(anim===false||MRM()||Math.abs(cur.m41-x)<1)return;
+ hl.animate([{transform:`translate(${cur.m41}px,${y}px)`},{transform:`translate(${x}px,${y}px)`}],{duration:400,easing:'cubic-bezier(.25,1,.35,1)'})}
+navGlide=function(){let n=document.querySelector('#app .nav');if(!n)return;
+ if(NAVK&&NAVK!==n&&navSig(NAVK)===navSig(n)){
+  const on=[...n.querySelectorAll('button')].map(b=>[b.className,b.getAttribute('aria-current')]);
+  [...NAVK.querySelectorAll('button')].forEach((b,i)=>{if(!on[i])return;b.className=on[i][0];if(on[i][1]==null)b.removeAttribute('aria-current');else b.setAttribute('aria-current',on[i][1])});
+  NAVK.className=n.className;n.replaceWith(NAVK);n=NAVK}
+ else NAVK=n;
+ n.classList.add('glide2');const b=n.querySelector('button.on');if(b)navPill(n,b,true)};
+// start the glide on the tap itself, before the new page is built
+window.addEventListener('click',e=>{const b=e.target.closest('#app .nav button[data-a=tab]');if(!b||ED)return;const n=b.closest('.nav');try{navPill(n,b,true)}catch(_){}},true);
+
+/* 2. calendar: the week follows your finger and snaps to the next one */
+let CALG=null;
+function calSlideIn(dir){const w=$('#app .cal .cw7');if(!w||MRM())return;const W=w.offsetWidth+24;
+ w.animate([{transform:`translateX(${dir*W}px)`},{transform:'translateX(0)'}],{duration:340,easing:'cubic-bezier(.2,.9,.25,1)'})}
+function calGo(dir,from,v){const w=$('#app .cal .cw7'),b=$(`#app .cal [data-a=wk][data-i="${dir>0?7:-7}"]`);if(!b)return;
+ const go=()=>{CALG=dir;b.__glide=1;const s0=swd;swd=0;b.click();swd=s0;b.__glide=0};
+ if(!w||MRM()){go();return}const W=w.offsetWidth+24,d=Math.max(120,Math.min(220,(W-Math.abs(from||0))/Math.max(.6,v||0)));
+ const a=w.animate([{transform:`translateX(${from||0}px)`},{transform:`translateX(${-dir*W}px)`}],{duration:d,easing:'cubic-bezier(.4,0,.9,.7)',fill:'forwards'});
+ a.onfinish=go}
+// arrows glide too
+window.addEventListener('click',e=>{const b=e.target.closest('#app .cal [data-a=wk]');if(!b||b.__glide||ED)return;e.stopImmediatePropagation();e.preventDefault();calGo(+b.dataset.i>0?1:-1,0,0)},true);
+{const _fa=fxApply;fxApply=function(root,pre,same){const r=_fa.apply(this,arguments);if(CALG!=null&&root&&root.id==='app'){const d=CALG;CALG=null;calSlideIn(d)}return r}}
+{let g=null;
+ document.addEventListener('touchstart',e=>{g=null;const c=e.target.closest('#app .cal');if(!c||ED||e.touches.length!==1||e.target.closest('.chipw,[data-a=wk]'))return;const t=e.touches[0],w=c.querySelector('.cw7');if(!w)return;g={x:t.clientX,y:t.clientY,w,on:false,pts:[[performance.now(),t.clientX]]}},{passive:true,capture:true});
+ document.addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=t.clientX-g.x,dy=t.clientY-g.y;
+  if(!g.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){g=null;return}if(Math.abs(dx)<8)return;g.on=true;g.w.getAnimations().forEach(a=>a.cancel())}
+  e.cancelable&&e.preventDefault();e.stopImmediatePropagation();g.dx=dx;g.w.style.transform=`translateX(${dx}px)`;g.pts.push([performance.now(),t.clientX]);if(g.pts.length>6)g.pts.shift()},{passive:false,capture:true});
+ const end=()=>{if(!g||!g.on){g=null;return}const {w,dx=0,pts}=g;g=null;swd=Date.now();const [t0,x0]=pts[0],[t1,x1]=pts[pts.length-1],v=(x1-x0)/Math.max(1,t1-t0);
+  const W=w.offsetWidth;if(Math.abs(dx)>W*.22||(Math.abs(v)>.45&&Math.sign(v)===Math.sign(dx))){w.style.transform='';try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}calGo(dx<0?1:-1,dx,Math.abs(v))}
+  else{w.style.transform='';w.animate([{transform:`translateX(${dx}px)`},{transform:'translateX(0)'}],{duration:300,easing:'cubic-bezier(.3,1.3,.5,1)'})}};
+ document.addEventListener('touchend',end,{passive:true,capture:true});document.addEventListener('touchcancel',end,{passive:true,capture:true})}
+
+/* 3. hold an empty spot in the widget area to rearrange, the same as holding a widget */
+document.addEventListener('pointerdown',e=>{if(tab!=='home'||ED||!S.user||e.button>0)return;const gr=e.target.closest('#app .grid');if(!gr||e.target.closest('.wd'))return;
+ const x=e.clientX,y=e.clientY,lp=setTimeout(()=>{off();ED=true;try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}render()},800),
+ c=ev=>{if(ev.type==='pointermove'&&Math.hypot(ev.clientX-x,ev.clientY-y)<=8)return;clearTimeout(lp);off()},off=()=>['pointermove','pointerup','pointercancel'].forEach(t=>document.removeEventListener(t,c));
+ ['pointermove','pointerup','pointercancel'].forEach(t=>document.addEventListener(t,c))});
+
+/* 4. weekly focus sheet: fits on the screen, and "1 session" */
+{const _w=wkSheet;wkSheet=function(){const r=_w.apply(this,arguments);const c=$('#sheet .mwc');if(c){c.classList.add('wks');const ok=c.querySelector('[data-a=wkok]'),no=c.querySelector('[data-a=wkno]');if(ok&&no&&!ok.parentElement.classList.contains('wkft')){const f=document.createElement('div');f.className='wkft';ok.before(f);f.append(ok,no)}c.querySelectorAll('.fopt small').forEach(s=>{s.textContent=s.textContent.replace(/^1 sessions/,'1 session')})}return r}}
+
+/* 5. Diet: one Today card. The totals card is folded into Today so far, with Edit goals and Work out my goals for me */
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);try{const T=document.createElement('template');T.innerHTML=h;
+  const kids=[...T.content.children],tot=kids.filter(c=>c.matches('.card')).find(c=>{const h=[...c.children].find(x=>x.tagName==='H2'),t=h?h.textContent:'';return/^(Today’s totals|Totals for this day)$/.test(t)});
+  const dp=kids.find(c=>c.matches('.card.dp'));
+  if(tot&&dp){tot.remove();const a=document.createElement('div');a.className='dpa';a.innerHTML=`<button class="btn" data-a="dgoals">${today()===realToday()?'Edit goals':'Edit totals'}</button><button class="btn" data-a="estopen">Work out my goals</button>`;dp.appendChild(a)}
+  return T.innerHTML}catch(_){return h}}}
+function dgSheet(){const g=S.setup,t=today(),m=S.macros[t]||{};const f=(k,v,a)=>`<label>${LBL[k][0]} (${LBL[k][1]})<input type="number" inputmode="decimal" ${a} value="${esc(v??'')}"></label>`;
+ sheet(`<h2>Goals and totals</h2><p class="sm" style="margin:0 0 6px">Your daily goals</p><div class="gtl">${SZ.map(k=>f(k,g[k],`data-gl="${k}"`)).join('')}</div>
+ <p class="sm" style="margin:14px 0 6px">Eaten ${t===realToday()?'today':dLbl(t)}. Meals you log add up here; change a number to correct it.</p><div class="gtl">${SZ.map(k=>f(k,m[k],`data-b="macro.${k}" placeholder="0"`)).join('')}</div>
+ <button class="btn big on" data-a="dgsave">Save</button><button class="btn" data-a="estopen" style="width:100%">Work out my goals for me</button>`)}
+Object.assign(NUMR,{'gl.k':[0,20000],'gl.p':[0,2000],'gl.f':[0,2000],'gl.c':[0,2000]});
+window.addEventListener('change',e=>{const t=e.target;if(!t.dataset||!t.dataset.gl)return;const r=NUMR['gl.'+t.dataset.gl],v=numIn(t.value);if(t.value===''||isNaN(v))return;const c=Math.min(r[1],Math.max(r[0],v));if(c!==v){t.value=c;toast(`That’s been set to ${c}.`)}},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dgoals],[data-a=dgsave]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ if(el.dataset.a==='dgoals'){dgSheet();return}
+ document.querySelectorAll('#sheet [data-gl]').forEach(i=>{const v=numIn(i.value);if(i.value!==''&&!isNaN(v)&&v>0)S.setup[i.dataset.gl]=Math.round(v)});
+ const t=today();S.macros[t]=S.macros[t]||{};document.querySelectorAll('#sheet [data-b^="macro."]').forEach(i=>{const k=i.dataset.b.slice(6),v=numIn(i.value);S.macros[t][k]=i.value===''?'':(isNaN(v)?0:Math.max(0,v))});
+ save();sheet(null);render();try{evalDay()}catch(_){}toast('Saved.')},true);
+// the tour and tips point at the new button
+[TOUR,FULLTOUR,ESS].forEach(L=>L.forEach(s=>{if(s.q==='[data-a=editgoal]'){s.q='[data-a=dgoals]';s.h='Your goals';s.p='Tap Edit goals to change a target or correct what you’ve eaten.'}
+ if(s.h==='Today so far')s.p='Shows how much of your calories and macros you’ve had, with your goals. On a past day it becomes a summary of whether you hit them.'}));
+TIPS.forEach(x=>{if(x.q==='[data-a=editgoal]')x.q='[data-a=dgoals]'});
+
+/* 6. scan tiles: shorter lines that fit */
+{const _d=diet;diet=function(){return _d.apply(this,arguments).replace('Reads the nutrition table on your phone. Works offline.','Reads the nutrition table, even offline.').replace('Quickest. Needs a signal to look it up.','Quickest. Needs a signal.')}}
+
+/* 7. describe-a-meal example that fits the box: the longest one that fits is used */
+const DSCX=['Describe it: large bowl of chilli','Describe it: big bowl of chilli','e.g. large bowl of chilli','e.g. big bowl of chilli'];
+function dscFit(){const i=$('#app [data-dsc]');if(!i)return;const c=getComputedStyle(i),w=i.clientWidth-parseFloat(c.paddingLeft)-parseFloat(c.paddingRight)-2;if(w<=0)return;
+ const x=(dscFit.cx=dscFit.cx||document.createElement('canvas').getContext('2d'));x.font=`${c.fontWeight} ${c.fontSize} ${c.fontFamily}`;i.placeholder=DSCX.find(t=>x.measureText(t).width<=w)||DSCX[DSCX.length-1]}
+{const _r=render;render=function(){_r.apply(this,arguments);if(tab==='diet')try{dscFit()}catch(_){}}}
+addEventListener('resize',()=>{try{dscFit()}catch(_){}});
+
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push(
+ {i:'<path d="M3 12h18M14 5l7 7-7 7"/>',h:'Smoother Home and dock',p:'The week now glides under your finger and snaps to the next one. Hold any empty spot in your widgets to rearrange them. The dock is calmer, and tab changes glide more smoothly.'},
+ {i:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',h:'One Today card on Diet',p:'Today so far now holds everything: your progress, Edit goals (targets and what you’ve eaten) and Work out my goals.'})}
 
 render();periodic();reqShow();
 </script>
