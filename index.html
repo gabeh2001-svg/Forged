@@ -5016,6 +5016,12 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wutog]');
 #lx2 .lxb .rowx:has([data-a=lx2lay]) .ch{font-size:11.5px;padding:5px 4px 7px!important;border-radius:14px}
 #lx2 .lxb .rowx:has([data-a=lx2lay]) .ch .pv{width:100%;height:auto;aspect-ratio:3/4;border-radius:9px}
 `;document.head.appendChild(st)})();
+/* ---------- v67: more colour presets (some silly) and more background tones ---------- */
+// All backgrounds stay very dark so white text keeps well over 7:1 contrast (Apple HIG, Dark Mode: aim for 7:1 for custom colours).
+PRE.push(['Beans on toast','#e8641c','#f2c14e'],['Mushy peas','#6fae3a','#1f4d1a'],['Builder’s tea','#a8582b','#e3b98a'],['Unicorn sneeze','#ff6fd8','#5ee7ff'],['Sunburnt tourist','#ff4b2b','#ffb4a2']);
+TONES.push(['Espresso','#150e0b'],['Deep sea','#031518'],['Wine','#1a080d']);
+try{LX2.hm=0}catch(_){}
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><circle cx="12" cy="16" r="3"/>',h:'More colours',p:'Five new colour sets, including Beans on toast and Unicorn sneeze, plus three new backgrounds. Find them in Customise look.'})}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
