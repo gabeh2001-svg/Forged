@@ -2347,7 +2347,7 @@ function bigMacros(){const m=S.macros[today()]||{},g=S.setup,has=['k','p','f','c
  return h}}
 {const _r=render;render=function(){_r.apply(this,arguments);try{document.querySelectorAll('#app .grid .wd').forEach(w=>{const L=S.lay.find(x=>x.id===w.dataset.id);w.classList.toggle('tall',!!L&&L.h===2)})}catch(_){}}}
 /* edit mode only edits: taps on anything other than Done, remove and add are ignored, and Done gives a little nudge */
-const ED_OK='[data-a=edone],[data-a=rmw],[data-a=addw],.mn,#sheet,#tour,#wn';
+const ED_OK='[data-a=edone],[data-a=rmw],[data-a=addw],.mn,#sheet,#tour,#wn,.ftip';
 let EDQUIET=0;
 ['click'].forEach(t=>window.addEventListener(t,e=>{if(Date.now()<EDQUIET){e.stopImmediatePropagation();e.preventDefault();return}
  if(!ED||tab!=='home')return;if(e.target.closest(ED_OK))return;if(t==='click'){e.stopImmediatePropagation();e.preventDefault();if(!e.target.closest('.grid')){const d=$('#app [data-a=edone]');if(d){d.classList.remove('nudge');void d.offsetWidth;d.classList.add('nudge')}}}},true));
@@ -4399,7 +4399,6 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input,textarea,select,[contenteditable],[contenteditable] *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .swgh .card,.swgh .wd,.swgh *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .swgh .card{background-color:rgba(255,255,255,.075)!important}
-.nav{will-change:translate}
 #bgl{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;transition:opacity 1.2s ease}
 #bgl i{position:absolute;border-radius:50%;will-change:transform}
 #bgl.drift i{animation:bgd var(--d,30s) ease-in-out infinite alternate;animation-delay:var(--dl,0s)}
@@ -4427,12 +4426,11 @@ let TABFROM=null;
 window.addEventListener('click',e=>{const b=e.target.closest('#app .nav [data-a=tab]');if(b&&b.dataset.i!==tab)TABFROM=tab},true);
 {const _fa=fxApply;fxApply=function(root,pre,same){if(!same&&root&&root.id==='app'&&TABFROM!=null&&!MRM()){const o=[...document.querySelectorAll('#app .nav button[data-i]')].map(b=>b.dataset.i),dir=Math.sign(o.indexOf(tab)-o.indexOf(TABFROM))||1;TABFROM=null;
   [...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;c.animate([{opacity:.4,transform:`translateX(${dir*18}px)`},{opacity:1,transform:'none'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})});return}
- TABFROM=null;return _fa.apply(this,arguments)}}
+ if(!same)TABFROM=null;return _fa.apply(this,arguments)}}
 
 /* ---------- 3. the dock stays where your thumb expects it ---------- */
 // iPhone rubber-bands the whole page past the top and bottom, fixed bar included; this cancels that movement for the dock only
-{let raf=0;const fix=()=>{raf=0;const n=$('#app .nav');if(!n)return;const max=Math.max(0,document.documentElement.scrollHeight-innerHeight),y=scrollY,over=y<0?y:y>max?y-max:0;n.style.translate=over?`0 ${over.toFixed(1)}px`:''};
- addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(fix)},{passive:true});addEventListener('touchend',()=>setTimeout(fix,0),{passive:true})}
+// (v59: replaced by turning off the page's rubber-band, which keeps the dock still without chasing it)
 
 /* ---------- 4. Customise look: designed Looks, living lights, and Home spacing ---------- */
 // Customisation research: fewer than 5% of people change any default (Spool, UIE), so the defaults must already be great;
@@ -4479,6 +4477,146 @@ try{applyBg();homeSp()}catch(_){}
 {const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push(
  {i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z"/>',h:'Looks, and lights that drift',p:'Customise look now starts with six Looks made for Swell. The lights stay put as you scroll, drift very slowly, and soften at night. Compact spacing is under More.'},
  {i:'<path d="M5 12h14M13 6l6 6-6 6"/>',h:'Smoother all round',p:'Tabs slide gently instead of blinking, the bottom bar stays still when you pull past the end of a page, and holding the screen no longer selects text.'})}
+/* ===== v59: edit mode never gets stuck, calendar weeks you can swipe, a cleaner week card, smarter starting widgets, grouped Settings ===== */
+(function(){const st=document.createElement('style');st.textContent=`
+html,body{overscroll-behavior-y:none}
+#splash.sw{margin:0;padding:0;gap:0;top:0;bottom:0;height:auto}#splash.sw .qbg,#splash .qbg{top:-120px;bottom:-220px}
+.cal .cw7{gap:2px;margin-top:16px}
+.cal .cday{min-height:112px;justify-content:center;gap:7px;padding:10px 0;border-radius:18px}
+.cal .cday b{font-size:21px;line-height:1}
+.cal .cday small{font-size:13px}
+.cal{touch-action:pan-y}
+.setg{margin:16px 4px 6px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.setg:first-child{margin-top:4px}
+.wsug{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(143,227,255,.18);color:#bfeeff;border-radius:999px;padding:2px 7px;margin-left:6px;vertical-align:1px}`;document.head.appendChild(st)})();
+// the dock: stop the whole page rubber-banding instead of chasing it, which moved and flickered the bar on iPhone
+try{const n=$('#app .nav');if(n)n.style.translate=''}catch(_){}
+
+/* ---------- 1. a tip can never cover Done or block edit mode ---------- */
+{const _tc=tipCheck;tipCheck=function(){if(ED)return;return _tc.apply(this,arguments)}}
+{const _r=render;render=function(){_r.apply(this,arguments);if(ED)document.querySelectorAll('.ftip').forEach(t=>t.remove())}}
+
+/* ---------- 2. Customise look keeps your place in each row when you pick something ---------- */
+{const _l=lx2r;lx2r=function(){const o=$('#lx2'),sx=o?[...o.querySelectorAll('.rowx')].map(r=>r.scrollLeft):[],tb=o&&o.querySelector('.tabs .on'),t0=tb&&tb.dataset.i;_l.apply(this,arguments);const n=$('#lx2');if(!n)return;
+ const tb2=n.querySelector('.tabs .on');if(sx.length&&tb2&&tb2.dataset.i===t0)n.querySelectorAll('.rowx').forEach((r,i)=>{if(sx[i])r.scrollLeft=sx[i]})}}
+
+/* ---------- 3. date changes slide like tabs: no blank flash when you change week or day ---------- */
+let VDFROM=null,VDT=0;
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wk],[data-a=vd]');if(el){VDFROM=today();VDT=Date.now()}},true);
+{const _fa=fxApply;fxApply=function(root,pre,same){if(VDFROM!=null&&Date.now()-VDT>800)VDFROM=null;if(!same&&root&&root.id==='app'&&VDFROM!=null&&!MRM()){const dir=today()>VDFROM?1:today()<VDFROM?-1:0;VDFROM=null;
+  [...root.children].forEach(c=>{if(c.classList.contains('nav')||getComputedStyle(c).position==='fixed')return;const isCal=c.classList.contains('cal');
+   c.animate(isCal?[{opacity:.55},{opacity:1}]:[{opacity:.4,transform:`translateX(${dir*14}px)`},{opacity:1,transform:'none'}],{duration:isCal?180:240,easing:'cubic-bezier(.2,.8,.2,1)'})});
+  const w=$('#app .cal .cw7');if(w&&dir)w.animate([{opacity:.3,transform:`translateX(${dir*28}px)`},{opacity:1,transform:'none'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});return}
+ return _fa.apply(this,arguments)}}
+// swipe the week card left or right to move a week at a time; dragging a workout pill still moves the workout
+{let sw=null;
+ document.addEventListener('touchstart',e=>{const c=e.target.closest('#app .cal');if(!c||e.touches.length!==1||e.target.closest('.chipw,button'))return sw=null;const t=e.touches[0];sw={x:t.clientX,y:t.clientY,t:Date.now()}},{passive:true});
+ document.addEventListener('touchmove',e=>{if(!sw)return;const t=e.touches[0],dx=t.clientX-sw.x,dy=t.clientY-sw.y;if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>10){sw=null;return}
+  if(Math.abs(dx)>12&&e.cancelable)e.preventDefault();if(Math.abs(dx)>46&&Math.abs(dx)>Math.abs(dy)*1.5){const b=$(`#app .cal [data-a=wk][data-i="${dx<0?7:-7}"]`);sw=null;if(b){try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}b.click()}}},{passive:false});
+ document.addEventListener('touchend',()=>{sw=null},{passive:true})}
+// the how-to text lives in the tour and a tip, so the week card is just your week
+{const _h=home;home=function(){return _h.apply(this,arguments).replace(/<p class="sm" style="margin:8px 0 0">Each pill is that day’s workout[^<]*<\/p>/,'').replace(/<p class="sm" style="margin:8px 0 0">Circle: diet[^<]*<\/p>/,'')}}
+TIPS.push({id:'calsw',t:'home',q:'.cal',w:2,u:1,ok:()=>!!activePlan(),h:'Your week',p:'Swipe the week left or right to see other weeks. Hold a workout and drag it to another day to move it. Dots show food (circle) and training (square).'});
+TIPS.sort((a,b)=>(b.w||2)-(a.w||2));
+
+/* ---------- 4. starting widgets for new people, and suggestions for the rest ---------- */
+// Apple's guidance: a widget should show what people come back to most. For Swell that's today's food and the day's
+// small habits, so new people start with Macros, Water, Sleep, what's coming up and their goal. Everything else waits in
+// the add list, with the ones their own behaviour points to marked Suggested.
+if(!S.lay)S.lay=[{id:'macros',w:2,h:1},{id:'water',w:1,h:1},{id:'sleep',w:1,h:1},{id:'next',w:1,h:1},{id:'goal',w:1,h:1}];
+function wSug(id){const days=k=>Object.keys(S[k]||{}).length;try{
+ if(id==='caf')return typeof coffeeMeals==='function'&&coffeeMeals()>=2;
+ if(id==='water')return days('water')>=1;if(id==='sleep')return days('sleep')>=1||!!(S.slp&&S.slp.bed);
+ if(id==='supp')return((S.supps||[]).length>0)||days('supl')>0;if(id==='macros')return days('meals')>=2;
+ if(id==='bring')return!!activePlan()&&(S.plans||[]).some(p=>(p.days||[]).some(d=>(d.ex||[]).length>2));if(id==='next')return!!activePlan();if(id==='work')return false;if(id==='goal')return false}catch(_){}return false}
+{const _h=home;home=function(){let h=_h.apply(this,arguments);if(!ED)return h;
+ // in edit mode, the add buttons are sorted with suggestions first
+ return h.replace(/<div class="chips">((?:<button class="chip" data-a="addw" data-i="[^"]+">[^<]*<\/button>)+)<\/div>/,(m,inner)=>{const B=[...inner.matchAll(/<button class="chip" data-a="addw" data-i="([^"]+)">([^<]*)<\/button>/g)].map(x=>({id:x[1],t:x[2],s:wSug(x[1])}));
+  B.sort((a,b)=>b.s-a.s);let k=0;B.forEach(x=>{if(x.s&&++k>2)x.s=false});return`<div class="chips">${B.map(x=>`<button class="chip" data-a="addw" data-i="${x.id}">${x.t}${x.s?'<span class="wsug">Suggested</span>':''}</button>`).join('')}</div>`})}}
+
+/* ---------- 5. Settings grouped under headings, with short status lines ---------- */
+// Grouping by task ("what am I trying to change?") follows card-sorting practice; status lines say the current value only.
+const SETG=[['Your plan and goals',['estopen','trsheet','wkend','setunit']],['Look and feel',['lxopen','glint','tipst']],['Notifications',['npopen']],['Your data',['bkup','rspick','impimg']],['Help',['tour']]];
+function setGroup(){try{const L=document.querySelector('#sheet .setl');if(!L)return;L.querySelectorAll(':scope > p.setg').forEach(x=>x.remove());
+ const btn=a=>L.querySelector(`:scope > [data-a="${a}"]`),used=new Set(),frag=document.createDocumentFragment();
+ SETG.forEach(([t,ids])=>{const bs=ids.map(btn).filter(Boolean);if(!bs.length)return;const hd=document.createElement('p');hd.className='setg';hd.textContent=t;frag.appendChild(hd);bs.forEach(b=>{used.add(b);frag.appendChild(b)})});
+ const rest=[...L.children].filter(c=>c.matches('button')&&!used.has(c));if(rest.length){const hd=document.createElement('p');hd.className='setg';hd.textContent='More';frag.appendChild(hd);rest.forEach(b=>frag.appendChild(b))}
+ L.prepend(frag);
+ // keep each status line to the current value
+ [['setunit',s=>s.replace(/^Currently\s+/i,'').replace(/\.\s*Tap to switch\.?$/i,'')],['tipst',s=>s.split('.')[0]],['wkend',s=>s.split('.')[0]],['bkup',s=>s.split('. ')[0]]].forEach(([a,f])=>{const sm=L.querySelector(`[data-a="${a}"] small`);if(sm)sm.textContent=f(sm.textContent).replace(/^./,c=>c.toUpperCase())})}catch(_){}}
+{const _sh=sheet;sheet=function(h){const r=_sh.apply(this,arguments);if(document.querySelector('#sheet .setl')){setGroup();queueMicrotask(setGroup);setTimeout(setGroup,0);setTimeout(setGroup,80)}return r}}
+
+/* ---------- 6. found in testing: numbers people type are checked before they're saved ---------- */
+// Forgiving input (accept "12,5" as 12.5, trim spaces) with a clear message for anything impossible, rather than saving it
+// silently as 0 or a negative number (error prevention, Nielsen's heuristic 5).
+const numIn=v=>{if(v==null)return NaN;const s=String(v).trim().replace(/\s/g,'').replace(',','.');if(s==='')return 0;return/^-?\d*\.?\d+$/.test(s)?+s:NaN};
+function mealProblem(m){const f=[['k','Calories',10000],['p','Protein',1000],['f','Fat',1000],['c','Carbs',1500]];
+ for(const [k,n,max] of f){const v=numIn(m[k]);if(isNaN(v))return`${n} needs to be a number.`;if(v<0)return`${n} can’t be below zero.`;if(v>max)return`${n} looks too high for one meal. Check the number.`}return''}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=addm]');if(!el||typeof M==='undefined')return;
+ // read what's in the boxes now, in case a value hasn't been picked up yet
+ document.querySelectorAll('#app [data-b^="M."]').forEach(i=>{const k=i.dataset.b.slice(2);M[k]=i.value});
+ const pr=mealProblem(M);if(pr){e.stopImmediatePropagation();e.preventDefault();toast(pr);const k=pr.startsWith('Cal')?'k':pr.startsWith('Pro')?'p':pr.startsWith('Fat')?'f':'c',i=$(`#app [data-b="M.${k}"]`);if(i){i.focus();i.animate&&i.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260})}return}
+ ['k','p','f','c'].forEach(k=>{if(M[k]!==''&&M[k]!=null)M[k]=numIn(M[k])});if(M.n)M.n=String(M.n).trim().slice(0,80)},true);
+// every number box has a sensible range; out-of-range values are pulled back when you leave the box (found by fuzzing)
+const NUMR={'macro.k':[0,20000],'macro.p':[0,2000],'macro.f':[0,2000],'macro.c':[0,2000],'setup.k':[0,20000],'setup.p':[0,2000],'setup.f':[0,2000],'setup.c':[0,2000],
+ 'EST.w':[20,800],'setup.w':[20,800],'EST.age':[13,110],'X.w':[0,1500],'X.s':[1,30],'X.v':[0,999],'D.total':[1,14],'D.perWeek':[1,7],'setup.freq':[1,7],'setup.thr':[1,100]};
+Object.assign(NUMR,{hcm:[50,250],hft:[1,8],hin:[0,11],'da.mg':[0,1000],'da.kcal':[0,3000],'N.s':[1,50],'N.m':[0,30],'N.c':[0,59],'rt.m':[0,30],'rt.s':[0,59],'rt.ms':[0,999]});
+window.addEventListener('change',e=>{const t=e.target,d=t&&t.dataset;if(!d)return;const r=NUMR[d.b||(d.da?'da.'+d.da:d.rt?'rt.'+d.rt:'hcm' in d?'hcm':'hft' in d?'hft':'hin' in d?'hin':'')];if(!r||t.value==='')return;const v=numIn(t.value);
+ if(isNaN(v)){t.value='';return}const c=Math.min(r[1],Math.max(r[0],v));if(c!==v){t.value=c;if(d.da||d.rt)t.dispatchEvent(new Event('input',{bubbles:true}));toast(c===r[1]?`That’s more than ${r[1]}, so it’s been set to ${r[1]}.`:`That can’t be below ${r[0]}, so it’s been set to ${r[0]}.`)}},true);
+// bottle and glass sizes and the caffeine guide stay within sensible limits
+document.addEventListener('change',e=>{const t=e.target;if(!t.matches)return;
+ if(t.matches('[data-wb=ml]')){const v=Math.round(numIn(t.value));const c=isNaN(v)?750:Math.max(100,Math.min(3000,v));if(c!==v){t.value=c;toast('Bottle size set to '+c+' ml.')}WAT().btl.ml=c;save()}
+ if(t.matches('[data-clim]')){const v=numIn(t.value);if(t.value.trim()==='')return;const c=isNaN(v)?null:Math.max(50,Math.min(1000,Math.round(v)));CAFP().lim=c;if(c!==v)t.value=c||'';save();try{render();if(FS)fsr()}catch(_){}}},true);
+{const _wa=watAdd;watAdd=function(ml){ml=Math.round(+ml||0);if(!ml||Math.abs(ml)>5000)return;return _wa.call(this,ml)}}
+try{const w=WAT();if(!(w.btl.ml>=100&&w.btl.ml<=3000))w.btl.ml=750;const c=CAFP();if(c.lim!=null&&!(c.lim>=50&&c.lim<=1000))c.lim=null}catch(_){}
+// long names wrap instead of running off the card, and tips belong to the tab they were shown on
+(function(){const st=document.createElement('style');st.textContent=`#app .sr b,#app .sr .in b,#app .card h2,#sheet b{overflow-wrap:anywhere}`;document.head.appendChild(st)})();
+{let lastTab=tab;const _r=render;render=function(){_r.apply(this,arguments);if(tab!==lastTab){lastTab=tab;document.querySelectorAll('.ftip').forEach(t=>t.remove())}}}
+// meal names typed into the form are capped so lists stay tidy
+document.addEventListener('focusin',e=>{const t=e.target;if(t.matches&&t.matches('[data-b="M.n"]')&&!(t.maxLength>0))t.maxLength=80});
+/* ---------- v60: pop-ups have a pull-down handle and close with a slide instead of vanishing ---------- */
+// Research: Firefox's Acorn iOS bottom-sheet guidance: "Always provide both a grabber and a close button when possible";
+// sheets "can be dismissed by either swiping down, tapping outside" (acorn.firefox.com). eBay Playbook lists the drag handle as
+// part of the sheet anatomy and "swiping downwards" as a standard dismissal (playbook.ebay.com/design-system/components/bottom-sheet).
+// The Close button stays. Dismissal follows the finger (direct manipulation) and is decided by distance or flick speed.
+(function(){const st=document.createElement('style');st.textContent=`
+#sheet .mwc{padding-top:0}
+#sheet .shg{position:sticky;top:0;z-index:3;display:flex;justify-content:center;align-items:center;height:28px;margin:0 -18px 4px;background:rgba(22,26,40,.96);border-radius:26px 26px 0 0;touch-action:none;cursor:grab}
+#sheet .shg i{display:block;width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.34)}
+#sheet .mwc.drag{animation:none!important;transition:none!important}
+#sheetx{position:fixed;inset:0;z-index:66;pointer-events:none}
+#sheetx .mwb{position:absolute;inset:0}
+`;document.head.appendChild(st)})();
+{const _s=sheet;sheet=function(h){const o=$('#sheet');
+ if(!h){if(o)shClose(o);GF=null;return}
+ _s.apply(this,arguments);const c=$('#sheet .mwc');if(c&&!c.querySelector(':scope > .shg')){const g=document.createElement('div');g.className='shg';g.setAttribute('aria-hidden','true');g.innerHTML='<i></i>';c.prepend(g)}}}
+// slide the card down and fade the backdrop, then remove it; renamed first so a new pop-up can open straight away
+function shClose(o,fromY){const c=o.querySelector('.mwc'),b=o.querySelector('.mwb');
+ if(!c||matchMedia('(prefers-reduced-motion: reduce)').matches){o.remove();return}
+ const r=c.getBoundingClientRect(),cs=getComputedStyle(c),bs=b?getComputedStyle(b):null;
+ Object.assign(c.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',margin:'0',background:cs.backgroundColor,animation:'none'});
+ if(b&&bs)Object.assign(b.style,{background:bs.backgroundColor,backdropFilter:bs.backdropFilter,webkitBackdropFilter:bs.backdropFilter,animation:'none'});
+ o.id='sheetx';o.querySelectorAll('[id],[data-a],[data-b]').forEach(n=>{n.removeAttribute('id');delete n.dataset.a;delete n.dataset.b});const y0=fromY||0,dist=innerHeight-r.top+20;
+ const a=c.animate([{transform:`translateY(${y0}px)`},{transform:`translateY(${dist}px)`}],{duration:Math.max(160,280*(1-y0/dist)),easing:'cubic-bezier(.4,0,.9,.6)',fill:'forwards'});
+ b&&b.animate([{opacity:getComputedStyle(b).opacity},{opacity:0}],{duration:260,fill:'forwards'});
+ const done=()=>o.remove();a.onfinish=done;setTimeout(done,500)}
+// pull down on the handle, or anywhere once the pop-up is scrolled to the top
+document.addEventListener('pointerdown',e=>{const c=e.target.closest('#sheet .mwc');if(!c||e.button>0)return;
+ const onG=!!e.target.closest('.shg');if(!onG&&(c.scrollTop>0||e.target.closest('input,textarea,select,.rowx,.chips,[type=range],.sr,canvas')))return;
+ const o=c.parentElement,b=o.querySelector('.mwb'),y0=e.clientY,x0=e.clientX,t0=performance.now();let dy=0,on=false,last=[[t0,y0]];
+ const mv=ev=>{const d=ev.clientY-y0;if(!on){if(Math.abs(ev.clientX-x0)>12&&Math.abs(ev.clientX-x0)>Math.abs(d))return end(null,true);if(d<6&&!onG)return;if(d<0&&!onG)return end(null,true);on=true;c.classList.add('drag');try{c.setPointerCapture(e.pointerId)}catch(_){}}
+  dy=Math.max(0,d)+(d<0?d/6:0);c.style.transform=`translateY(${dy}px)`;if(b)b.style.opacity=String(Math.max(.15,1-dy/500));last.push([performance.now(),ev.clientY]);if(last.length>5)last.shift();ev.cancelable&&ev.preventDefault()};
+ const end=(ev,cancel)=>{['pointermove','pointerup','pointercancel'].forEach(t=>document.removeEventListener(t,t==='pointermove'?mv:end));if(!on||cancel)return;
+  const [ta,ya]=last[0],v=(last[last.length-1][1]-ya)/Math.max(1,performance.now()-ta);c.classList.remove('drag');
+  if(dy>Math.min(140,c.offsetHeight*.3)||v>.6){swd=Date.now();if(typeof EST!=='undefined')EST=null;GF=null;shClose(o,dy)}
+  else{c.animate([{transform:`translateY(${dy}px)`},{transform:'translateY(0)'}],{duration:320,easing:'cubic-bezier(.3,1.3,.5,1)'});c.style.transform='';if(b){b.style.transition='opacity .3s';b.style.opacity='';setTimeout(()=>b.style.transition='',320)}}};
+ document.addEventListener('pointermove',mv,{passive:false});document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end)});
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push(
+ {i:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M9 15l-2 0M17 15h-2"/>',h:'Swipe through weeks',p:'Swipe the calendar on Home left or right to move a week at a time. Tap a day to see it.'},
+ {i:'<path d="M9 5h6"/><rect x="4" y="3" width="16" height="18" rx="4"/>',h:'Pull down to close',p:'Pop-ups like Settings now have a handle at the top. Pull it down to close, or keep using Close. Settings is grouped into sections too.'})}
+// stop the page underneath from scrolling while a pop-up is being pulled
+document.addEventListener('touchmove',e=>{if(document.querySelector('#sheet .mwc.drag'))e.preventDefault()},{passive:false});
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
