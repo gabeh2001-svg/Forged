@@ -5057,6 +5057,39 @@ let KBMAX=0;
 // where Servings was 13px). WebKit's guidance is to use a 16px or larger font for form fields rather than disabling zoom.
 (function(){const st=document.createElement('style');st.textContent=`
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}`;document.head.appendChild(st)})();
+/* ---------- v70: horse riding, and an easy calorie estimate for every cardio session ---------- */
+// Calories: METs from the Compendium of Physical Activities (Ainsworth et al., 2024 update), where 1 MET is about 1 kcal per kg per hour,
+// so kcal ≈ MET × body weight (kg) × hours. Riding: walk 3.8, trot 5.8, canter or gallop 7.3, general riding 5.5 (Compendium codes
+// 15400/15390/15380/15370; the British Horse Society's riding report gives 5.0 to 6.5 METs for trotting). Runs and walks with a
+// distance use the ACSM metabolic equations (running VO2 = 0.2 × speed in m/min + 3.5; walking 0.1 × speed + 3.5; 1 MET = 3.5).
+CARDIO.splice(CARDIO.indexOf('Other'),0,'Horse riding','Walk');
+const RIDE=[['Mixed','A bit of everything',5.5],['Walk','Mostly walking',3.8],['Trot','Mostly trotting',5.8],['Canter','Cantering or galloping',7.3]];
+const CMET={Treadmill:8,'Exercise bike':6.8,Rower:7,'Cross trainer':5,'Stair climber':9,'Ski erg':6.8,'Outdoor run':9,'Outdoor cycle':7.5,Swim:6,Skipping:11.8,Walk:3.5,Other:5};
+function bodyKg(){try{const B=S.bm||{},ds=Object.keys(B).filter(d=>B[d]&&+B[d].w>0).sort(),u=U(),w=ds.length?+B[ds[ds.length-1]].w:(+S.setup.w||0);if(!w)return 0;return u==='lb'?w/2.2046:w}catch(_){return 0}}
+function cMet(e){const a=e.act||'Other';if(a==='Horse riding'){const r=RIDE.find(x=>x[0]===e.int)||RIDE[0];return r[2]}
+ const min=+e.v||0,km=+e.dist||0;if(km>0&&min>0&&/Treadmill|Outdoor run|Walk/.test(a)){const mpm=km*1000/min,kph=km/(min/60);return Math.max(2,(kph<8?0.1*mpm+3.5:0.2*mpm+3.5)/3.5)}
+ if(km>0&&min>0&&a==='Outdoor cycle'){const kph=km/(min/60);return kph<16?6:kph<19?6.8:kph<22?8:kph<25?10:12}
+ return CMET[a]||5}
+function cKcal(e){const kg=bodyKg();if(!kg)return null;let h;const m=cMet(e);
+ if(e.mode==='Intervals'){const w=(+e.rd||0)*(+e.wk||0)/3600,r=(+e.rd||0)*(+e.rs||0)/3600;if(!w)return null;return Math.round(kg*(m*w+2.5*r)/5)*5}
+ h=(+e.v||0)/60;if(!h)return null;return Math.round(m*kg*h/5)*5}
+const cKcalTxt=e=>{const k=cKcal(e);return k==null?(bodyKg()?'':'Add your weight in Body metrics to see calories burned.'):`About ${k} kcal for you`};
+// builder: riding gets a simple Pace choice instead of the speed or level box, and the estimate updates as you type
+{const _cf=cardioFields;cardioFields=function(){let h=_cf.apply(this,arguments).replace('<select data-b="X.act">','<select data-b="X.act" data-r>');
+ const X2={...X,v:X.dur??X.v,act:X.act||'Treadmill'};
+ if(X2.act==='Horse riding'){h=h.replace(/<label>Style<select[^]*?<\/select><\/label>/,`<label>Pace<select data-b="X.int" data-r>${RIDE.map(r=>`<option value="${r[0]}" ${(X.int||'Mixed')===r[0]?'selected':''}>${r[0]}</option>`).join('')}</select></label>`)
+  .replace(/<label>Speed, incline or level \(optional\)<input[^>]*><\/label>/,'');if(!X.int)X.int='Mixed';X.mode='Steady'}
+ return h+`<p class="sm cfk" style="margin:6px 2px 12px">${cKcalTxt(X2)}</p>`}}
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||!/^X\.(dur|dist|wk|rs|rd)$/.test(t.dataset.b||''))return;setTimeout(()=>{const c=$('.cfk');if(c)c.textContent=cKcalTxt({...X,v:X.dur??X.v,act:X.act||'Treadmill'})},0)});
+// the plan view shows the estimate, and "Pace" for riding
+{const _eb=exBlock;exBlock=function(e){let h=_eb.apply(this,arguments);if(e.eq!=='Cardio')return h;if(e.act==='Horse riding'){const r=RIDE.find(x=>x[0]===e.int)||RIDE[0];h=h.replace(/<dt>Settings<\/dt><dd>[^<]*<\/dd>/,`<dt>Pace</dt><dd>${r[1]}</dd>`).replace('Steady cardio','Riding')}
+ const k=cKcal(e);return k==null?h:h.replace('</dl>',`<dt>Burns</dt><dd>About ${k} kcal</dd></dl>`)}}
+// guided session: riding-friendly set-up text, the estimate before you start, and what you burned when you finish
+{const _w=awr;awr=function(){_w.apply(this,arguments);const o=$('#aw');if(!o||!AW)return;const e=AW.d.ex[AW.e]||{};if(e.eq!=='Cardio')return;
+ try{if(AW.ph==='load'&&e.act==='Horse riding'){const b=o.querySelector('.big2');const r=RIDE.find(x=>x[0]===e.int)||RIDE[0];if(b)b.innerHTML=`Get your horse ready and mount up<div class="sm" style="font-size:18px;margin-top:10px">${esc(r[1])}</div>`}
+  if(AW.ph==='begin'||AW.ph==='set'){const k=cKcal(e),sm=o.querySelector('.big2+small');if(k!=null&&sm&&!sm.dataset.k){sm.dataset.k=1;sm.insertAdjacentHTML('afterend',`<small class="awlt">About ${k} kcal for you</small>`)}}}catch(_){}}}
+{const _c=completeSet;completeSet=function(now){const x=AW&&AW.d.ex[AW.e];const r=_c.apply(this,arguments);try{if(x&&x.eq==='Cardio'){const k=cKcal(x);if(k!=null){const d=today();(S.burn=S.burn||{})[d]=(+S.burn[d]||0)+k;save();setTimeout(()=>toast(`Nice. About ${k} kcal burned on that ${x.act==='Horse riding'?'ride':(x.act||'session').toLowerCase()}.`),400)}}}catch(_){}return r}}
+{const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<path d="M4 20c2-6 6-9 11-9l3-4 2 1-1 4c0 4-2 7-5 8"/><path d="M8 20v-4M15 20v-3"/>',h:'Horse riding, and calories for cardio',p:'Horse riding and walking are now in cardio. Just add how long you rode and your pace. Every cardio session shows roughly how many calories it burns for you.'})}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
