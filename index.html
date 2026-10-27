@@ -5052,6 +5052,11 @@ document.addEventListener('pointerdown',e=>{const o=e.target.closest('#lx2');if(
 let KBMAX=0;
 {const kbHold=()=>{const v=visualViewport,kb=innerHeight-v.height;if(kb<=120)return;KBMAX=Math.max(KBMAX,kb);const h=Math.min(v.height,innerHeight-KBMAX);
  document.querySelectorAll('#sheet,#req,#mw,#imp,#wn').forEach(o=>{o.style.height=h+'px'})};if(window.visualViewport){visualViewport.addEventListener('resize',kbHold);visualViewport.addEventListener('scroll',kbHold)}}
+/* ---------- v69: text boxes are at least 16px, so iPhone never zooms the page in when you tap one ---------- */
+// Safari zooms in on any input with text smaller than 16px when it's focused (the "snap" between boxes in the recipe builder,
+// where Servings was 13px). WebKit's guidance is to use a 16px or larger font for form fields rather than disabling zoom.
+(function(){const st=document.createElement('style');st.textContent=`
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}`;document.head.appendChild(st)})();
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
