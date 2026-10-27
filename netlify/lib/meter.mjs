@@ -6,7 +6,10 @@ export const CAP = 300;
 // credits already used before the meter existed (from the Netlify dashboard), including the deploy that added it
 const START = { '2026-10-22': 256 };
 // levels go by credits left, with a buffer kept back so the site never hits the hard limit
-const LEVELS = [{ left: 30, lv: 1 }, { left: 20, lv: 2 }, { left: 12, lv: 3 }];
+// v71: the owner wants server reminders to keep going as long as possible, so the full stop is at 10 left (was 12)
+const LEVELS = [{ left: 30, lv: 1 }, { left: 20, lv: 2 }, { left: 10, lv: 3 }];
+// real figures from the Netlify dashboard, applied once to that month's running record: credits used at that moment
+const FIX = { '2026-10-22': 271 };
 const ctx = () => {
   const raw = globalThis.netlifyBlobsContext || process.env.NETLIFY_BLOBS_CONTEXT;
   if (!raw) return null;
@@ -44,6 +47,7 @@ export function level(m, now = new Date()) {
 export async function load(deployId) {
   const k = 'm-' + month(), m = (await bget(k)) || { base: START[month()] || 0, dep: 0, mb: 0, req: 0, fn: 0, opens: 0, devices: {} };
   let changed = false;
+  if (FIX[month()] != null && !m.fixed) { const traffic = estimate(m) - (m.base || 0) - (m.dep || 0) * 15; m.base = Math.max(0, FIX[month()] - traffic - (m.dep || 0) * 15); m.fixed = 1; changed = true }
   if (deployId) {
     const g = (await bget('deploy')) || {};
     if (g.id !== deployId) { if (g.id) { m.dep++; } g.id = deployId; await bset('deploy', g); changed = true }
