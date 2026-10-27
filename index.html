@@ -4745,6 +4745,19 @@ addEventListener('resize',()=>{try{dscFit()}catch(_){}});
 
 /* ---------- v62: tidy counts ("1 exercise", not "1 exercises") ---------- */
 ['home','planner','diet'].forEach(f=>{const o=window[f];if(typeof o!=='function')return;window[f]=function(){return o.apply(this,arguments).replace(/([ >])1 exercises/g,'$11 exercise').replace(/([ >])1 sessions/g,'$11 session')}});
+/* ---------- v63: the add-button water fill lives inside the button, so it scrolls with it; deeper blue to match the app ---------- */
+(function(){const st=document.createElement('style');st.textContent=`
+.wfx.inb{position:absolute;inset:0;z-index:3;border-radius:inherit}
+.wfx .wv{background:linear-gradient(180deg,#3f6fe0,#1b3c9e)}`;document.head.appendChild(st)})();
+{const _fb=fxBurst;fxBurst=function(el,x,y){if(MRM())return;let b=el&&el.isConnected?el:null;
+ if(!b&&FXT2){b=document.querySelector(`[data-a="${FXT2.a}"]${FXT2.i!=null?`[data-i="${CSS.escape(FXT2.i)}"]`:''}`)}
+ const r=b&&b.getBoundingClientRect();
+ // a button that's gone or off screen keeps the old floating version
+ if(!b||!r||!r.width||r.bottom<0||r.top>innerHeight||b.matches('input,select,textarea'))return _fb.apply(this,arguments);
+ const n=document.querySelectorAll('body > .wfx').length;_fb.apply(this,arguments);const o=[...document.querySelectorAll('body > .wfx')][n];if(!o)return;
+ if(getComputedStyle(b).position==='static')b.style.position='relative';if(getComputedStyle(b).overflow==='visible'){b.style.overflow='hidden';setTimeout(()=>{b.style.overflow=''},1500)}
+ o.classList.add('inb');o.style.left=o.style.top=o.style.width=o.style.height='';b.appendChild(o);
+ o.querySelector('.wv path')&&o.querySelector('.wv path').setAttribute('fill','#3f6fe0')}}
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
