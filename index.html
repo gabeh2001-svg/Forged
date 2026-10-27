@@ -910,9 +910,9 @@ addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return
  if(!AW)return;const x=AW.d.ex[AW.e]||{};
  if(a==='awn'&&x.eq==='Cardio'&&(AW.ph==='begin'||AW.ph==='set')){e.stopImmediatePropagation();const segs=[];if(x.mode==='Intervals'){for(let r=1;r<=(+x.rd||1);r++){segs.push({k:'Work',r,ms:(+x.wk||30)*1000});if(+x.rs&&r<(+x.rd||1))segs.push({k:'Rest',r,ms:+x.rs*1000})}}else segs.push({k:'Work',r:1,ms:(+x.v||10)*60000});AW.cs={segs,i:0};AW.ph='cardio';AW.left=segs[0].ms;AW.end=now+AW.left;AW.run=true;awr();return}
  if(a==='awn'&&AW.ph==='cardio'){e.stopImmediatePropagation();completeSet(now);awr();return}
- if(a==='awpick'){e.stopImmediatePropagation();const i=+el.dataset.i,o=$('#aw'),kids=[...o.children];el.animate([{transform:'scale(1)'},{transform:'scale(1.06)'}],{duration:160,easing:'ease-out',fill:'forwards'});
-  kids.forEach(k=>k.animate([{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(-18px)'}],{duration:230,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}));
-  setTimeout(()=>{AW.e=i;AW.s=1;AW.ph='go';awr();[...o.children].forEach((k,j)=>k.animate([{opacity:0,transform:'translateY(22px)'},{opacity:1,transform:'translateY(0)'}],{duration:380,delay:j*35,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'}))},240);return}},true);
+ if(a==='awpick'){e.stopImmediatePropagation();const i=+el.dataset.i;
+  // v62: the step crossfades straight to the picked exercise (no fade to empty and back)
+  AW.e=i;AW.s=1;AW.ph='go';awr();return}},true);
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a;
  if(a==='xk'){if(el.dataset.i==='Cardio'){X.eq='Cardio'}else{X.eq='Bar';X.t=X.t==='Cardio'?'Target Reps':X.t}}
  else if(a==='xedit'&&X.eq==='Cardio'){X.dur=X.v}
@@ -935,7 +935,7 @@ function dietPanel(){const t=today(),r=realToday(),m=S.macros[t]||{},g=S.setup,v
 function dayWork(t){const sl=S.solo&&S.solo.d===t?S.solo.k.split('|'):null;if(sl){const pp=S.plans.find(x=>x.id===sl[0]);if(pp&&pp.days[+sl[1]])return pp.days[+sl[1]]}const p=activePlan();ensureSched();const s=S.sch&&S.sch[t];return p&&s!=null?p.days[s%p.days.length]:null}
 function workPanel(){const t=today(),r=realToday(),d=dayWork(t),fd=!!(S.fd||{})[t],n=d?d.ex.length:0,c=Math.min(n,(S.checks[t]||[]).filter(Boolean).length),title=d?`${esc(d.name)}${d.body?` - ${esc(d.body)}`:''}`:'';
  if(!d&&!fd)return`<div class="card dp"><div class="dph">${ring(0,'transparent',IDOT)}<div><b>Rest day</b><div class="sm">${t<r?'No workout was planned.':t>r?'Nothing planned for this day.':'No workout planned today. You can still start one below.'}</div></div></div></div>`;
- if(t>r)return`<div class="card dp"><div class="dph">${ring(0,'transparent')}<div><b>Planned</b><div class="sm">${title}, ${n} exercises.</div></div></div></div>`;
+ if(t>r)return`<div class="card dp"><div class="dph">${ring(0,'transparent')}<div><b>Planned</b><div class="sm">${title||'A workout'}, ${n?`${n} exercise${n===1?'':'s'}`:'no exercises added yet'}.</div></div></div></div>`;
  if(fd)return`<div class="card dp"><div class="dph">${ring(1,'var(--G)',ICK)}<div><b>Workout done</b><div class="sm">${title||'Session complete'}</div></div></div>${n?bar('Exercises',n,n,'',C3.g,1):''}</div>`;
  const p=n?c/n:0;
  if(t===r)return`<div class="card dp"><div class="dph">${ring(p,'#fff',pctT(p))}<div><b>Today’s workout</b><div class="sm">${title}</div></div></div>${bar('Exercises done',c,n,'',ACC,1)}</div>`;
@@ -1834,7 +1834,7 @@ function ghostOut(el){const all=[el,...el.querySelectorAll('*')];if(all.length>2
 /* guided workouts: each step slides in from the side, so the flow reads as moving forward */
 let AWK='',AWPT=0;document.addEventListener('click',e=>{if(e.target.closest('[data-a=awpick]'))AWPT=Date.now()},true);
 if(typeof awr==='function'){const _w=awr;awr=function(){_w.apply(this,arguments);const o=$('#aw');if(!o||!AW){AWK='';return}const k=AW.e+'|'+AW.s+'|'+AW.ph;if(k===AWK)return;const first=!AWK;AWK=k;if(first||MRM()||Date.now()-AWPT<700)return;
- [...o.children].forEach((c,i)=>{if(getComputedStyle(c).position==='fixed')return;c.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:360,delay:Math.min(i,6)*30,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})}}
+ [...o.children].forEach((c,i)=>{if(getComputedStyle(c).position==='fixed'||c.classList.contains('pulse'))return;c.animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:360,delay:Math.min(i,6)*30,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})}}
 RELEASES.find(r=>r.v==='2026.10.27').items.push({i:'<path d="M3 15c3 0 4-6 8-6s4 6 8 6"/><path d="M3 19h18"/>',h:'Smoother everywhere',p:'A new wave loader, and every animation has been tuned: pop-ups ease away instead of vanishing, screens arrive in a gentle cascade and guided workout steps fade in.'});
 
 /* ===== v34: refinement pass: consistent spacing, concentric corners, comfortable tap targets, tidier edit mode ===== */
@@ -2413,14 +2413,19 @@ AWPT=1e15;
 if(typeof fxApply==='function'){const _fa=fxApply;fxApply=function(root){if(root&&root.id==='aw')return;return _fa.apply(this,arguments)}}
 {const _w=awr;let busy=false,again=false;
  const key=()=>AW?AW.e+'|'+AW.s+'|'+AW.ph:'';
- const enter=o=>{if(!o||MRM())return;[...o.children].filter(c=>getComputedStyle(c).position!=='fixed'&&getComputedStyle(c).position!=='absolute').forEach((c,i)=>c.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:320,delay:i*28,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'}))};
+ const enter=o=>{if(!o||MRM())return;[...o.children].filter(c=>getComputedStyle(c).position!=='fixed'&&getComputedStyle(c).position!=='absolute'&&!c.classList.contains('pulse')).forEach((c,i)=>{c.getAnimations().forEach(x=>{if(!(x instanceof CSSAnimation))x.cancel()});c.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:320,delay:60+i*24,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})})};
  awr=function(){const o=$('#aw'),k=key(),args=arguments,self=this;
   if(busy){again=true;return}
   if(!o||!AW||!o.dataset.k||o.dataset.k===k||MRM()){_w.apply(self,args);const n=$('#aw');if(n){const fresh=!o;n.dataset.k=key();if(fresh)enter(n)}return}
-  busy=true;o.style.pointerEvents='none';
-  const kids=[...o.children].filter(c=>getComputedStyle(c).position!=='fixed'&&getComputedStyle(c).position!=='absolute');
-  const outs=kids.map(c=>c.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(-4px)'}],{duration:150,easing:'cubic-bezier(.55,0,.9,.45)',fill:'forwards'}));
-  Promise.all(outs.map(a=>a.finished.catch(()=>{}))).then(()=>{busy=false;_w.apply(self,args);const n=$('#aw');if(n){n.style.pointerEvents='';n.dataset.k=key();enter(n)}if(again){again=false;awr()}})}}
+  // v62: crossfade instead of fade-out, redraw, fade-in. A copy of the old step fades away on top while the new one is already
+  // in place, so there is never an empty frame (the jitter when swapping a taken machine).
+  const flow=c=>{const p=getComputedStyle(c).position;return p!=='fixed'&&p!=='absolute'};
+  const gh=document.createElement('div');gh.setAttribute('aria-hidden','true');
+  Object.assign(gh.style,{position:'fixed',inset:'0',zIndex:71,pointerEvents:'none'});
+  [...o.children].filter(flow).forEach(c=>{const r=c.getBoundingClientRect(),k=c.cloneNode(true);k.removeAttribute('id');k.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));
+   Object.assign(k.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',margin:'0',boxSizing:'border-box',animation:'none'});gh.appendChild(k)});
+  document.body.appendChild(gh);_w.apply(self,args);const n=$('#aw');if(n){n.dataset.k=key();enter(n)}
+  gh.animate([{opacity:1},{opacity:0}],{duration:160,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}).onfinish=()=>gh.remove();setTimeout(()=>gh.remove(),400)}}
 /* ===== v42: light on widgets. Only the rims catch the light as the phone tilts; content never moves ===== */
 (function(){const st=document.createElement('style');st.textContent=`
 .grid .wd::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;z-index:2;
@@ -4632,7 +4637,7 @@ document.addEventListener('touchmove',e=>{if(document.querySelector('#sheet .mwc
  backdrop-filter:blur(44px) saturate(120%) brightness(.8)!important;-webkit-backdrop-filter:blur(44px) saturate(120%) brightness(.8)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 -10px 30px rgba(0,0,0,.18)}
 #app .nav .navhl3{position:absolute;top:0;left:0;border-radius:16px;background:rgba(255,255,255,.16);pointer-events:none;z-index:0;will-change:transform}
 #app .nav .navhl2,#app .nav .navhl{display:none}
-.cal{overflow:hidden}.cal .cw7{will-change:transform;touch-action:pan-y}
+.cal{overflow:hidden;position:relative}.cal .cw7{will-change:transform;touch-action:pan-y}
 .sctiles button{display:block}.sctiles button svg{display:block;margin-bottom:8px}.sctiles button b{display:block;margin-bottom:3px}.sctiles button small{display:block}
 #sheet .wks .wkr{margin:10px 0 8px}#sheet .wks .wkr div{padding:10px 6px}#sheet .wks .fopt{gap:6px;margin:8px 0 10px}#sheet .wks .fopt button{padding:10px 14px}
 #sheet .wks>p.sm{margin:6px 0 0}#sheet .wks .glink[data-a=wkno]{min-height:44px;padding:10px 16px;margin:4px auto 0!important}
@@ -4661,26 +4666,36 @@ navGlide=function(){let n=document.querySelector('#app .nav');if(!n)return;
 // start the glide on the tap itself, before the new page is built
 window.addEventListener('click',e=>{const b=e.target.closest('#app .nav button[data-a=tab]');if(!b||ED)return;const n=b.closest('.nav');try{navPill(n,b,true)}catch(_){}},true);
 
-/* 2. calendar: the week follows your finger and snaps to the next one */
-let CALG=null;
-function calSlideIn(dir){const w=$('#app .cal .cw7');if(!w||MRM())return;const W=w.offsetWidth+24;
- w.animate([{transform:`translateX(${dir*W}px)`},{transform:'translateX(0)'}],{duration:340,easing:'cubic-bezier(.2,.9,.25,1)'})}
-function calGo(dir,from,v){const w=$('#app .cal .cw7'),b=$(`#app .cal [data-a=wk][data-i="${dir>0?7:-7}"]`);if(!b)return;
- const go=()=>{CALG=dir;b.__glide=1;const s0=swd;swd=0;b.click();swd=s0;b.__glide=0};
- if(!w||MRM()){go();return}const W=w.offsetWidth+24,d=Math.max(120,Math.min(220,(W-Math.abs(from||0))/Math.max(.6,v||0)));
- const a=w.animate([{transform:`translateX(${from||0}px)`},{transform:`translateX(${-dir*W}px)`}],{duration:d,easing:'cubic-bezier(.4,0,.9,.7)',fill:'forwards'});
- a.onfinish=go}
-// arrows glide too
-window.addEventListener('click',e=>{const b=e.target.closest('#app .cal [data-a=wk]');if(!b||b.__glide||ED)return;e.stopImmediatePropagation();e.preventDefault();calGo(+b.dataset.i>0?1:-1,0,0)},true);
-{const _fa=fxApply;fxApply=function(root,pre,same){const r=_fa.apply(this,arguments);if(CALG!=null&&root&&root.id==='app'){const d=CALG;CALG=null;calSlideIn(d)}return r}}
+/* 2. calendar: a paged strip. Last and next week sit either side of this one, already drawn, so the swipe never waits on a redraw.
+   The week follows your finger and snaps to the next one past a distance or flick speed; the page only redraws once the new
+   week is in place, and what it draws is identical, so nothing visibly changes. (v62: replaces v61's slide-out / redraw / slide-in.) */
+let CALSNAP=0;
+function calRow(dir){const v0=VD;try{const v=addDays(today(),dir*7);VD=v===realToday()?null:v;const T=document.createElement('template');T.innerHTML=cal2();const r=T.content.querySelector('.cw7');return r?r.outerHTML:''}catch(_){return''}finally{VD=v0}}
+function calStrip(c){const w=c.querySelector('.cw7:not(.cwn)');if(!w)return null;if(c.__st&&c.__st.w===w)return c.__st;c.querySelectorAll('.cwn').forEach(x=>x.remove());
+ const W=w.offsetWidth+28,mk=d=>{const T=document.createElement('template');T.innerHTML=calRow(d);const n=T.content.firstElementChild;if(!n)return null;n.classList.add('cwn');n.setAttribute('aria-hidden','true');
+  n.querySelectorAll('[data-a],[data-mv]').forEach(x=>{x.removeAttribute('data-a');x.removeAttribute('data-mv')});
+  Object.assign(n.style,{position:'absolute',left:w.offsetLeft+'px',top:w.offsetTop+'px',width:w.offsetWidth+'px',margin:'0',pointerEvents:'none',transform:`translateX(${d*W}px)`});c.appendChild(n);return n};
+ return c.__st={w,W,p:mk(-1),n:mk(1)}}
+const calEls=st=>[[st.w,0],[st.p,-1],[st.n,1]].filter(x=>x[0]);
+function calSet(st,x){calEls(st).forEach(([e,k])=>{e.style.transform=`translateX(${x+k*st.W}px)`})}
+function calGo(dir,from,v){const c=$('#app .cal');if(!c)return;const st=MRM()?null:calStrip(c);
+ const commit=()=>{const nv=addDays(today(),dir*7);VDFROM=today();VDT=Date.now();VD=nv===realToday()?null:nv;CALSNAP=1;try{render()}finally{CALSNAP=0}};
+ if(!st){commit();return}const x0=from||0,x1=-dir*st.W,dist=Math.abs(x1-x0),dur=v>0?Math.max(180,Math.min(340,dist/Math.max(v,.9)*1.6)):340;
+ calEls(st).forEach(([e,k])=>{e.getAnimations().forEach(a=>a.cancel());e.style.transform=`translateX(${x1+k*st.W}px)`});
+ const A=calEls(st).map(([e,k])=>e.animate([{transform:`translateX(${x0+k*st.W}px)`},{transform:`translateX(${x1+k*st.W}px)`}],{duration:dur,easing:'cubic-bezier(.2,.8,.25,1)'}));
+ c.__busy=1;A[0].onfinish=()=>{c.__busy=0;commit()}}
+// arrows use the same strip
+window.addEventListener('click',e=>{const b=e.target.closest('#app .cal [data-a=wk]');if(!b||ED)return;e.stopImmediatePropagation();e.preventDefault();const c=b.closest('.cal');if(c&&c.__busy)return;calGo(+b.dataset.i>0?1:-1,0,0)},true);
+// the redraw after a swipe draws the same week that's already showing, so the usual date-change fade is skipped for the calendar
+{const _fa=fxApply;fxApply=function(root,pre,same){const r=_fa.apply(this,arguments);if(CALSNAP&&root&&root.id==='app'){const c=$('#app .cal');if(c){c.getAnimations().forEach(a=>a.cancel());c.querySelectorAll('*').forEach(x=>x.getAnimations().forEach(a=>a.cancel()))}}return r}}
 {let g=null;
- document.addEventListener('touchstart',e=>{g=null;const c=e.target.closest('#app .cal');if(!c||ED||e.touches.length!==1||e.target.closest('.chipw,[data-a=wk]'))return;const t=e.touches[0],w=c.querySelector('.cw7');if(!w)return;g={x:t.clientX,y:t.clientY,w,on:false,pts:[[performance.now(),t.clientX]]}},{passive:true,capture:true});
+ document.addEventListener('touchstart',e=>{g=null;const c=e.target.closest('#app .cal');if(!c||c.__busy||ED||e.touches.length!==1||e.target.closest('.chipw,[data-a=wk]'))return;const t=e.touches[0];g={c,x:t.clientX,y:t.clientY,on:false,pts:[[performance.now(),t.clientX]]}},{passive:true,capture:true});
  document.addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=t.clientX-g.x,dy=t.clientY-g.y;
-  if(!g.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){g=null;return}if(Math.abs(dx)<8)return;g.on=true;g.w.getAnimations().forEach(a=>a.cancel())}
-  e.cancelable&&e.preventDefault();e.stopImmediatePropagation();g.dx=dx;g.w.style.transform=`translateX(${dx}px)`;g.pts.push([performance.now(),t.clientX]);if(g.pts.length>6)g.pts.shift()},{passive:false,capture:true});
- const end=()=>{if(!g||!g.on){g=null;return}const {w,dx=0,pts}=g;g=null;swd=Date.now();const [t0,x0]=pts[0],[t1,x1]=pts[pts.length-1],v=(x1-x0)/Math.max(1,t1-t0);
-  const W=w.offsetWidth;if(Math.abs(dx)>W*.22||(Math.abs(v)>.45&&Math.sign(v)===Math.sign(dx))){w.style.transform='';try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}calGo(dx<0?1:-1,dx,Math.abs(v))}
-  else{w.style.transform='';w.animate([{transform:`translateX(${dx}px)`},{transform:'translateX(0)'}],{duration:300,easing:'cubic-bezier(.3,1.3,.5,1)'})}};
+  if(!g.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){g=null;return}if(Math.abs(dx)<8)return;g.st=calStrip(g.c);if(!g.st){g=null;return}g.on=true;calEls(g.st).forEach(([el])=>el.getAnimations().forEach(a=>a.cancel()))}
+  e.cancelable&&e.preventDefault();e.stopImmediatePropagation();g.dx=dx;calSet(g.st,dx);g.pts.push([performance.now(),t.clientX]);if(g.pts.length>6)g.pts.shift()},{passive:false,capture:true});
+ const end=()=>{if(!g||!g.on){g=null;return}const {st,dx=0,pts}=g;g=null;swd=Date.now();const [t0,x0]=pts[0],[t1,x1]=pts[pts.length-1],v=(x1-x0)/Math.max(1,t1-t0);
+  if(Math.abs(dx)>st.W*.22||(Math.abs(v)>.45&&Math.sign(v)===Math.sign(dx))){try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}calGo(dx<0?1:-1,dx,Math.abs(v))}
+  else{calSet(st,0);calEls(st).forEach(([el,k])=>el.animate([{transform:`translateX(${dx+k*st.W}px)`},{transform:`translateX(${k*st.W}px)`}],{duration:320,easing:'cubic-bezier(.3,1.25,.5,1)'}))}};
  document.addEventListener('touchend',end,{passive:true,capture:true});document.addEventListener('touchcancel',end,{passive:true,capture:true})}
 
 /* 3. hold an empty spot in the widget area to rearrange, the same as holding a widget */
@@ -4728,6 +4743,8 @@ addEventListener('resize',()=>{try{dscFit()}catch(_){}});
  {i:'<path d="M3 12h18M14 5l7 7-7 7"/>',h:'Smoother Home and dock',p:'The week now glides under your finger and snaps to the next one. Hold any empty spot in your widgets to rearrange them. The dock is calmer, and tab changes glide more smoothly.'},
  {i:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',h:'One Today card on Diet',p:'Today so far now holds everything: your progress, Edit goals (targets and what you’ve eaten) and Work out my goals.'})}
 
+/* ---------- v62: tidy counts ("1 exercise", not "1 exercises") ---------- */
+['home','planner','diet'].forEach(f=>{const o=window[f];if(typeof o!=='function')return;window[f]=function(){return o.apply(this,arguments).replace(/([ >])1 exercises/g,'$11 exercise').replace(/([ >])1 sessions/g,'$11 session')}});
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
