@@ -6214,6 +6214,48 @@ let PRS=null;window.addEventListener('pointerdown',e=>{const el=e.target.closest
 try{fpRoll()}catch(_){}
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 4h2l2.4 11h11L21 8H7"/>',h:'Food plan and shopping',p:'Plan your week by dropping recipes into days. Swell scores the week’s balance, writes your shopping list in aisle order, and gets it ready on your usual shop day. Paste recipes from any website and they come out as numbered steps in UK measures. There’s a Shopping widget too.'})}
 
+/* ===== v80: a cover picture for each workout ===== */
+// Research notes for this block:
+// - Personalisation and ownership: people value things they've made or customised more (the IKEA effect, Norton, Mochon &
+//   Ariely 2012), and a recognisable image helps people find an item faster than text alone (picture superiority effect,
+//   Paivio 1971). Playlist covers do both, so each workout day can have its own picture.
+// - Two clean layouts, never an empty placeholder: a workout with a picture shows it as a square cover beside the name;
+//   without one, the layout is text only and nothing is reserved for it (an empty frame reads as something missing).
+// - Pictures are cropped square, shrunk to 480 px and kept in the phone's IndexedDB, not in the main storage, so the app
+//   stays fast to save and load.
+(function(){const st=document.createElement('style');st.textContent=`
+.wcov{width:64px;height:64px;border-radius:14px;object-fit:cover;flex:none;box-shadow:0 6px 18px rgba(0,0,0,.35);display:block}
+.wcov.s{width:44px;height:44px;border-radius:10px}.wcov.xs{width:26px;height:26px;border-radius:7px;display:inline-block;vertical-align:middle;margin-right:8px;box-shadow:none}
+.wcov.l{width:96px;height:96px;border-radius:18px}
+.cvrow{display:flex;align-items:center;gap:12px;margin:0 0 10px}.cvrow .btn{margin:0}.cvrow .glink{margin-left:auto}
+.wbh{display:flex;align-items:center;gap:12px;margin:0 0 10px;text-align:left}.wbh b{font-size:17px;display:block;line-height:1.2}.wbh small{color:var(--dim);font-size:12.5px}
+.dph .wcov{margin-left:auto}`;document.head.appendChild(st)})();
+const cvImg=d=>d&&d.cv?IMGS[d.cv]:null;
+const cvTag=(d,c)=>{const u=cvImg(d);return u?`<img class="wcov ${c||''}" src="${u}" alt="">`:''};
+// load covers once, then draw them
+(async()=>{try{const ks=[];(S.plans||[]).forEach(p=>(p.days||[]).forEach(d=>{if(d.cv&&!IMGS[d.cv])ks.push(d.cv)}));for(const k of ks){const v=await idbGet(k);if(v)IMGS[k]=v}if(ks.length)render()}catch(_){}})();
+function cvPick(cb){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.style.cssText='position:fixed;left:-9999px';document.body.appendChild(inp);
+ inp.addEventListener('change',()=>{const f=inp.files&&inp.files[0];inp.remove();if(!f)return;const im=new Image(),url=URL.createObjectURL(f);im.onload=()=>{const s=Math.min(im.naturalWidth,im.naturalHeight),N=Math.min(480,s),c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d');x.drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,N,N);URL.revokeObjectURL(url);cb(c.toDataURL('image/jpeg',.8))};im.onerror=()=>{URL.revokeObjectURL(url);toast('Couldn’t open that picture. Try another.')};im.src=url});inp.click()}
+// the plan editor: add, change or remove the day's cover
+{const _b=builder;builder=function(){let h=_b.apply(this,arguments);try{const d=D.days[D.sel];if(!d)return h;const u=cvImg(d);
+ const row=u?`<div class="cvrow"><img class="wcov" src="${u}" alt="Cover picture"><button class="btn" data-a="cvset">Change picture</button><button class="glink" data-a="cvrm">Remove</button></div>`:`<button class="btn" data-a="cvset" style="width:100%;margin:0 0 10px">Add a cover picture</button>`;
+ h=h.replace('<div class="card"><label>Day name',`<div class="card">${row}<label>Day name`)}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cvset],[data-a=cvrm]');if(!el||!D)return;e.stopImmediatePropagation();e.preventDefault();const d=D.days[D.sel];if(!d)return;
+ if(el.dataset.a==='cvrm'){if(d.cv){delete IMGS[d.cv];idbDo('readwrite',s=>s.delete(d.cv)).catch(()=>{})}d.cv=undefined;cvApply(d);return render()}
+ cvPick(u=>{const id=d.cv||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5));d.cv=id;IMGS[id]=u;idbPut(id,u).catch(()=>storeWarn('photo'));cvApply(d);render();toast('Cover added.')})},true);
+// the builder edits a copy, so the cover goes onto the saved plan straight away too
+function cvApply(d){try{const p=D.eid&&S.plans.find(x=>x.id===D.eid);if(p&&p.days[D.sel]){p.days[D.sel].cv=d.cv;save()}}catch(_){}}
+// plan list
+{const _p=planner0;planner0=function(){let h=_p.apply(this,arguments);try{(S.plans||[]).forEach(p=>(p.days||[]).forEach(d=>{const u=cvImg(d);if(!u)return;h=h.replace(`<p class="sm" style="margin:6px 0 0"><b>${esc(d.name)}</b>`,`<p class="sm" style="margin:6px 0 0;display:flex;align-items:center"><img class="wcov xs" src="${u}" alt=""><span><b>${esc(d.name)}</b>`).replace(/(<img class="wcov xs"[^>]*><span><b>[^<]*<\/b>[^<]*)<\/p>/,'$1</span></p>')}))}catch(_){}return h}}
+// Workout tab: today's card
+{const _w=workPanel;workPanel=function(){let h=_w.apply(this,arguments);try{const d=dayWork(today());const t=cvTag(d,'s');if(t)h=h.replace(/(<div class="dph">[\s\S]*?<\/div><\/div>)/,m=>m+t)}catch(_){}return h}}
+// Home: the big workout widget
+{const _bw=bigWork;bigWork=function(){let h=_bw.apply(this,arguments);try{const p=activePlan(),t=today(),v=S.sch&&S.sch[t];if(!p||v==null)return h;const d=p.days[v%p.days.length],u=cvImg(d);if(!u||!h)return h;const n=(d.ex||[]).length;
+ h=h.replace(/^<h2>[^<]*<\/h2>/,`<h2 style="display:none">${esc(d.name)}</h2>`).replace('<div class="wbig" style="justify-content:flex-start;padding-top:2px">',`<div class="wbig" style="justify-content:flex-start;padding-top:2px"><div class="wbh"><img class="wcov" src="${u}" alt=""><div><b>${n} exercise${n===1?'':'s'}</b><small>${d.body?esc(d.body):esc(p.name)}</small></div></div>`)}catch(_){}return h}}
+// guided session: the start screen shows the cover
+if(typeof awr==='function'){const _a=awr;awr=function(){const r=_a.apply(this,arguments);try{const o=$('#aw');if(o&&!o.querySelector('.wcov.l')&&typeof AW!=='undefined'&&AW){const d=dayWork(today()),u=cvImg(d),h=o.querySelector('h1,h2');if(u&&h&&AW.i===0&&!AW.ph)h.insertAdjacentHTML('beforebegin',`<img class="wcov l" src="${u}" alt="" style="margin:0 0 14px">`)}}catch(_){}return r}}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m4 15 4-4 5 5 3-3 4 4"/>',h:'Workout covers',p:'Give each workout day its own picture, like a playlist cover. Edit a plan, pick a day and tap Add a cover picture.'})}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
