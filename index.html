@@ -4346,7 +4346,7 @@ let DSC=null,FELOAD=null;
 .dst{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 2px 0}.dst b{font-size:16px}
 .dsoff{display:flex;flex-direction:column;gap:6px}.dsoff button{text-align:left;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:0;color:inherit;font:inherit}.dsoff small{display:block;color:var(--dim);font-size:12.5px}
 .dscr{font-size:11.5px;color:var(--dim);opacity:.75;margin:2px 2px 0}`;document.head.appendChild(st)})();
-function feReady(){if(FE.rows)return Promise.resolve();if(!FELOAD)FELOAD=fetch('food/foods-3.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(feLoad).catch(e=>{FELOAD=null;throw e});return FELOAD}
+function feReady(){if(FE.rows)return Promise.resolve();if(!FELOAD)FELOAD=fetch('food/foods-4.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(feLoad).catch(e=>{FELOAD=null;throw e});return FELOAD}
 const feMacApp=it=>{if(it.off){const x=it.g/100,o=it.off;return{k:Math.round(o.k*x),p:Math.round(o.p*x*10)/10,f:Math.round(o.f*x*10)/10,c:Math.round(o.c*x*10)/10,fb:o.fb!=null?Math.round(o.fb*x*10)/10:null}}return feMac(it)};
 function dscHTML(){let h=`<div class="dsc"><input data-dsc placeholder="Describe it: large bowl of spaghetti bolognese" value="${esc(DSC?DSC.text:'')}" enterkeyhint="go" autocomplete="off"><button class="btn on" data-a="dscgo">Estimate</button></div>`;
  if(!DSC)return h+'<p class="dscr" style="margin-bottom:12px">Swell estimates the macros from food tables, and shows the portion it assumed so you can adjust it.</p>';
@@ -5378,6 +5378,297 @@ function bpHook(v,nm,t){const p=BPD&&BPD.p;if(!p)return null;nm=niceName(p.b&&!S
  if(cafmg>=20){S.cafl=S.cafl||{};(S.cafl[t]=S.cafl[t]||[]).push({t:nowMin(),mg:cafmg,n:nm,k:0,scan:1});out.push(`${cafmg} mg caffeine`);try{remSync(true)}catch(_){}}
  return`${nm}: ${out.join(', ')||'added'}.`}
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M8 2h8l-1 4H9z"/><path d="M9 6c-1 2-2 3-2 6v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8c0-3-1-4-2-6"/>',h:'Scanned drinks count as water',p:'Scan a drink and Swell measures it in ml, adds it to your water, logs any caffeine, and only puts it in your food log if it has calories worth counting.'})}
+
+/* ===== v75: macros widget, sugar under carbs, describe a meal (dishes, restaurant menus, clear), electrolytes, training-day supplements ===== */
+// Research notes for this block:
+// - Macros widget: people read lengths and positions more accurately than angles (Cleveland & McGill 1984, JASA), so the
+//   wide widget keeps four separate rings with numbers under them, now centred in the tile. The square widget uses nested
+//   rings (the Apple Activity pattern people already know) with the values written beside them, so the rings show the
+//   shape of the day and the labels carry the exact figures. Each macro has its own colour from a colour-blind-safe set
+//   (blue, amber, violet and white; Okabe & Ito 2008), never red against green.
+// - Sugar: the UK label reference intake for total sugars is 90 g a day (Regulation (EU) 1169/2011, Annex XIII, kept in UK
+//   law). SACN (Carbohydrates and Health, 2015) advises free sugars stay under 5% of energy, about 30 g a day for adults.
+//   Labels and food tables give total sugars, so Swell shows total sugars against 90 g and explains the 30 g free-sugar line.
+// - Describe a meal: adults underestimate fast-food meals by about 20%, and by more as meals get bigger (Block et al. 2013,
+//   BMJ 346:f2907). Chains in England have printed calories since April 2022 (Calorie Labelling (Out of Home Sector)
+//   (England) Regulations 2021), so known menu items use the published figures: KFC UK's nutrition guide; McDonald's and
+//   Burger King kcal as published in the UK (fatsecret UK, Deliveroo), with the protein, fat and carb split from USDA lab
+//   analysis of the same item; Greggs from community-logged labels. Dishes like a burger are split into the parts people
+//   actually choose (bun, patty, cheese, sauce, salad), each with a sensible default, because breaking a meal into parts
+//   makes the estimate easier to check and correct.
+// - Electrolytes: ACSM's fluid replacement position stand (Sawka et al. 2007) suggests drinks with 20-30 mEq/L sodium
+//   (460-690 mg per litre) and 2-5 mEq/L potassium when sweating heavily for long periods; for under an hour, water is
+//   enough. Drinks with sodium are retained better than water (Maughan et al. 2016, beverage hydration index, AJCN).
+// - Training days: protein timed around training (ISSN position stand, Jäger et al. 2017) and pre-workouts are often only
+//   taken on gym days, so a supplement can follow the plan. Creatine works by saturating muscle and should be taken every
+//   day (ISSN, Kreider et al. 2017), so Swell says so if a creatine is set to training days only.
+(function(){const st=document.createElement('style');st.textContent=`
+.wd[data-id=macros]>.c{display:flex;flex-direction:column;height:100%}
+.wd[data-id=macros] .mg.four{flex:1;align-content:center;align-items:center}
+.mnest{flex:1;display:flex;align-items:center;gap:7px;min-height:0}
+.mnest svg{width:62px;height:62px;flex:none}
+.nlg{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.nlg div{display:flex;align-items:center;gap:4px;font-size:11.5px;line-height:1.15;white-space:nowrap}
+.nlg i{width:7px;height:7px;border-radius:50%;flex:none}
+.nlg span{color:var(--dim)}.nlg b{margin-left:auto;padding-right:3px;font-weight:700;font-variant-numeric:tabular-nums}
+.sugx{cursor:pointer;-webkit-tap-highlight-color:transparent}.sugx .pbl span:first-child{display:inline-flex;align-items:center;gap:3px}
+.sugx .chev{width:12px;height:12px;transition:transform .25s ease;opacity:.7}.sugx.open .chev{transform:rotate(180deg)}
+.sugp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease}.sugp.open{grid-template-rows:1fr}.sugp>div{overflow:hidden}
+.sugp .in{padding:10px 0 2px}.sugp .sm{margin:6px 2px 0;font-size:12.5px}
+@media (prefers-reduced-motion:reduce){.sugp,.sugx .chev{transition:none}}
+.dsiw{position:relative;flex:1;display:flex}.dsiw input{flex:1;margin:0;padding-right:38px}
+.dsx{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center;padding:0}
+.dsx svg{width:14px;height:14px}.dsiw input:placeholder-shown+.dsx{display:none}
+.dsk{font-size:11.5px;letter-spacing:.02em;color:var(--dim);margin:0 2px -2px}
+.dgp{gap:4px}.dgh{display:flex;align-items:center;gap:8px}.dgh b{font-size:15px;margin-right:auto}
+.dgh select{width:auto;margin:0;padding:5px 24px 5px 9px;font-size:14px}
+.dgx{width:30px;height:30px;flex:none;border:0;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;display:grid;place-items:center;padding:0}.dgx svg{width:13px;height:13px}
+.dgr{display:grid;grid-template-columns:62px 1fr auto;align-items:center;gap:8px;font-size:13px}
+.dgr>span{color:var(--dim)}.dgr select{margin:0;padding:7px 26px 7px 10px;font-size:14px;min-width:0}.dgr em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--dim);min-width:54px;text-align:right}
+.dgadd input{margin:2px 0 0;padding:8px 10px;font-size:16px;background:rgba(255,255,255,.04)}
+.elc .elp{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
+.elc .elp button{text-align:left;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:0;color:inherit;font:inherit}
+.elc .elp small{display:block;color:var(--dim);font-size:12.5px}
+.elf label{display:block;font-size:13px;color:var(--dim);margin:8px 2px 0}.elf label input{margin-top:4px}
+.elrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.dtr{margin-top:8px}.dtr .chip{width:auto}`;document.head.appendChild(st)})();
+
+/* --- 3: macros widget --- */
+const MCOL={k:'#ffffff',p:'#7fd0ff',f:'#ffc062',c:'#b99cff'};
+function nestRing(m,g){const R=[22,17,12,7];let s='<svg viewBox="0 0 50 50" aria-hidden="true">';
+ SZ.forEach((k,i)=>{const r=R[i],C=2*Math.PI*r,v=+m[k]||0,gg=+g[k]||0,p=gg?Math.min(1,v/gg):0;
+  s+=`<circle cx="25" cy="25" r="${r}" fill="none" stroke="${MCOL[k]}" stroke-opacity=".17" stroke-width="4"/>`;
+  if(p>0)s+=`<circle cx="25" cy="25" r="${r}" fill="none" stroke="${MCOL[k]}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${Math.max(.01,p*C).toFixed(2)} ${C.toFixed(2)}" transform="rotate(-90 25 25)"/>`});
+ return s+'</svg>'}
+{const _mw=macroW;macroW=function(l){if(!(l&&l.w===1&&l.h===1))return _mw.apply(this,arguments);const m=S.macros[today()]||{},g=S.setup||{};
+ const lg=SZ.map((k,i)=>{const v=+m[k]||0,gg=+g[k]||0;return`<div><i style="background:${MCOL[k]}"></i><span>${['Cal','Prot','Fat','Carb'][i]}</span><b>${gg?Math.round(v/gg*100)+'%':Math.round(v)}</b></div>`}).join('');
+ const lab=SZ.map((k,i)=>`${LBL[k][0]} ${Math.round(+m[k]||0)} of ${+g[k]||0}${k==='k'?' kcal':'g'}`).join(', ');
+ return`<h2 style="margin:0 0 3px;font-size:16px;line-height:1.2">Macros</h2><div class="mnest" role="img" aria-label="${esc(lab)}">${nestRing(m,g)}<div class="nlg">${lg}</div></div>`}}
+
+/* --- 22: sugar (and the nutrients that come with it) --- */
+{const _m=feMac;feMac=function(it){const m=_m.apply(this,arguments),r=FE.rows&&FE.rows[it.c&&it.c[it.pick]];m.sug=r&&r[7]>=0?Math.round(r[7]*it.g/100*10)/10:null;return m}}
+const MK=['na','kp','ca','mg','fe','zn','se','io','va','vd','ve','vk','b1','b2','b3','b6','b9','b12','vc'];
+function rowMi(ri,g){const r=FE.rows&&FE.rows[ri];if(!r)return null;const o={};MK.forEach((k,j)=>{const v=r[9+j];if(v!=null&&v>=0)o[k]=v*g/100});return o}
+const miAdd=(a,b,f=1)=>{if(!b)return a;for(const k in b)a[k]=(a[k]||0)+b[k]*f;return a};
+const miRound=o=>{const r={};for(const k in o){const v=o[k];if(v>0)r[k]=v>=10?Math.round(v):Math.round(v*100)/100}return r};
+function itSug(it){if(it.off)return it.off.sug!=null?it.off.sug*it.g/100:null;const m=feMac(it);return m.sug}
+function itMi(it){const ri=it.off?it.off.ri:it.c&&it.c[it.pick];if(ri==null)return null;if(it.off&&it.off.mix)return it.off.mix.reduce((a,[r,g])=>miAdd(a,rowMi(r,g*it.g/it.off.mg)),{});return rowMi(ri,it.g)}
+let MX=null;
+window.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-a=dsuse]');if(!el||!DSC||!DSC.items)return;let sug=0,any=false,mi={};
+ DSC.items.forEach(x=>{const s=itSug(x);if(s!=null){sug+=s;any=true}miAdd(mi,itMi(x))});let k=0;DSC.items.forEach(x=>k+=feMacApp(x).k);
+ MX={sug:any?Math.round(sug*10)/10:null,mi:miRound(mi),k,at:Date.now()}},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=addm]');if(!el||!MX)return;const before=((S.meals||{})[today()]||[]).length,X=MX;
+ setTimeout(()=>{const L=(S.meals||{})[today()]||[];if(L.length!==before+1||Date.now()-X.at>9e5)return;const x=L[L.length-1],f=X.k>0?Math.max(.2,Math.min(5,(+x.k||0)/X.k)):1;
+  if(X.sug!=null&&x.sug==null)x.sug=Math.round(X.sug*f*10)/10;if(Object.keys(X.mi).length&&!x.mi){const o={};for(const k in X.mi)o[k]=X.mi[k]*f;x.mi=miRound(o)}MX=null;save();render()},0)},true);
+// scanned food: micronutrients from Open Food Facts (values per 100 g arrive in grams)
+const OFFMI={na:['sodium',1e3],kp:['potassium',1e3],ca:['calcium',1e3],mg:['magnesium',1e3],fe:['iron',1e3],zn:['zinc',1e3],se:['selenium',1e6],io:['iodine',1e6],va:['vitamin-a',1e6],vd:['vitamin-d',1e6],ve:['vitamin-e',1e3],vk:['vitamin-k',1e6],b1:['vitamin-b1',1e3],b2:['vitamin-b2',1e3],b3:['vitamin-pp',1e3],b6:['vitamin-b6',1e3],b9:['vitamin-b9',1e6],b12:['vitamin-b12',1e6],vc:['vitamin-c',1e3]};
+{const _bp=bcProd;bcProd=function(j){const p=_bp.apply(this,arguments),n=(j.product||{}).nutriments||{},v=x=>x==null||x===''||isNaN(+x)?null:+x;const a={},s={};
+ for(const k in OFFMI){const [o,f]=OFFMI[k];const h=v(n[o+'_100g']),sv=v(n[o+'_serving']);if(h!=null)a[k]=Math.round(h*f*100)/100;if(sv!=null)s[k]=Math.round(sv*f*100)/100}
+ if(a.na==null&&v(n.salt_100g)!=null)a.na=Math.round(v(n.salt_100g)*400);p.mi100=a;p.mis=s;p.elx=1;return p}}
+{const _h=bpHook;bpHook=function(v,nm,t){const L0=((S.meals||{})[t]||[]).length,r=_h.apply(this,arguments);try{const L=(S.meals||{})[t]||[],p=BPD&&BPD.p,g=+BPD.g||0;
+ if(L.length===L0+1&&p&&p.mi100&&g){const o={};for(const k in p.mi100)o[k]=p.mi100[k]*g/100;const x=L[L.length-1];if(!x.mi&&Object.keys(o).length)x.mi=miRound(o)}}catch(_){}return r}}
+// the Today card: carbs opens to show sugar
+let SUGX=false;
+const sugToday=()=>{let s=0,any=false;((S.meals||{})[today()]||[]).forEach(x=>{if(x.sug!=null&&!isNaN(+x.sug)){s+=+x.sug;any=true}});return any?s:null};
+{const _d=diet;diet=function(){let h=_d.apply(this,arguments);try{const i=h.indexOf('<div class="pb"><div class="pbl"><span>Carbs</span>');if(i<0)return h;
+ const chev='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+ h=h.slice(0,i)+`<div class="pb sugx ${SUGX?'open':''}" data-a="sugx" role="button" tabindex="0" aria-expanded="${SUGX}" aria-controls="sugp"><div class="pbl"><span>Carbs${chev}</span>`+h.slice(i+'<div class="pb"><div class="pbl"><span>Carbs</span>'.length);
+ const s=sugToday(),RI=90,body=s==null?`<p class="sm" style="margin:0 2px">No sugar figures yet today. Food you scan or describe adds them.</p>`:`${bar('Of which sugars',s,RI,'g',s>RI?'linear-gradient(90deg,#ffb36b,#ffd8a8)':'linear-gradient(90deg,#b99cff,#e2d6ff)')}<p class="sm">90 g is the reference intake on food labels, for all sugars. The NHS suggests keeping free sugars, the kind added to food plus honey, syrups and juice, under 30 g a day.</p>`;
+ const panel=`<div class="sugp ${SUGX?'open':''}" id="sugp"><div><div class="in">${body}</div></div></div>`;
+ const j=h.indexOf('<div style="margin-top:10px"><div class="pb"><div class="pbl"><span>Fibre'),k=j>=0?j:h.indexOf('<div class="dpa">',i);if(k>=0)h=h.slice(0,k)+panel+h.slice(k)}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=sugx]');if(!el)return;e.stopImmediatePropagation();SUGX=!SUGX;el.classList.toggle('open',SUGX);el.setAttribute('aria-expanded',SUGX);const p=$('#sugp');if(p)p.classList.toggle('open',SUGX)},true);
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-a=sugx]')){e.preventDefault();e.target.click()}});
+
+/* --- 15: describe a meal --- */
+FEALIAS.push([/\b(french )?fries\b/,'french fries chips frozen deep fried'],[/^(a )?(side |green |mixed )?salad$/,'salad green']);
+let FEN=null;const feRow=n=>{if(!FEN){FEN=new Map();FE.rows.forEach((r,i)=>{if(!FEN.has(r[0]))FEN.set(r[0],i)})}const i=FEN.get(n);if(i!=null)return i;const c=feMatch(n);return c.length?c[0]:null};
+function offRow(ri,nm){const r=FE.rows[ri];return{n:nm||r[0],k:r[1],p:r[2],f:r[3],c:r[4],fb:r[6]>=0?r[6]:null,sug:r[7]>=0?r[7]:null,ri}}
+const ZOFF={n:'None',k:0,p:0,f:0,c:0,fb:0,sug:0};
+// one choice for one part of a dish: a single food, a mix of foods, or nothing
+function altOff(a){if(!a.r)return{...ZOFF};if(typeof a.r==='string'){const ri=feRow(a.r);return ri==null?{...ZOFF}:offRow(ri,a.n)}
+ const mix=a.r.map(([n,g])=>[feRow(n),g]).filter(x=>x[0]!=null),G=mix.reduce((s,x)=>s+x[1],0)||1,o={n:a.n,k:0,p:0,f:0,c:0,fb:0,sug:0,mix,mg:G,ri:mix.length?mix[0][0]:null};
+ mix.forEach(([ri,g])=>{const r=FE.rows[ri],w=g/G;o.k+=r[1]*w;o.p+=r[2]*w;o.f+=r[3]*w;o.c+=r[4]*w;if(r[6]>=0)o.fb+=r[6]*w;if(r[7]>=0)o.sug+=r[7]*w});return o}
+const NONE={n:'None',g:0};
+// dishes and their parts: typical UK portions in grams; the first matching word picks the choice, otherwise d
+const DISH={
+ burger:{n:'Burger',re:/burger/,slots:[
+  {s:'Bun',d:0,a:[{n:'White bun',r:'Bread, hamburger buns',g:60,k:/white bun|\bbun\b/},{n:'Brioche bun',r:'Brioche',g:70,k:/brioche/},{n:'Wholemeal bun',r:'Rolls for hamburger/hotdog (buns), wholemeal, prepacked',g:60,k:/wholemeal|brown bun/},{n:'Lettuce wrap',r:'Lettuce, average, raw',g:30,k:/lettuce wrap|no bun|bunless/},NONE]},
+  {s:'Patty',d:0,a:[{n:'Beef',r:'Burger, beef, 62-85%, beef, grilled',g:90,k:/beef/},{n:'Double beef',r:'Burger, beef, 62-85%, beef, grilled',g:180,k:/double/},{n:'Crispy chicken',r:'Chicken breast in crumbs, chilled, fried',g:110,k:/chicken|crispy/},{n:'Grilled chicken',r:'Chicken, breast, grilled without skin, meat only',g:110,k:/grilled chicken/},{n:'Veggie',r:'Vegeburger, retail, grilled',g:90,k:/veg|vegan|plant|bean|quorn/}]},
+  {s:'Cheese',d:0,a:[NONE,{n:'Cheddar slice',r:'Cheese, Cheddar, English',g:20,k:/cheddar|chees/},{n:'Processed slice',r:'Cheese, processed, plain',g:20,k:/american|processed|slice/}]},
+  {s:'Sauce',d:0,multi:1,a:[{n:'Ketchup',r:'Tomato ketchup',g:15,k:/ketchup/},{n:'Mayonnaise',r:'Mayonnaise, standard, retail',g:15,k:/mayo/},{n:'BBQ sauce',r:'Barbecue sauce',g:15,k:/bbq|barbecue/},{n:'Burger relish',r:'Pickle relish, hamburger',g:15,k:/relish|burger sauce|special sauce/},{...NONE,k:/no sauce/}]},
+  {s:'Salad',d:0,a:[{n:'Lettuce and tomato',r:[['Lettuce, average, raw',15],['Tomatoes, standard, raw',20]],g:35},{n:'Lettuce',r:'Lettuce, average, raw',g:15,k:/lettuce(?! wrap)/},{...NONE,k:/no salad/}]},
+  {s:'Extra',d:0,multi:1,opt:1,a:[NONE,{n:'Bacon',r:'Bacon rashers, back, grilled',g:25,k:/bacon/},{n:'Fried onions',r:'Onions, fried in sunflower oil',g:20,k:/onion/},{n:'Gherkins',r:'Gherkins, pickled, drained',g:10,k:/pickle|gherkin/},{n:'Fried egg',r:'Eggs, chicken, whole, fried in sunflower oil',g:50,k:/\begg/},{n:'Avocado',r:'Avocado, average, flesh only',g:40,k:/avocado|guac/}]}]},
+ hotdog:{n:'Hot dog',re:/hot ?dog/,slots:[
+  {s:'Roll',d:0,a:[{n:'Hot dog roll',r:'Roll, hamburger / hot dog, plain',g:55,k:/roll/},{n:'Brioche roll',r:'Brioche',g:60,k:/brioche/},NONE]},
+  {s:'Sausage',d:0,a:[{n:'Frankfurter',r:'Frankfurter',g:45,k:/frankfurter|wiener/},{n:'Pork sausage',r:'Sausages, pork, chilled, grilled',g:60,k:/pork|banger/},{n:'Veggie sausage',r:'Sausages, vegetarian, baked/grilled',g:50,k:/veg|vegan|plant/}]},
+  {s:'Sauce',d:0,multi:1,a:[{n:'Ketchup',r:'Tomato ketchup',g:15,k:/ketchup/},{n:'Mustard',r:'Mustard, smooth',g:10,k:/mustard/},{n:'Mayonnaise',r:'Mayonnaise, standard, retail',g:15,k:/mayo/},{...NONE,k:/no sauce/}]},
+  {s:'Onions',d:0,a:[NONE,{n:'Fried onions',r:'Onions, fried in sunflower oil',g:20,k:/onion/}]}]},
+ kebab:{n:'Kebab',re:/kebab|shawarma|gyros?\b/,slots:[
+  {s:'Bread',d:0,a:[{n:'Pitta',r:'Bread, pitta, white',g:75,k:/pitta|pita/},{n:'Naan',r:'Bread, naan, retail',g:160,k:/naan/},{n:'Wrap',r:'Tortilla, wheat, soft',g:65,k:/wrap|tortilla/},{...NONE,k:/box|no bread/}]},
+  {s:'Meat',d:0,a:[{n:'Doner',r:'Doner kebabs, meat only',g:150,k:/doner|donner|lamb/},{n:'Chicken',r:'Chicken, breast, grilled without skin, meat only',g:150,k:/chicken|shish|shawarma/}]},
+  {s:'Salad',d:0,a:[{n:'Salad',r:[['Lettuce, average, raw',20],['Onions, raw',15],['Tomatoes, standard, raw',25]],g:60},{...NONE,k:/no salad/}]},
+  {s:'Sauce',d:0,multi:1,a:[{n:'Garlic mayo',r:'Aioli sauce (garlic and olive oil mayonnaise), prepacked',g:20,k:/garlic|mayo/},{n:'Chilli sauce',r:'Chilli sauce',g:20,k:/chilli|chili|hot sauce/},{...NONE,k:/no sauce/}]}]},
+ jacket:{n:'Jacket potato',re:/jacket|baked potato/,slots:[
+  {s:'Potato',d:0,a:[{n:'Baked potato',r:'Potatoes, old, baked, flesh and skin',g:220}]},
+  {s:'Butter',d:0,a:[{n:'Butter',r:'Butter, salted',g:10,k:/butter/},{...NONE,k:/no butter|dry/}]},
+  {s:'Topping',d:0,multi:1,opt:1,a:[NONE,{n:'Baked beans',r:'Baked beans, canned in tomato sauce',g:150,k:/beans/},{n:'Grated cheddar',r:'Cheese, Cheddar, English',g:40,k:/chees|cheddar/},{n:'Tuna mayo',r:[['Tuna, canned in brine, drained',60],['Mayonnaise, standard, retail',15]],g:75,k:/tuna/},{n:'Chilli con carne',r:'Chilli con carne, homemade',g:150,k:/chilli|chili/},{n:'Coleslaw',r:'Coleslaw, not low calorie, retail',g:60,k:/coleslaw|slaw/}]}]}};
+const DISHK=Object.keys(DISH);
+const dishKey=s=>{s=s.toLowerCase();return DISHK.find(k=>DISH[k].re.test(s))||null};
+// restaurant menus: kcal as sold in the UK; macros either per item (p,f,c,sug) or split from a matching lab-analysed row
+const CHB={mcd:{n:'McDonald’s',re:/\bmc ?donald'?s?\b|\bmaccies\b|\bmaccy ?d'?s\b|\bmcd'?s\b/},kfc:{n:'KFC',re:/\bkfc\b|\bkentucky\b/},bk:{n:'Burger King',re:/\bburger king\b|\bbk\b/},gg:{n:'Greggs',re:/\bgreggs\b/}};
+const CHN=[
+ ['mcd','Big Mac',509,"McDONALD'S, BIG MAC",/big ?mac/,1],['mcd','Double Quarter Pounder with Cheese',749,"McDONALD'S, DOUBLE QUARTER POUNDER with Cheese",/double quarter|\bdqp/,1],
+ ['mcd','Quarter Pounder with Cheese',514,"McDONALD'S, QUARTER POUNDER with Cheese",/quarter ?pounder|\bqpc?\b/,1],['mcd','Double Cheeseburger',452,"McDONALD'S, Double Cheeseburger",/double cheese ?burger/],
+ ['mcd','Cheeseburger',303,"McDONALD'S, Cheeseburger",/cheese ?burger/],['mcd','Mayo Chicken',282,"McDONALD'S, McCHICKEN Sandwich",/mayo chicken/,1],['mcd','McChicken Sandwich',371,"McDONALD'S, McCHICKEN Sandwich",/mc ?chicken/,1],
+ ['mcd','McCrispy',484,'Fast foods, sandwiches and burgers, crispy chicken fillet sandwich, with lettuce tomato and mayonnaise',/mc ?crispy/,1],
+ ['mcd','Chicken McNuggets',43.5,"McDONALD'S, Chicken McNUGGETS",/nugget/,1,6],['mcd','Chicken Selects',112,'Fast foods, chicken tenders, breaded',/selects?/,1,3],
+ ['mcd','Fries, small',237,{k:296,p:3,f:15,c:37,sug:.5,fb:3.2},/fries|chips/,0,0,'s'],['mcd','Fries, medium',337,{k:296,p:3,f:15,c:37,sug:.5,fb:3.2},/fries|chips/,0,0,'m'],['mcd','Fries, large',444,{k:296,p:3,f:15,c:37,sug:.5,fb:3.2},/fries|chips/,0,0,'l'],
+ ['mcd','Hash Brown',127,"McDONALD'S, Hash Brown",/hash ?brown/],['mcd','Double Sausage and Egg McMuffin',552,"McDONALD'S, Sausage McMUFFIN with Egg",/double sausage/,1],
+ ['mcd','Sausage and Egg McMuffin',424,"McDONALD'S, Sausage McMUFFIN with Egg",/mc ?muffin/,1],['mcd','Smarties McFlurry',273,"McDONALD'S, McFLURRY with M&M'S CANDIES",/mc ?flurry/,1],
+ ['kfc','Fillet Tower Burger',620,[33.5,28,58.4,10.2],/fillet tower/],['kfc','Zinger Tower Burger',595,[30.2,27.6,56.7,8.9],/tower/],['kfc','Zinger Burger',450,[26.4,18.8,43.8,5.4],/zinger/,1],
+ ['kfc','Mini Fillet',130,[13.8,5.6,6.3,.3],/mini fillet/],['kfc','Fillet Burger',475,[29.7,19.3,45.1,5.5],/fillet/],['kfc','Twister Wrap',500,[28.4,22.8,45.1,6],/twister|wrap/],
+ ['kfc','Popcorn Chicken, regular',285,[17.6,16.2,17.6,.2],/popcorn/],['kfc','Hot Wings',85,[4.5,5.6,3.4,.1],/hot wing|wings/,0,3],
+ ['kfc','Original Recipe breast',265,[29.1,13.3,7.3,.5],/breast/],['kfc','Original Recipe drumstick',170,[13.4,10.2,6.9,.3],/drumstick|\bleg/],['kfc','Original Recipe wing',175,[16.1,10.3,4.9,.3],/\bwing\b/],
+ ['kfc','Original Recipe thigh',285,[19.2,19.4,8.1,.3],/thigh|piece|original|chicken|bucket/],
+ ['kfc','Fries, regular',250,[3.5,11,30.2,.2],/fries|chips/,0,0,'m'],['kfc','Fries, large',345,[4.8,15.4,42,.3],/fries|chips/,0,0,'l'],
+ ['kfc','Coleslaw, regular',160,[.8,13.4,8.2,6.9],/slaw/],['kfc','Gravy, regular',45,[2.7,1.3,6.3,.1],/gravy/],['kfc','Corn cobette',85,[3.1,1.7,14.5,1.7],/corn/],
+ ['bk','Double Whopper',821,'BURGER KING, DOUBLE WHOPPER, no cheese',/double whopper/,1],['bk','Whopper with bacon and cheese',717,'BURGER KING, WHOPPER, with cheese',/whopper.*(bacon|cheese)/,1],
+ ['bk','Plant-based Whopper',528,'BURGER KING, WHOPPER, no cheese',/plant|vegan whopper|veggie whopper/,1],['bk','Whopper',595,'BURGER KING, WHOPPER, no cheese',/whopper/,1],
+ ['bk','Bacon Double Cheeseburger',320,'BURGER KING, Double Cheeseburger',/bacon double/],['bk','Chicken Royale',569,'BURGER KING, Original Chicken Sandwich',/royale/,1],
+ ['bk','Fries, large',369,'BURGER KING, french fries',/fries|chips/],['bk','Onion rings',225,'BURGER KING, Onion Rings',/onion ring/],
+ ['gg','Vegan sausage roll',302,[11,18,22,1],/vegan|veggie/],['gg','Sausage roll',338,[8.9,23,23,1],/sausage roll|roll/]
+].map(([b,n,k,src,re,u,pc,sz])=>({b,n,k,src,re,u:!!u,pc:pc||0,sz:sz||null}));
+const chBrand=s=>{for(const k in CHB)if(CHB[k].re.test(s))return k;return null};
+function chFind(pt,br){let s=pt.toLowerCase();for(const k in CHB)s=s.replace(CHB[k].re,' ');s=s.replace(/\s+/g,' ').trim();if(!s)return br?{only:1}:null;
+ const sz=feSizeOf(s);let hit=CHN.map((x,i)=>[x,i]).filter(([x])=>(br?x.b===br:x.u)&&x.re.test(s));if(!hit.length){
+  if(!br)return null;const tk=s.replace(FEDROP,' ').split(/\s+/).filter(w=>w.length>2);hit=CHN.map((x,i)=>[x,i]).filter(([x])=>x.b===br&&tk.some(w=>x.n.toLowerCase().includes(w)));if(!hit.length)return null}
+ if(hit[0][0].sz){const L=hit.filter(([x])=>x.sz);const m=L.find(([x])=>x.sz===(sz||'m'))||(sz==='s'?L[0]:L[L.length-1]);return{i:m[1]}}return{i:hit[0][1]}}
+function chOff(x){if(typeof x.src==='string'){const ri=feRow(x.src);if(ri!=null){const o=offRow(ri,x.n);return{off:o,ug:x.k/o.k*100}}}
+ if(Array.isArray(x.src)){const [p,f,c,sug]=x.src;return{off:{n:x.n,k:x.k,p,f,c,sug,fb:null},ug:100}}
+ if(x.src&&x.src.k){return{off:{n:x.n,...x.src},ug:x.k/x.src.k*100}}return{off:{n:x.n,k:x.k,p:0,f:0,c:0},ug:100}}
+const feNum=s=>{const m=s.toLowerCase().match(/^(\d+(?:\.\d+)?|a|an|one|two|three|four|five|six|half|couple|few|double)\b/);if(!m||/^double/.test(m[1])&&/double (cheese|quarter|whopper|sausage|beef)/.test(s.toLowerCase()))return null;return FEWORDN[m[1]]??+m[1]};
+function chItem(i,pt){const x=CHN[i],{off,ug}=chOff(x);let n=feNum(pt);if(n==null)n=x.pc||1;return{q:pt,c:[],pick:0,off,g:Math.round(ug*n),ch:{i,n,ug},lbl:x.pc?`${n} piece${n===1?'':'s'}`:n===1?'one':`${n}`}}
+function chSet(it,i){const x=CHN[i],was=CHN[it.ch.i],{off,ug}=chOff(x);let n=it.ch.n;if(!!x.pc!==!!was.pc)n=x.pc||1;it.off=off;it.ch={i,n,ug};it.g=Math.round(ug*n)}
+const grpMul=G=>FESZM[G.sz||'m']*(G.cnt||1);
+function dishItems(key,gid,ctx,G){const D=DISH[key],out=[];
+ D.slots.forEach(sl=>{const hits=sl.a.map((a,j)=>[a,j]).filter(([a])=>a.k&&a.k.test(ctx));let picks=hits.length?(sl.multi?hits.map(h=>h[1]):[hits[0][1]]):[sl.d];
+  if(picks.length>1)picks=picks.filter(j=>sl.a[j].r);picks.forEach(j=>{const a=sl.a[j],it={q:sl.s,c:[],pick:0,grp:gid,slot:sl.s,alts:sl.a,ai:j,off:altOff(a),g:0};it.g=Math.round(a.g*grpMul(G));out.push(it)})});return out}
+function absorbs(pt,keys){const s=pt.toLowerCase().replace(FEDROP,' ').trim();if(s.split(/\s+/).length>3)return false;return keys.some(k=>DISH[k].slots.some(sl=>sl.a.some(a=>a.k&&a.r&&a.k.test(s))))}
+// typical takeaway sides: a medium portion of fries is about 115 g (McDonald's UK), a side salad about 80 g
+const DSFIX=[[/\bfries\b/,115],[/\bside salad\b|^(a )?(green |mixed )?salad$/,80],[/\bonion rings?\b/,90],[/\bcoleslaw\b/,60]];
+function dsEst(text){const low=text.toLowerCase(),br=chBrand(low),parts=feSplit(text),items=[],groups={};let gn=0;
+ const kinds=parts.map(pt=>{const ch=chFind(pt,br);if(ch)return ch.only?{t:'skip'}:{t:'ch',i:ch.i};const dk=dishKey(pt);return dk?{t:'dish',dk}:null});
+ const dk=kinds.filter(k=>k&&k.t==='dish').map(k=>k.dk),abs=parts.map((pt,i)=>!kinds[i]&&dk.length&&absorbs(pt,dk));let first=true;
+ parts.forEach((pt,i)=>{const k=kinds[i];if(k&&k.t==='skip'||abs[i])return;
+  if(k&&k.t==='ch'){items.push(chItem(k.i,pt));return}
+  if(k&&k.t==='dish'){const gid='g'+(gn++),sz=feSizeOf(pt.toLowerCase()),G=groups[gid]={key:k.dk,n:DISH[k.dk].n,sz:sz||'m',asked:!!sz,cnt:Math.max(1,Math.min(6,Math.round(feNum(pt)||1)))};
+   const ctx=[pt,...(first?parts.filter((_,j)=>abs[j]):[])].join(' ').toLowerCase();first=false;items.push(...dishItems(k.dk,gid,ctx,G));return}
+  const c=feMatch(pt),row=c.length?FE.rows[c[0]]:null,p=fePortion(pt,row);if(!p.fixed&&!/\b(bowl|plate|portion|bag|handful|cup)s?\b/.test(pt.toLowerCase()))for(const [re,w] of DSFIX)if(re.test(pt.toLowerCase())){p.base=w*(feNum(pt)||1);p.g=Math.round(p.base*FESZM[p.sz||'m']);break}items.push({q:pt,c,pick:0,g:p.g,base:p.base,sz:p.sz||null,asked:!!p.sz,lbl:p.lbl,fixed:p.fixed})});
+ return{items,groups}}
+dscRun=async function(text){text=(text||'').trim();if(!text)return;DSC={text,st:'load'};dscPaint();try{await feReady()}catch(_){DSC.st='err';return dscPaint()}const r=dsEst(text);DSC={text,items:r.items,groups:r.groups};dscPaint()};
+const XIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const dsMacLine=m=>`<b>${Math.round(m.k)} kcal</b> · ${Math.round(m.p)}g protein · ${Math.round(m.f)}g fat · ${Math.round(m.c)}g carbs`;
+dscHTML=function(){let h=`<div class="dsc"><div class="dsiw"><input data-dsc placeholder="Describe it: cheeseburger and large fries" value="${esc(DSC?DSC.text:'')}" enterkeyhint="go" autocomplete="off"><button class="dsx" data-a="dsclr" aria-label="Clear">${XIC}</button></div><button class="btn on" data-a="dscgo">Estimate</button></div>`;
+ if(!DSC)return h+'<p class="dscr" style="margin-bottom:12px">Swell estimates the macros from food tables and restaurant menus, and shows what it assumed so you can change it.</p>';
+ if(DSC.st==='load')return h+'<p class="sm">Getting the food list ready. This happens once.</p>';
+ if(DSC.st==='err')return h+'<p class="sm">Couldn’t load the food list. Check your signal and try again.</p>';
+ const it=DSC.items||[],G=DSC.groups||{},tot={k:0,p:0,f:0,c:0},done=new Set();let menu=false;
+ const one=(x,i)=>{const m=feMacApp(x);
+  if(x.ch){menu=true;const c=CHN[x.ch.i],opts=CHN.map((y,j)=>y.b===c.b?`<option value="${j}" ${j===x.ch.i?'selected':''}>${esc(y.n)}</option>`:'').join('');const ns=c.pc?[1,2,3,4,5,6,9,10,12,20]:[1,2,3,4,5,6];if(!ns.includes(x.ch.n))ns.push(x.ch.n);ns.sort((a,b)=>a-b);
+   return`<div class="dsi"><span class="dsk">${esc(CHB[c.b].n)} menu</span><select data-dsch="${i}" aria-label="Which item">${opts}</select><div class="dsg"><select data-dscn="${i}" class="dssz" aria-label="How many">${ns.map(n=>`<option value="${n}" ${n===x.ch.n?'selected':''}>${n} ${c.pc?(n===1?'piece':'pieces'):'×'}</option>`).join('')}</select><button class="glink" data-a="dsrm" data-i="${i}" style="margin-left:auto">Remove</button></div><div class="dsm">${dsMacLine(m)}</div></div>`}
+  const opts=x.off?`<option>${esc(x.off.n)}</option>`:x.c.length?x.c.map((ri,j)=>`<option value="${j}" ${j===x.pick?'selected':''}>${esc(FE.rows[ri][0])}</option>`).join(''):'<option>No match. Try other words, or search products</option>';
+  return`<div class="dsi"><span class="dsk">${x.off?'Product':x.c.length?'Closest to':'Not found'}</span><select data-dsp="${i}" aria-label="Which food">${opts}</select><div class="dsg">${x.fixed||x.off?'':`<select data-dssz="${i}" class="dssz ${x.asked?'':'ask'}" aria-label="Portion size">${x.asked?'':'<option value="" selected disabled>How big?</option>'}${['s','m','l'].map(k=>`<option value="${k}" ${x.asked&&x.sz===k?'selected':''}>${FESZN[k]}</option>`).join('')}</select>`}<input type="number" inputmode="numeric" data-dsg="${i}" value="${x.g}" aria-label="Grams"><span>g</span><button class="glink" data-a="dsrm" data-i="${i}" style="margin-left:auto">Remove</button></div><div class="dsm">${esc((x.lbl||'portion').replace(/^./,c=>c.toUpperCase()))}${x.fixed||x.asked||x.off?'':', medium for now'} · ${dsMacLine(m)}</div></div>`};
+ const grp=gid=>{const g=G[gid],rows=[],gt={k:0,p:0,f:0,c:0};it.forEach((x,i)=>{if(x.grp!==gid)return;const m=feMacApp(x);for(const k in gt)gt[k]+=m[k];
+   rows.push(`<div class="dgr"><span>${esc(x.slot)}</span><select data-dsalt="${i}" aria-label="${esc(x.slot)}">${x.alts.map((a,j)=>`<option value="${j}" ${j===x.ai?'selected':''}>${esc(a.n)}</option>`).join('')}</select><em>${Math.round(m.k)} kcal</em></div>`)});
+  return`<div class="dsi dgp"><div class="dgh"><b>${esc(g.n)}</b><select data-dgsz="${gid}" class="${g.asked?'':'ask'}" aria-label="How big">${g.asked?'':'<option value="" selected disabled>How big?</option>'}${['s','m','l'].map(k=>`<option value="${k}" ${g.asked&&g.sz===k?'selected':''}>${FESZN[k]}</option>`).join('')}</select><select data-dgn="${gid}" aria-label="How many">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===g.cnt?'selected':''}>${n} ×</option>`).join('')}</select><button class="dgx" data-a="dgrm" data-i="${gid}" aria-label="Remove ${esc(g.n.toLowerCase())}">${XIC}</button></div>${rows.join('')}<div class="dgadd"><input data-dgadd="${gid}" placeholder="Add a part, like bacon" enterkeyhint="done" autocomplete="off"></div><div class="dsm">${g.asked?FESZN[g.sz]:'Medium for now'} · ${dsMacLine(gt)}</div></div>`};
+ const rows=[];it.forEach((x,i)=>{const m=feMacApp(x);for(const k in tot)tot[k]+=m[k];if(x.grp){if(!done.has(x.grp)){done.add(x.grp);rows.push(grp(x.grp))}return}rows.push(one(x,i))});
+ h+=`<div class="dsr">${rows.join('')}
+ ${DSC.off?`<div class="dsoff">${DSC.off.st==='load'?'<p class="sm">Searching products…</p>':DSC.off.st==='wait'?`<p class="sm">That’s a lot of searches. Try again in ${DSC.off.wait} seconds.</p>`:DSC.off.st==='err'?'<p class="sm">Product search needs a signal. Try again in a moment.</p>':DSC.off.list.length?DSC.off.list.map((o,j)=>`<button data-a="dsoffp" data-i="${j}">${esc(o.n)}<small>${o.b?esc(o.b)+' · ':''}${o.k} kcal per 100 g${o.sq?` · serving ${o.sq} g`:''}</small></button>`).join(''):'<p class="sm">No products found. Try the brand and product name.</p>'}</div>`:''}
+ <div class="dst"><span><b>${Math.round(tot.k)} kcal</b><br><small class="sm" style="margin:0">${Math.round(tot.p)}g protein · ${Math.round(tot.f)}g fat · ${Math.round(tot.c)}g carbs</small></span><button class="btn on" data-a="dsuse" ${it.length?'':'disabled'}>Use this</button></div>
+ <button class="glink" data-a="dsoff">Shop-bought? Search products</button></div>
+ <p class="dscr">Food data: McCance and Widdowson’s (UK CoFID), CIQUAL (ANSES), USDA, Health Canada${menu?', published UK menu calories':''}${DSC.off?', Open Food Facts':''}. Estimates, so adjust if you know better.</p>`;
+ return h};
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dsclr],[data-a=dgrm]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ if(el.dataset.a==='dsclr'){DSC=null;dscPaint();const i=$('#app [data-dsc]');if(i){i.value='';i.focus()}return}
+ if(DSC&&DSC.items){const g=el.dataset.i;DSC.items=DSC.items.filter(x=>x.grp!==g);delete DSC.groups[g];dscPaint()}},true);
+document.addEventListener('input',e=>{const t=e.target;if(t.matches&&t.matches('[data-dsc]')){const w=t.closest('.dsiw');if(w)w.classList.toggle('has',!!t.value)}});
+document.addEventListener('change',e=>{const t=e.target;if(!t.matches||!DSC||!DSC.items)return;
+ if(t.matches('[data-dsalt]')){const x=DSC.items[+t.dataset.dsalt],G=x&&DSC.groups[x.grp];if(!x||!G)return;x.ai=+t.value;const a=x.alts[x.ai];x.off=a.off||altOff(a);x.g=Math.round(a.g*grpMul(G));dscPaint();return}
+ if(t.matches('[data-dgsz],[data-dgn]')){const gid=t.dataset.dgsz||t.dataset.dgn,G=DSC.groups[gid];if(!G)return;if(t.dataset.dgsz){G.sz=t.value;G.asked=true}else G.cnt=+t.value||1;
+  DSC.items.forEach(x=>{if(x.grp===gid)x.g=Math.round(x.alts[x.ai].g*grpMul(G))});dscPaint();return}
+ if(t.matches('[data-dsch]')){const x=DSC.items[+t.dataset.dsch];if(x&&x.ch){chSet(x,+t.value);dscPaint()}return}
+ if(t.matches('[data-dscn]')){const x=DSC.items[+t.dataset.dscn];if(x&&x.ch){x.ch.n=+t.value||1;x.g=Math.round(x.ch.ug*x.ch.n);dscPaint()}return}},true);
+document.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Enter'||!t.matches||!t.matches('[data-dgadd]')||!DSC)return;e.preventDefault();const q=t.value.trim(),gid=t.dataset.dgadd,G=DSC.groups[gid];if(!q||!G)return;
+ const c=feMatch(q);if(!c.length){toast('Couldn’t find that. Try other words.');return}const alts=c.slice(0,5).map(ri=>{const p=fePortion(q,FE.rows[ri]);return{n:FE.rows[ri][0],r:FE.rows[ri][0],g:Math.max(5,Math.round(p.base||p.g||50))}});
+ const last=DSC.items.map(x=>x.grp).lastIndexOf(gid),a=alts[0];DSC.items.splice(last+1,0,{q,c:[],pick:0,grp:gid,slot:q.replace(/^./,x=>x.toUpperCase()).slice(0,12),alts,ai:0,off:altOff(a),g:Math.round(a.g*grpMul(G))});dscPaint();
+ setTimeout(()=>{const n=$(`#app [data-dgadd="${gid}"]`);if(n)n.focus()},30)},true);
+
+/* --- 8: electrolytes --- */
+const ELX=()=>{S.elx=S.elx||{p:[],log:{}};S.elx.p=S.elx.p||[];S.elx.log=S.elx.log||{};return S.elx};
+const ELU={sachet:['sachet','sachets'],scoop:['scoop','scoops'],tab:['tablet','tablets']};
+const elxDesc=x=>[x.na?`${Math.round(x.na)} mg sodium`:'',x.kp?`${Math.round(x.kp)} mg potassium`:'',x.mg?`${Math.round(x.mg)} mg magnesium`:''].filter(Boolean).join(' · ')||'No mineral values yet';
+function elxCard(){const E=ELX(),L=E.log[today()]||[],tot=L.reduce((a,x)=>{a.na+=x.na||0;a.kp+=x.kp||0;a.mg+=x.mg||0;return a},{na:0,kp:0,mg:0});
+ return`<div class="card elc"><h2>Electrolytes</h2>${L.length?`<p class="sm" style="margin:0 0 8px">Today: ${L.map(x=>`${x.sv===.5?'half a':x.sv} ${esc(ELU[x.u||'sachet'][x.sv>1?1:0])} in ${x.ml} ml`).join(', ')}. ${elxDesc(tot)}.</p>`:''}
+ ${E.p.length?`<div class="elp">${E.p.map(x=>`<button data-a="elxp" data-i="${x.id}">${esc(x.n)}<small>Per ${ELU[x.u||'sachet'][0]}: ${elxDesc(x)}</small></button>`).join('')}</div>`:''}
+ <div class="row2"><button class="btn" data-a="elxscan">${ico('<path d="M4 6v12M7 6v12M10 6v12M14 6v12M16 6v12M20 6v12"/>')} Scan a pack or tub</button><button class="btn" data-a="elxman">Add by hand</button></div>
+ <p class="sm" style="margin:8px 2px 0">Worth it after long or very sweaty sessions. For under an hour, water does the job. The drink still counts towards your water.</p></div>`}
+{const _w=waterV;waterV=function(){const h=_w.apply(this,arguments);try{const k=h.indexOf('<div class="card fset"><h2>Your goal</h2>');if(k>=0)return h.slice(0,k)+elxCard()+h.slice(k)}catch(_){}return h+elxCard()}}
+let ELD=null;// the product being added or edited
+const elxGuess=p=>{const s=`${p.n||''} ${p.ss||''} ${p.q||''}`.toLowerCase();return/tab/.test(s)?'tab':/sachet|stick|pouch/.test(s)?'sachet':/tub|powder|\d+\s*g\b/.test(s)?'scoop':'sachet'};
+function elxFrom(p){const sg=+p.sg||0,a=p.mi100||{},s=p.mis||{},per=k=>s[k]!=null?s[k]:a[k]!=null&&sg?a[k]*sg/100:null,k=p.ks!=null?p.ks:p.k100!=null&&sg?p.k100*sg/100:0;
+ return{n:[p.b,p.n].filter(Boolean).join(' ').slice(0,40),u:elxGuess(p),g:sg||'',a100:a,k100:p.k100,na:per('na'),kp:per('kp'),mg:per('mg'),k:Math.round(k||0),c:p.cs!=null?p.cs:p.c100!=null&&sg?p.c100*sg/100:0,sug:p.sugs!=null?p.sugs:p.sug100!=null&&sg?p.sug100*sg/100:0}}
+const exR0=v=>v==null||v===''?'':Math.round(+v);
+function elxEdit(){const x=ELD;sheet(`<h2>${x.id?'Edit':'Add'} electrolytes</h2><div class="elf">
+ <input placeholder="Name, like Dioralyte" data-ex="n" value="${esc(x.n||'')}" maxlength="40">
+ <p class="sm" style="margin:10px 2px 6px">It comes as</p><div class="chips">${Object.keys(ELU).map(k=>`<button class="chip ${x.u===k?'on':''}" data-a="exu" data-i="${k}">${ELU[k][0].replace(/^./,c=>c.toUpperCase())}</button>`).join('')}</div>
+ ${x.a100&&Object.keys(x.a100).length?`<label>One ${ELU[x.u][0]} weighs (g)<input type="number" inputmode="decimal" data-ex="g" value="${x.g||''}" placeholder="From the pack"></label>`:''}
+ <p class="sm" style="margin:12px 2px 0">In one ${ELU[x.u][0]} (mg)</p><div class="elrow"><label>Sodium<input type="number" inputmode="numeric" data-ex="na" value="${exR0(x.na)}"></label><label>Potassium<input type="number" inputmode="numeric" data-ex="kp" value="${exR0(x.kp)}"></label><label>Magnesium<input type="number" inputmode="numeric" data-ex="mg" value="${exR0(x.mg)}"></label></div>
+ </div><button class="btn big on" data-a="exsave" style="margin-top:14px">Save</button>${x.id?'<button class="btn big dng" data-a="exdel">Delete</button>':''}<button class="btn big" data-a="shx">Cancel</button>`)}
+let ELL=null;
+function elxLog(){const E=ELX(),x=E.p.find(y=>y.id===ELL.id);if(!x)return;const u=ELU[x.u||'sachet'],sv=ELL.sv,ml=ELL.ml,f=sv,na=(x.na||0)*f,L=ml?na/ml*1000:0;
+ sheet(`<h2>${esc(x.n)}</h2><p class="sm" style="margin:-2px 0 10px">Per ${u[0]}: ${elxDesc(x)}</p>
+ <p class="sm" style="margin:6px 2px 6px">How many ${u[1]}?</p><div class="chips">${[.5,1,2,3].map(n=>`<button class="chip ${sv===n?'on':''}" data-a="exsv" data-i="${n}">${n===.5?'Half':n}</button>`).join('')}</div>
+ <p class="sm" style="margin:12px 2px 6px">Mixed into</p><div class="chips">${[250,500,750,1000].map(n=>`<button class="chip ${ml===n?'on':''}" data-a="exml" data-i="${n}">${n>=1000?'1 L':n+' ml'}</button>`).join('')}</div>
+ ${x.na?`<p class="sm" style="margin:12px 2px 0">That’s about ${Math.round(L)} mg of sodium per litre${L>=460&&L<=1200?', in the range sports guidance suggests for heavy sweating.':L<460?'. Fine for everyday drinking.':'. That’s strong, so sip it over time.'}</p>`:''}
+ <button class="btn big on" data-a="exadd" style="margin-top:14px">Add to water</button><button class="btn big" data-a="exed" data-i="${x.id}">Edit</button><button class="btn big" data-a="shx">Cancel</button>`)}
+document.addEventListener('input',e=>{const t=e.target;if(!ELD||!t.matches||!t.matches('[data-ex]'))return;const k=t.dataset.ex;ELD[k]=k==='n'?t.value:t.value===''?null:+t.value;
+ if(k==='g'&&ELD.a100){const g=+t.value||0;['na','kp','mg'].forEach(m=>{if(ELD.a100[m]!=null){ELD[m]=ELD.a100[m]*g/100;const i=$(`#sheet [data-ex="${m}"]`);if(i)i.value=Math.round(ELD[m])}});if(ELD.k100!=null)ELD.k=Math.round(ELD.k100*g/100)}},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=elx],[data-a^=ex]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(elxp|elxscan|elxman|exu|exsave|exdel|exsv|exml|exadd|exed)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();const E=ELX();
+ if(a==='elxscan')return bcOpen('elx');
+ if(a==='elxman'){ELD={n:'',u:'sachet',na:null,kp:null,mg:null};return elxEdit()}
+ if(a==='elxp'){ELL={id:i,sv:1,ml:500};return elxLog()}
+ if(a==='exed'){const x=E.p.find(y=>y.id===i);if(x){ELD={...x};elxEdit()}return}
+ if(a==='exu'&&ELD){ELD.u=i;return elxEdit()}
+ if(a==='exsave'&&ELD){const n=(ELD.n||'').trim();if(!n){toast('Give it a name first.');return}const x={id:ELD.id||'e'+Date.now().toString(36),n,u:ELD.u,na:ELD.na||0,kp:ELD.kp||0,mg:ELD.mg||0,k:ELD.k||0,c:ELD.c||0,sug:ELD.sug||0,bc:ELD.bc};
+  const k=E.p.findIndex(y=>y.id===x.id);if(k>=0)E.p[k]=x;else E.p.push(x);save();ELD=null;ELL={id:x.id,sv:1,ml:500};if(FS==='water')fsr();return elxLog()}
+ if(a==='exdel'&&ELD){E.p=E.p.filter(y=>y.id!==ELD.id);save();ELD=null;sheet(null);if(FS==='water')fsr();return}
+ if(a==='exsv'&&ELL){ELL.sv=+i;return elxLog()}
+ if(a==='exml'&&ELL){ELL.ml=+i;return elxLog()}
+ if(a==='exadd'&&ELL){const x=E.p.find(y=>y.id===ELL.id);if(!x)return;const f=ELL.sv,d=today();(E.log[d]=E.log[d]||[]).push({id:x.id,n:x.n,u:x.u,sv:f,ml:ELL.ml,na:Math.round((x.na||0)*f),kp:Math.round((x.kp||0)*f),mg:Math.round((x.mg||0)*f),t:nowMin()});
+  if((x.k||0)*f>=20){const v={k:Math.round(x.k*f),p:0,f:0,c:Math.round((x.c||0)*f*10)/10,sug:Math.round((x.sug||0)*f*10)/10,mi:miRound({na:(x.na||0)*f,kp:(x.kp||0)*f,mg:(x.mg||0)*f}),n:x.n,drink:1,ml:ELL.ml};S.meals=S.meals||{};(S.meals[d]=S.meals[d]||[]).push(v);addTot(v,1)}
+  const ml=ELL.ml;ELL=null;sheet(null);setTimeout(()=>watAdd(ml),0);return}},true);
+{const _bd=bcDone;bcDone=function(p){if(!BC||BC.mode!=='elx')return _bd.apply(this,arguments);const code=BC.code;bcClose();ELD={...elxFrom(p),bc:code};elxEdit();toast(ELD.na!=null?'Found it. Check the values per serving.':'Found it, but it has no mineral values. Add them from the pack.')}}
+{const _br=bcRender;bcRender=function(){if(BC&&BC.mode==='elx'&&(BC.st==='nf'||BC.st==='off')){const code=BC.code;setTimeout(()=>{if(BC&&BC.mode==='elx'){bcClose();ELD={n:'',u:'sachet',na:null,kp:null,mg:null,bc:code};elxEdit();toast('Couldn’t find that one. Add the values from the pack.')}},0)}return _br.apply(this,arguments)}}
+{const _bl=bcLook;bcLook=function(code){if(BC&&BC.mode==='elx'){const c=String(code||'').replace(/\D/g,''),h=(S.bc||{})[c];if(h&&h.n&&!h.elx)delete S.bc[c]}return _bl.apply(this,arguments)}}
+
+/* --- 20: supplements on training days --- */
+const trainDay=d=>{try{ensureSched()}catch(_){}return!!(activePlan()&&S.sch&&S.sch[d]!=null)||!!(S.fd||{})[d]||((S.clog||{})[d]||[]).length>0};
+{const _sd=supDue;supDue=function(d){return _sd.apply(this,arguments).filter(x=>!x.train||trainDay(d))}}
+{const _ss=seSheet;seSheet=function(){_ss.apply(this,arguments);try{const x=SE.x,dc=$('#sheet .dchips');if(!dc)return;
+ if(x.train)dc.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));
+ const ev=dc.querySelector('.chip.all');(ev||dc).insertAdjacentHTML(ev?'afterend':'beforeend',`<button class="chip all" data-a="setr" aria-pressed="${!!x.train}">On days I’m training</button>`);const tb=dc.querySelector('[data-a=setr]');if(x.train)tb.classList.add('on');
+ if(x.train&&/creatine/i.test(x.n||''))dc.insertAdjacentHTML('afterend','<p class="sm" style="margin:8px 2px 0">Creatine works best taken every day, rest days included.</p>')}catch(_){}}}
+window.addEventListener('pointerdown',e=>{const el=e.target.closest('#sheet [data-a=seday]');if(!el||!SE||!SE.x.train)return;SE.x.train=false;const t=$('#sheet [data-a=setr]');if(t){t.classList.remove('on');t.setAttribute('aria-pressed','false')}},true);
+window.addEventListener('click',e=>{const el=e.target.closest('#sheet [data-a=setr]');if(!el||!SE)return;e.stopImmediatePropagation();e.preventDefault();SE.x.train=!SE.x.train;if(SE.x.train)SE.x.days=[];seSheet()},true);
+// the list says "Training days" for these
+{const _v=suppV;suppV=function(){let h=_v.apply(this,arguments);try{SUP().list.forEach(x=>{if(x.train)h=h.replace(new RegExp(`(data-a="sped" data-i="${x.id}"><b>[^<]*</b><small>)([^<]*)`),(m,a,b)=>a+(/Every day/.test(b)?b.replace('Every day','Training days'):b?b+' · Training days':'Training days'))})}catch(_){}return h}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push(
+ {i:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/>',h:'A clearer Macros widget',p:'The small Macros widget now shows nested rings with a key beside them, and the wide one sits centred.'},
+ {i:'<path d="M4 6h16M4 12h10M4 18h13"/>',h:'Describe a meal, rebuilt',p:'Type “cheeseburger and fries” or “McDonald’s Big Mac” and Swell splits dishes into their parts, knows UK menus from McDonald’s, KFC, Burger King and Greggs, and shows what each match is closest to. Clear it with one tap.'},
+ {i:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',h:'Electrolytes',p:'In Water, scan a pack or tub of electrolytes, pick how many sachets or scoops, and add the drink. It counts towards your water too.'},
+ {i:'<path d="M6 12h12M12 6v12"/>',h:'Sugar under Carbs',p:'Tap Carbs on the Diet tab to see how much sugar you’ve had today.'},
+ {i:'<path d="M4 12h3l2-5 4 10 2-5h5"/>',h:'Supplements for training days',p:'Set a supplement to “On days I’m training” and it follows your plan.'})}
 
 render();periodic();reqShow();
 </script>
