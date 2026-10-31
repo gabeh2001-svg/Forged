@@ -21,6 +21,7 @@ const MSG = {
   cafp: p => ['Pre-workout caffeine', `Have it now and it peaks for your session${p.n ? ` (${clip(p.n, 12)})` : ''}.`],
   cafl: p => ['Last call for caffeine', p.n ? `Anything after ${clip(p.n, 10)} will still be in you at bedtime.` : 'Anything later will still be in you at bedtime.'],
   mealb: () => ['Log today’s meals', 'A quick catch-up keeps your totals right.'],
+  cyc: () => ['A heads-up from Swell', 'Open Swell to see your cycle forecast for the next few days.'],
   test: () => ['Notifications are working', 'This is how Swell reminders will look.']
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });

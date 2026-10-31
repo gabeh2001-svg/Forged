@@ -5694,6 +5694,148 @@ let FXQ=0;
 {const _fc=fsClose;fsClose=function(){if(FS)FXQ=Date.now();return _fc.apply(this,arguments)}}
 {const _g=goalW;goalW=function(l){const G=S.goal2;if(G&&G.due&&G.due<=realToday()&&l&&l.w===1&&l.h===1)return`<div class="gdl"><span class="when">Deadline reached</span><b>Did you hit “${esc(G.name)}”?</b><div class="gdb"><button class="btn on" data-a="gyes2">Yes</button><button class="btn" data-a="gno2">Not yet</button></div></div>`;return _g.apply(this,arguments)}}
 
+/* ===== v77: cycle tracking (optional) ===== */
+// Research notes for this block:
+// - What people expect (Clue, Flo, Apple Cycle Tracking): log period days and flow, symptoms and mood, see the next period
+//   forecast and your averages. The free tiers of Flo and Clue cover logging and basic forecasts; insights by cycle phase
+//   are usually paid. Swell includes all of it, and the data never leaves the phone, which matters most to users of these
+//   apps (Flo's 2021 FTC settlement over data sharing).
+// - Forecasts: only about 13% of cycles are exactly 28 days, and length varies between and within people (Bull et al. 2019,
+//   npj Digital Medicine, 600,000 cycles). So Swell uses the median of your own last six cycles, starts at 28 until it has
+//   two, and says "around" rather than a firm date. The NHS says cycles of 21 to 40 days are common.
+// - Ovulation is estimated as 14 days before the next period, since the luteal phase varies less than the follicular
+//   phase (Lenton et al. 1984). The fertile window (5 days before to 1 day after ovulation, Wilcox et al. 1995, NEJM) is
+//   off by default, clearly marked as an estimate, and never offered as contraception (that needs a certified device).
+// - Training: a meta-analysis found only trivial, individual differences in performance across the cycle (McNulty et al.
+//   2020, Sports Medicine), so tips say "train as you feel" rather than prescribing phases. Heavy periods raise iron needs
+//   (NHS RNI 14.8 mg for women 19 to 50), which links to the nutrient view.
+// - Reminders are worded discreetly on the lock screen.
+(function(){const st=document.createElement('style');st.textContent=`
+.cyh{display:flex;align-items:center;gap:16px}.cyh svg{width:104px;height:104px;flex:none}
+.cyh b.t{display:block;font-size:22px;letter-spacing:-.01em}.cyh p{margin:4px 0 0}
+.cyb{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.cyb .btn{margin:0}
+.cym{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin-top:8px}
+.cym .dw{font-size:11px;color:var(--dim);padding:2px 0}
+.cym button{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:#fff;font:inherit;font-size:14px;position:relative;padding:0;font-variant-numeric:tabular-nums}
+.cym button.o{opacity:.3}.cym button.p{background:#ff6f91;color:#2a0712;font-weight:700}.cym button.pr{box-shadow:inset 0 0 0 1.5px rgba(255,111,145,.85)}
+.cym button.fw{background:rgba(127,208,255,.16)}.cym button.td{outline:2px solid #fff;outline-offset:-2px}
+.cym button i{position:absolute;bottom:4px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#ffc062}
+.cymh{display:flex;align-items:center;justify-content:space-between}.cymh b{font-size:16px}.cymh .nav2{display:flex;gap:6px}
+.cymh .nav2 button{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;padding:0}
+.cylg{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12px;color:var(--dim)}.cylg span{display:inline-flex;align-items:center;gap:5px}
+.cylg i{width:10px;height:10px;border-radius:50%}
+.cyst{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cyst div{background:rgba(255,255,255,.05);border-radius:14px;padding:10px 12px}.cyst b{display:block;font-size:20px}.cyst small{color:var(--dim)}
+.cyhist{display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:10px}.cyhist div{flex:1;background:rgba(255,111,145,.55);border-radius:6px 6px 2px 2px;position:relative;min-height:6px}
+.cyhist div span{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;color:var(--dim)}
+.cyw{display:flex;flex-direction:column;height:100%;justify-content:space-between}.cyw .big{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.cyw2{display:flex;align-items:center;gap:12px;height:100%}.cyw2 svg{width:74px;height:74px;flex:none}`;document.head.appendChild(st)})();
+const CYC=()=>{S.cyc=S.cyc||{};const c=S.cyc;c.p=c.p||[];c.d=c.d||{};return c};
+const cycOn=()=>!!(S.cyc&&S.cyc.on);
+const cyDD=(a,b)=>Math.round((new Date(b+'T12:00')-new Date(a+'T12:00'))/864e5);
+const med=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+function cycTidy(){const c=CYC(),t=realToday();c.p.sort((a,b)=>a.s<b.s?-1:1);c.p.forEach(x=>{if(!x.e&&cyDD(x.s,t)>9)x.e=addDays(x.s,Math.max(2,Math.round(cycStats().pl||5))-1)})}
+function cycStats(){const c=CYC(),P=c.p.slice().sort((a,b)=>a.s<b.s?-1:1),L=[];for(let i=1;i<P.length;i++){const n=cyDD(P[i-1].s,P[i].s);if(n>=15&&n<=60)L.push(n)}
+ const last=L.slice(-6),len=last.length>=1?Math.round(med(last)):(+c.len||28),pls=P.filter(x=>x.e).slice(-6).map(x=>cyDD(x.s,x.e)+1),pl=pls.length?Math.round(med(pls)):(+c.plen||5);
+ const sd=last.length>=3?Math.sqrt(last.reduce((a,x)=>a+(x-len)**2,0)/last.length):0;return{len,pl,L:last,n:last.length,sd,P}}
+function cycNow(d){d=d||realToday();const c=CYC(),st=cycStats(),P=st.P.filter(x=>x.s<=d);if(!P.length)return null;const cur=P[P.length-1],day=cyDD(cur.s,d)+1,next=addDays(cur.s,st.len*Math.max(1,Math.ceil(day/st.len))),ov=addDays(next,-14);
+ const inP=cur.e?d<=cur.e:day<=Math.max(st.pl,1)+(cur.e===undefined||cur.e===null?0:0),ongoing=!cur.e&&day<=10;
+ const ovd=cyDD(d,ov);let ph=inP||ongoing&&day<=st.pl?'period':Math.abs(ovd)<=1?'ovulation':ovd>1?'follicular':'luteal';if(day>st.len+3)ph='late';
+ return{day,next,ov,ph,cur,st,toNext:cyDD(d,next),ongoing:!cur.e}}
+const CYPH={period:['Period','Train as you feel. Research finds only small, personal differences across the cycle, so there’s no need to skip sessions you’re up for.'],
+ follicular:['Follicular phase','Many people feel their strongest in the days after a period, so it can be a good time for harder sessions if you feel up to it.'],
+ ovulation:['Around ovulation (estimate)','Energy is often good now. If anything feels off, an easier day is fine.'],
+ luteal:['Luteal phase','Body temperature rises a little and some people feel more tired or hungrier before a period. Drink a bit more water and go by how you feel.'],
+ late:['Period is late','Cycles vary, and stress, illness or training load can all shift them. If it’s much later than usual and that’s new for you, a pharmacist or GP can help.']};
+const CYSY=['Cramps','Headache','Bloating','Tender breasts','Spots','Back pain','Tired','Cravings','Low mood','Anxious','Irritable','Good energy','Trouble sleeping','Nausea'];
+const CYFL={s:'Spotting',l:'Light',m:'Medium',h:'Heavy'};
+const cyFmt=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+function cycRing(n,size){const st=n?n.st:{len:28,pl:5},len=st.len,R=20,C=2*Math.PI*R,day=n?Math.min(n.day,len):0,arc=(a,b,col,w)=>`<circle cx="25" cy="25" r="${R}" fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${(Math.max(0,b-a)/len*C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-a/len*C).toFixed(2)}" transform="rotate(-90 25 25)"/>`;
+ let s=`<svg viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="${R}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/>`+arc(0,st.pl,'#ff6f91',5);
+ if(S.cyc&&S.cyc.fert){const o=len-14;s+=arc(o-5,o+1,'rgba(127,208,255,.75)',5)}
+ if(n){const a=(day-.5)/len*2*Math.PI-Math.PI/2;s+=`<circle cx="${(25+R*Math.cos(a)).toFixed(2)}" cy="${(25+R*Math.sin(a)).toFixed(2)}" r="4.2" fill="#fff" stroke="#0b0e16" stroke-width="1.5"/><text x="25" y="25" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="system-ui">${n.day}</text><text x="25" y="32.5" text-anchor="middle" font-size="5.2" fill="rgba(255,255,255,.7)" font-family="system-ui">DAY</text>`}
+ return s+'</svg>'}
+const cycLine=n=>!n?'Log your last period to start the forecast.':n.ph==='period'?`Period day ${n.day}${n.ongoing?'':''}`:n.toNext<0||n.ph==='late'?`Period ${Math.max(1,-n.toNext)} day${-n.toNext===1?'':'s'} late`:n.toNext===0?'Period due today':n.toNext===1?'Period due tomorrow':`Period in about ${n.toNext} days`;
+let CYMO=null;
+function cycMonth(ym){const c=CYC(),n=cycNow(),st=cycStats(),t=realToday(),[y,m]=ym.split('-').map(Number),first=new Date(y,m-1,1),off=(first.getDay()+6)%7,days=new Date(y,m,0).getDate();
+ const per=new Set();st.P.forEach(x=>{const e=x.e||(cyDD(x.s,t)<10?(t>x.s?t:x.s):addDays(x.s,st.pl-1));for(let d=x.s;d<=e;d=addDays(d,1))per.add(d)});
+ const pred=new Set(),fw=new Set();if(n){for(let k=0;k<4;k++){const s=addDays(n.next,k*st.len);for(let i=0;i<st.pl;i++){const d=addDays(s,i);if(d>t)pred.add(d)}if(c.fert){const o=addDays(s,-14);for(let i=-5;i<=1;i++)fw.add(addDays(o,i))}}if(n.ph!=='period'&&n.toNext<0)pred.clear()}
+ let h=['M','T','W','T','F','S','S'].map(x=>`<span class="dw">${x}</span>`).join('');for(let i=0;i<off;i++)h+='<span></span>';
+ for(let i=1;i<=days;i++){const d=`${y}-${String(m).padStart(2,'0')}-${String(i).padStart(2,'0')}`,lg=c.d[d],cl=[per.has(d)?'p':pred.has(d)&&!per.has(d)?'pr':'',fw.has(d)&&!per.has(d)?'fw':'',d===t?'td':'',d>t&&!pred.has(d)?'':''].filter(Boolean).join(' ');
+  h+=`<button class="${cl}" data-a="cyday" data-i="${d}" aria-label="${cyFmt(d)}${per.has(d)?', period':pred.has(d)?', period forecast':''}">${i}${lg&&(lg.sy&&lg.sy.length||lg.note)?'<i></i>':''}</button>`}
+ return h}
+function cycV(){const c=CYC();cycTidy();const n=cycNow(),st=cycStats(),t=realToday();CYMO=CYMO||t.slice(0,7);const [y,m]=CYMO.split('-').map(Number),mn=new Date(y,m-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+ const ph=n?CYPH[n.ph]:null,ongoing=n&&n.ongoing&&n.day<=10;
+ const btns=!n?`<button class="btn on" data-a="cystart">My period started today</button><button class="btn" data-a="cypast">It started earlier</button>`:ongoing?`<button class="btn on" data-a="cyend">My period has ended</button><button class="btn" data-a="cyday" data-i="${t}">Log today</button>`:`<button class="btn on" data-a="cystart">Period started today</button><button class="btn" data-a="cyday" data-i="${t}">Log today</button>`;
+ const irr=st.n>=3&&(st.sd>7||st.L.some(x=>x<21||x>40));
+ const sy={};if(st.n>=2){Object.entries(c.d).forEach(([d,v])=>{const k=cycNow(d);if(!k||!v.sy)return;v.sy.forEach(s=>{sy[k.ph]=sy[k.ph]||{};sy[k.ph][s]=(sy[k.ph][s]||0)+1})})}
+ const syTxt=Object.entries(sy).map(([p,o])=>{const top=Object.entries(o).filter(x=>x[1]>=2).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0].toLowerCase());return top.length?`<p class="sm" style="margin:6px 2px 0"><b style="color:#fff">${CYPH[p][0].replace(' (estimate)','')}:</b> ${esc(top.join(', '))}</p>`:''}).join('');
+ return`<h1>Cycle</h1>
+ <div class="card"><div class="cyh">${cycRing(n)}<div><b class="t">${esc(cycLine(n))}</b>${n?`<p class="sm">${esc(ph[0])}${n.ph!=='period'&&n.toNext>0?` · next around ${cyFmt(n.next)}`:''}</p>`:'<p class="sm">Swell forecasts your next period from your own cycles. Everything stays on this phone.</p>'}</div></div>
+ ${ph?`<p class="sm" style="margin:12px 2px 0">${esc(ph[1])}</p>`:''}<div class="cyb">${btns}</div></div>
+ <div class="card"><div class="cymh"><b>${mn}</b><div class="nav2"><button data-a="cymo" data-i="-1" aria-label="Previous month"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg></button><button data-a="cymo" data-i="1" aria-label="Next month"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button></div></div>
+ <div class="cym">${cycMonth(CYMO)}</div><div class="cylg"><span><i style="background:#ff6f91"></i>Period</span><span><i style="box-shadow:inset 0 0 0 1.5px #ff6f91"></i>Forecast</span>${c.fert?'<span><i style="background:rgba(127,208,255,.35)"></i>Fertile window (estimate)</span>':''}<span><i style="background:#ffc062;width:6px;height:6px"></i>Symptoms logged</span></div>
+ <p class="sm" style="margin:8px 2px 0">Tap any day to log your period, flow or how you feel.</p></div>
+ <div class="card"><h2>Your cycles</h2><div class="cyst"><div><b>${st.len} days</b><small>${st.n?`Typical cycle (last ${st.n})`:'Cycle length, until Swell learns yours'}</small></div><div><b>${st.pl} days</b><small>Typical period</small></div></div>
+ ${st.L.length?`<div class="cyhist">${st.L.map(x=>`<div style="height:${Math.max(10,Math.min(100,(x-15)/30*100))}%"><span>${x}</span></div>`).join('')}</div>`:''}
+ ${irr?'<p class="sm" style="margin:12px 2px 0">Your cycles vary more than usual. That can be normal, but if it’s new for you it’s worth mentioning to a GP.</p>':''}
+ ${syTxt?`<p class="sm" style="margin:12px 2px 0">What you’ve noticed, by phase</p>${syTxt}`:''}</div>
+ <div class="card fset"><h2>Settings</h2>
+ <div class="npr"><div><b>Fertile window estimate</b><small>Shown in blue. An estimate only, not for contraception.</small></div><button class="tg ${c.fert?'on':''}" data-a="cyfert" role="switch" aria-checked="${!!c.fert}" aria-label="Fertile window estimate"></button></div>
+ <div class="npr"><div><b>Heads-up before my period</b><small>A discreet notification two days before.</small></div><button class="tg ${c.rem!==false?'on':''}" data-a="cyrem" role="switch" aria-checked="${c.rem!==false}" aria-label="Heads-up before my period"></button></div>
+ <div class="npr"><div><b>Cycle tracking</b><small>Turn off to hide it. Your logs are kept.</small></div><button class="tg on" data-a="cyoff" role="switch" aria-checked="true" aria-label="Cycle tracking"></button></div></div>`}
+let CYD=null;
+function cyDaySheet(d){const c=CYC(),v=c.d[d]||{},st=cycStats(),inP=st.P.some(x=>d>=x.s&&d<=(x.e||addDays(x.s,st.pl-1)));CYD=d;
+ sheet(`<h2>${cyFmt(d)}</h2>
+ <div class="npr"><div><b>Period</b><small>${inP?'Marked as a period day':'Not a period day'}</small></div><button class="tg ${inP?'on':''}" data-a="cyper" role="switch" aria-checked="${inP}" aria-label="Period day"></button></div>
+ <p class="sm" style="margin:10px 2px 6px">Flow</p><div class="chips">${Object.entries(CYFL).map(([k,n])=>`<button class="chip ${v.fl===k?'on':''}" data-a="cyfl" data-i="${k}">${n}</button>`).join('')}</div>
+ <p class="sm" style="margin:12px 2px 6px">How you feel</p><div class="chips">${CYSY.map(s=>`<button class="chip ${(v.sy||[]).includes(s)?'on':''}" data-a="cysy" data-i="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+ <input placeholder="Note (optional)" data-cyn value="${esc(v.note||'')}" maxlength="120" style="margin-top:12px">
+ <button class="btn big on" data-a="shx" style="margin-top:12px">Done</button>`)}
+function cySetPeriod(d,on){const c=CYC(),P=c.p,st=cycStats();cycTidy();const end=x=>x.e||addDays(x.s,Math.max(0,cyDD(x.s,realToday())));
+ if(on){const a=P.find(x=>addDays(x.s,-1)===d||addDays(end(x),1)===d||d>=x.s&&d<=end(x));if(a){if(d<a.s)a.s=d;else if(a.e&&d>a.e)a.e=d}else P.push({s:d,e:d<realToday()?d:null});
+  // merge touching periods
+  P.sort((x,y)=>x.s<y.s?-1:1);for(let i=P.length-1;i>0;i--){const A=P[i-1],B=P[i];if(A.e&&addDays(A.e,1)>=B.s){A.e=B.e&&B.e>A.e?B.e:B.e===null?null:A.e;P.splice(i,1)}}}
+ else{const i=P.findIndex(x=>d>=x.s&&d<=end(x));if(i<0)return;const x=P[i],e=end(x);if(d===x.s&&d===e)P.splice(i,1);else if(d===x.s)x.s=addDays(d,1);else if(d===e)x.e=addDays(d,-1);else{P.splice(i,1,{s:x.s,e:addDays(d,-1)},{s:addDays(d,1),e:x.e})}}
+ save()}
+const cyRefresh=()=>{if(FS==='cyc')fsr();render()};
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=cy]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(cystart|cypast|cyend|cyday|cymo|cyfert|cyrem|cyoff|cyper|cyfl|cysy|cyon|cyno)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();const c=CYC(),t=realToday();
+ if(a==='cyon'){c.on=1;save();NM.cyc='Cycle';if(!S.lay.some(l=>l.id==='cyc'))S.lay.push({id:'cyc',w:1,h:1});save();render();setTimeout(()=>fsOpen('cyc'),60);return}
+ if(a==='cyno'){c.on=0;c.asked=1;save();render();return}
+ if(a==='cystart'){c.p.forEach(x=>{if(!x.e&&x.s<t)x.e=addDays(t,-1)});if(!c.p.some(x=>x.s===t))c.p.push({s:t,e:null});c.d[t]=c.d[t]||{};if(!c.d[t].fl)c.d[t].fl='m';save();toast('Logged. Swell will update your forecast.');return cyRefresh()}
+ if(a==='cypast'){const inp=document.createElement('input');inp.type='date';inp.max=t;inp.style.cssText='position:fixed;left:-9999px';document.body.appendChild(inp);inp.addEventListener('change',()=>{const v=inp.value;inp.remove();if(!v)return;c.p.push({s:v,e:cyDD(v,t)>=Math.max(1,(+c.plen||5))?addDays(v,(+c.plen||5)-1):null});save();cyRefresh()});try{inp.showPicker?inp.showPicker():inp.click()}catch(_){inp.click()}return}
+ if(a==='cyend'){const x=c.p.filter(x=>!x.e).pop();if(x){x.e=t<x.s?x.s:t;save();toast('Got it. Period marked as ended.')}return cyRefresh()}
+ if(a==='cyday')return cyDaySheet(i);
+ if(a==='cymo'){const [y,m]=(CYMO||t.slice(0,7)).split('-').map(Number),dt=new Date(y,m-1+(+i),1);CYMO=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;return fsr()}
+ if(a==='cyfert'){c.fert=!c.fert;save();return fsr()}
+ if(a==='cyrem'){c.rem=c.rem===false;save();try{remSync(true)}catch(_){}return fsr()}
+ if(a==='cyoff'){c.on=0;S.lay=S.lay.filter(l=>l.id!=='cyc');delete NM.cyc;save();fsClose();toast('Cycle tracking is off. Turn it on again in Settings.');return}
+ if(!CYD)return;const v=c.d[CYD]=c.d[CYD]||{};
+ if(a==='cyper'){const st=cycStats(),inP=st.P.some(x=>CYD>=x.s&&CYD<=(x.e||addDays(x.s,st.pl-1)));cySetPeriod(CYD,!inP);if(!inP&&!v.fl)v.fl='m';if(inP)delete v.fl;save();cyDaySheet(CYD);if(FS==='cyc')fsr();return}
+ if(a==='cyfl'){v.fl=v.fl===i?undefined:i;if(v.fl&&v.fl!=='s'){const st=cycStats();if(!st.P.some(x=>CYD>=x.s&&CYD<=(x.e||addDays(x.s,st.pl-1))))cySetPeriod(CYD,true)}save();cyDaySheet(CYD);if(FS==='cyc')fsr();return}
+ if(a==='cysy'){v.sy=v.sy||[];const k=v.sy.indexOf(i);if(k>=0)v.sy.splice(k,1);else v.sy.push(i);save();el.classList.toggle('on',k<0);if(FS==='cyc')fsr();return}},true);
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('[data-cyn]')&&CYD){const c=CYC();(c.d[CYD]=c.d[CYD]||{}).note=e.target.value;save()}});
+// full page and widget
+const FSX={};
+FSX.cyc=cycV;
+{const _f=fsr;fsr=function(){if(!FS||!FSX[FS])return _f.apply(this,arguments);let o=$('#fs');if(!o){o=document.createElement('div');o.id='fs';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');document.body.appendChild(o);lockOn()}
+ o.style.backgroundColor='#080b13';o.setAttribute('aria-label',NM[FS]||'');const top=o.scrollTop;o.innerHTML=`<div class="fsw"><div class="fsh"><button class="fsx" data-a="fsx" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>${FSX[FS]()}</div>`;o.scrollTop=top}}
+if(cycOn())NM.cyc='Cycle';
+WIS.drop2=WIS.drop2||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/></svg>';
+{const _wd=wd;wd=function(l){if(!l||l.id!=='cyc')return _wd.apply(this,arguments);if(!cycOn())return'';cycTidy();const n=cycNow();
+ if(l.w===1&&l.h===1)return`<div class="cyw">${wlab('drop2','Cycle')}<div><div class="big">${!n?'Start':n.ph==='period'?'Day '+n.day:n.toNext<0?Math.abs(n.toNext)+'d late':n.toNext+(n.toNext===1?' day':' days')}</div><span class="sm" style="margin:0">${!n?'Log your last period':n.ph==='period'?'of your period':n.toNext<0?'Period is late':'until your period'}</span></div></div>`;
+ return`${wlab('drop2','Cycle')}<div class="cyw2">${cycRing(n)}<div><b style="font-size:17px">${esc(cycLine(n))}</b><p class="sm" style="margin:4px 0 0">${n?esc(CYPH[n.ph][0])+(n.ph!=='period'&&n.toNext>0?` · around ${cyFmt(n.next)}`:''):'Tap to set it up.'}</p></div></div>`}}
+document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd');if(!w||ED||e.target.closest('button,input,a,[data-a]'))return;if(Date.now()-WTD>450)return;const id=w.dataset.id;if(FSX[id]){fsOpen(id)}});
+// offered once to people who said they're female, in Settings and as a card on Home, never as a pop-up
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=cyset]')){
+  L.insertAdjacentHTML('beforeend',`<button data-a="cyset">${ico('<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/>')}<span>Cycle tracking<small>${cycOn()?'On':'Off'}</small></span></button>`);setGroup()}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Your plan and goals');if(g&&!g[1].includes('cyset'))g[1].push('cyset')}catch(_){}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cyset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const c=CYC();if(!c.on){c.on=1;NM.cyc='Cycle';if(!S.lay.some(l=>l.id==='cyc'))S.lay.push({id:'cyc',w:1,h:1});save()}sheet(null);render();setTimeout(()=>fsOpen('cyc'),80)},true);
+{const _h=home;home=function(){let h=_h.apply(this,arguments);try{if(S.setup&&S.setup.sex==='f'&&!S.cyc?.on&&!S.cyc?.asked&&S.user){h=h.replace(/(<div class="grid)/,`<div class="card cyoffer"><h2>Track your cycle?</h2><p class="sm" style="margin:0 0 10px">See your next period, log symptoms, and get training tips that fit. Everything stays on your phone.</p><div class="row2"><button class="btn on" data-a="cyon">Turn it on</button><button class="btn" data-a="cyno">No thanks</button></div></div>$1`)}}catch(_){}return h}}
+// discreet heads-up two days before
+{const _rp=remPlan;remPlan=function(){const L=_rp.apply(this,arguments);try{const P=npGet();if(cycOn()&&CYC().rem!==false){const n=cycNow();if(n&&n.ph!=='period'&&n.toNext>=2){const d=addDays(n.next,-2),x=at(d,'09:00');if(x.getTime()>Date.now())L.push({k:'cyc|'+d,t:'cyc',at:x,p:{}})}}}catch(_){}return L}}
+{const _rs=remSig;remSig=function(){let n=null;try{n=cycOn()?cycNow():null}catch(_){}return _rs.apply(this,arguments)+JSON.stringify([n&&n.next,S.cyc&&S.cyc.rem])}}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/>',h:'Cycle tracking',p:'Optional, in Settings. Log your period and symptoms, see your next period forecast and how your cycles run, with training tips for each phase. It stays on your phone.'})}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
