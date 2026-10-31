@@ -6256,6 +6256,97 @@ function cvApply(d){try{const p=D.eid&&S.plans.find(x=>x.id===D.eid);if(p&&p.day
 if(typeof awr==='function'){const _a=awr;awr=function(){const r=_a.apply(this,arguments);try{const o=$('#aw');if(o&&!o.querySelector('.wcov.l')&&typeof AW!=='undefined'&&AW){const d=dayWork(today()),u=cvImg(d),h=o.querySelector('h1,h2');if(u&&h&&AW.i===0&&!AW.ph)h.insertAdjacentHTML('beforebegin',`<img class="wcov l" src="${u}" alt="" style="margin:0 0 14px">`)}}catch(_){}return r}}
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m4 15 4-4 5 5 3-3 4 4"/>',h:'Workout covers',p:'Give each workout day its own picture, like a playlist cover. Edit a plan, pick a day and tap Add a cover picture.'})}
 
+/* ===== v81: eating out: pick the place, then its menu; your places and last orders come back in one tap ===== */
+// Research notes for this block:
+// - Since April 2022, chains in England with 250+ staff must print calories (Calorie Labelling (Out of Home Sector)
+//   (England) Regulations 2021), so Swell carries their published figures in a small menu file (food/menus-1.json) that
+//   downloads the first time someone eats out, then works offline. Where a chain only prints calories, the protein, fat
+//   and carb split comes from a lab-analysed food of the same kind, scaled to the printed calories.
+// - Recall is the weak point of eating-out logs: drinks, sides, sauces and desserts are the items most often forgotten in
+//   dietary recalls (the USDA multiple-pass method adds a "forgotten foods" prompt for exactly these; Moshfegh et al.
+//   2008, AJCN). So after a main, Swell asks about sides, drinks and dessert using that menu's own sections.
+// - People tend to reorder the same things at a familiar restaurant (habit research: Wood & Neal 2009), so the places
+//   you've logged come first, with last time's order ready to add again in one tap.
+// - A small independent place won't be on the list. Swell says so plainly and lets you build its menu yourself, item by
+//   item, estimated from the food tables. That menu stays on your phone for next time.
+(function(){const st=document.createElement('style');st.textContent=`
+.eo .eos{margin:0 0 10px}.eopl{display:flex;flex-direction:column;gap:6px}
+.eopl button{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:11px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:0;color:inherit;font:inherit}
+.eopl button small{color:var(--dim);font-size:12.5px;display:block}.eopl .tag{font-size:11px;color:var(--dim);white-space:nowrap}
+.eoh{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:14px 2px 6px}
+.eoi{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 2px;border-top:1px solid rgba(255,255,255,.06)}
+.eoi b{font-weight:600;font-size:14.5px}.eoi small{display:block;color:var(--dim);font-size:12px}
+.eoq{display:flex;align-items:center;gap:6px}.eoq button{width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:#fff;font-size:18px;line-height:1;padding:0}
+.eoq button.add{width:auto;padding:0 12px;border-radius:16px;font-size:14px;background:rgba(255,255,255,.12)}.eoq b{min-width:16px;text-align:center}
+.eosec{border-top:1px solid rgba(255,255,255,.08)}.eosec>button{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 2px;background:none;border:0;color:#fff;font:inherit;font-weight:700;font-size:15px}
+.eosec>button svg{width:16px;height:16px;transition:transform .2s}.eosec.open>button svg{transform:rotate(180deg)}.eosec .bd{display:none}.eosec.open .bd{display:block}
+.eobask{position:sticky;bottom:-1px;background:linear-gradient(rgba(18,21,32,0),rgb(18,21,32) 16px);padding:18px 0 6px;margin-top:8px;z-index:2}
+.eobask .sum{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}.eobask .sum b{font-size:18px}
+.eoask{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.eoask .chip{margin:0}`;document.head.appendChild(st)})();
+const REST=()=>{S.rest=S.rest||{};S.rest.pl=S.rest.pl||{};S.rest.own=S.rest.own||{};return S.rest};
+let MENUS=null,MNLOAD=null;
+const menusReady=()=>MENUS?Promise.resolve(MENUS):(MNLOAD=MNLOAD||fetch('food/menus-1.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>MENUS=j).catch(e=>{MNLOAD=null;throw e}));
+// built-in chains from the describe-a-meal list, grouped into menu sections
+function chSecs(b){const sec=n=>/fries|chips|hash|slaw|gravy|corn|onion|nugget|popcorn|wings/i.test(n)?'Sides and sharing':/flurry|sundae|cookie|cake/i.test(n)?'Desserts':/muffin|breakfast/i.test(n)?'Breakfast':/roll|bake/i.test(n)?'Bakes':/original recipe/i.test(n)?'Chicken':'Burgers and mains';
+ const o={};CHN.forEach((x,i)=>{if(x.b!==b)return;const {off,ug}=chOff(x),f=ug/100;(o[sec(x.n)]=o[sec(x.n)]||[]).push([x.n,Math.round(off.k*f),Math.round(off.p*f*10)/10,Math.round(off.f*f*10)/10,Math.round(off.c*f*10)/10,off.sug!=null?Math.round(off.sug*f*10)/10:-1])});
+ return Object.entries(o).map(([n,i])=>({n,i}))}
+function eoChains(){const L=Object.entries(CHB).map(([id,c])=>({id:'c_'+id,n:c.n.replace('’',"'"),re:c.re,src:'Published UK menu calories',s:null,b:id}));(MENUS&&MENUS.chains||[]).forEach(c=>L.push({id:c.id,n:c.n,re:new RegExp(c.re,'i'),src:c.src,s:c.s}));return L}
+function eoPlace(id){const own=REST().own[id];if(own)return{id,n:own.n,own:1,s:[{n:'Your usual items',i:own.items}]};const c=eoChains().find(x=>x.id===id);if(!c)return null;if(c.b&&!c.s)c.s=chSecs(c.b);return c}
+let EO=null;// {id, q:{name:count}, open:{sec:true}, find}
+function eoPick(){const R=REST(),t=realToday(),mine=Object.entries(R.pl).sort((a,b)=>(b[1].at||'')>(a[1].at||'')?1:-1),q=(EO&&EO.find||'').toLowerCase().trim(),ch=eoChains();
+ const match=x=>!q||x.n.toLowerCase().includes(q)||x.re&&x.re.test(q);const fresh=ch.filter(c=>match(c)&&!R.pl[c.id]),own=Object.entries(R.own).filter(([id,o])=>match(o)&&!R.pl[id]);
+ const mineL=mine.filter(([id,p])=>match({n:p.n}));
+ const list=`${mineL.length?`<div class="eoh">Your places</div><div class="eopl">${mineL.map(([id,p])=>`<button data-a="eoopen" data-i="${id}"><span>${esc(p.n)}<small>Last time: ${esc((p.last||[]).slice(0,3).map(x=>(x.q>1?x.q+' × ':'')+x.n).join(', ')||'nothing saved')}</small></span><span class="tag">${p.c||1} visit${(p.c||1)===1?'':'s'}</span></button>`).join('')}</div>`:''}
+ ${fresh.length||own.length?`<div class="eoh">${mineL.length?'Other places':'Places with menus'}</div><div class="eopl">${own.map(([id,o])=>`<button data-a="eoopen" data-i="${id}"><span>${esc(o.n)}<small>Your own menu</small></span></button>`).join('')}${fresh.map(c=>`<button data-a="eoopen" data-i="${c.id}"><span>${esc(c.n)}<small>${esc(c.src)}</small></span></button>`).join('')}</div>`:''}
+ ${q&&!mineL.length&&!fresh.length&&!own.length?`<p class="sm" style="margin:12px 2px 6px">“${esc(EO.find)}” isn’t on Swell’s list. Most smaller places don’t publish nutrition, but you can add it and build its menu as you go.</p>`:''}
+ ${q?`<button class="btn big" data-a="eonew" style="margin-top:10px">Add “${esc(EO.find)}” as a new place</button>`:''}`;
+ return list}
+function eoPickSheet(keep){const had=$('#sheet .eo'),v=EO&&EO.find||'';if(had&&keep){const w=$('#sheet .eolist');if(w){w.innerHTML=eoPick();return}}
+ sheet(`<div class="eo"><h2>Where did you eat?</h2><input class="eos" data-eof placeholder="Search, like Nando's" value="${esc(v)}" autocomplete="off" enterkeyhint="search"><div class="eolist">${eoPick()}</div><button class="btn big" data-a="shx" style="margin-top:12px">Cancel</button></div>`);
+ if(!MENUS)menusReady().then(()=>{if($('#sheet .eolist'))$('#sheet .eolist').innerHTML=eoPick()}).catch(()=>{})}
+const eoKey=n=>String(n);
+function eoTot(P){const o={k:0,p:0,f:0,c:0,sug:0,n:0};let sAny=false;P.s.forEach(s=>s.i.forEach(it=>{const q=EO.q[eoKey(it[0])]||0;if(!q)return;o.n+=q;o.k+=it[1]*q;o.p+=it[2]*q;o.f+=it[3]*q;o.c+=it[4]*q;if(it[5]!=null&&it[5]>=0){o.sug+=it[5]*q;sAny=true}}));o.sAny=sAny;return o}
+const CHV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>';
+function eoMenu(){const P=eoPlace(EO.id);if(!P)return;const R=REST(),me=R.pl[EO.id],last=me&&me.last||[],T=eoTot(P);
+ const row=it=>{const k=eoKey(it[0]),q=EO.q[k]||0;return`<div class="eoi"><div><b>${esc(it[0])}</b><small>${Math.round(it[1])} kcal · ${Math.round(it[2])}g protein</small></div><div class="eoq">${q?`<button data-a="eoq" data-i="${esc(k)}" data-d="-1" aria-label="One fewer">−</button><b>${q}</b><button data-a="eoq" data-i="${esc(k)}" data-d="1" aria-label="One more">+</button>`:`<button class="add" data-a="eoq" data-i="${esc(k)}" data-d="1">Add</button>`}</div></div>`};
+ const all=P.s.flatMap(s=>s.i),lastIt=last.map(x=>all.find(i=>i[0]===x.n)).filter(Boolean);
+ // the menu's own sections decide what to ask about next
+ const has=re=>P.s.find(s=>re.test(s.n)),chosen=re=>{const s=has(re);return s&&s.i.some(i=>EO.q[eoKey(i[0])])};const asks=[];
+ if(T.n){[[/side|sharing|fries/i,'Any sides?'],[/drink|shake/i,'Any drinks?'],[/dessert|cookie/i,'Dessert?']].forEach(([re,l])=>{const s=has(re);if(s&&!chosen(re))asks.push(`<button class="chip" data-a="eosec" data-i="${esc(s.n)}">${l}</button>`)})}
+ sheet(`<div class="eo"><h2>${esc(P.n)}</h2><p class="sm" style="margin:-2px 0 6px">${P.own?'Your own menu, built from what you’ve logged here.':esc(P.src)}</p>
+ ${lastIt.length?`<div class="eoh">Last time</div>${lastIt.map(row).join('')}<button class="chip" data-a="eoagain" style="margin:8px 0 4px">Add the same again</button>`:''}
+ ${P.s.map(s=>`<div class="eosec ${EO.open[s.n]||P.s.length===1?'open':''}" data-sec="${esc(s.n)}"><button data-a="eosec" data-i="${esc(s.n)}">${esc(s.n)}<span style="display:flex;align-items:center;gap:8px">${s.i.reduce((a,i)=>a+(EO.q[eoKey(i[0])]||0),0)?`<small class="sm" style="margin:0">${s.i.reduce((a,i)=>a+(EO.q[eoKey(i[0])]||0),0)} added</small>`:''}${CHV}</span></button><div class="bd">${s.i.map(row).join('')}</div></div>`).join('')}
+ <div class="eosec open"><div class="bd" style="padding:8px 0 0"><p class="sm" style="margin:0 2px 6px">Something not listed?</p><div class="fpadd"><input data-eoadd placeholder="Describe it, like garlic bread" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="eoadd">Add</button></div></div></div>
+ <div class="eobask">${asks.length?`<div class="eoask">${asks.join('')}</div>`:''}<div class="sum"><span class="sm" style="margin:0">${T.n?`${T.n} item${T.n===1?'':'s'} · ${Math.round(T.p)}g protein`:'Nothing added yet'}</span><b>${Math.round(T.k)} kcal</b></div><button class="btn big on" data-a="eolog" ${T.n?'':'disabled'}>Log this meal</button><button class="btn big" data-a="eoback">Choose another place</button></div></div>`);
+ const sc=$('#sheet');if(sc&&EO.sy!=null){sc.scrollTop=EO.sy;EO.sy=null}}
+document.addEventListener('input',e=>{const t=e.target;if(t.matches&&t.matches('[data-eof]')){EO=EO||{q:{},open:{}};EO.find=t.value;eoPickSheet(true)}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-eoadd]')){e.preventDefault();const b=$('#sheet [data-a=eoadd]');b&&b.click()}});
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=eo]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(eostart|eoopen|eonew|eoq|eosec|eoagain|eoadd|eolog|eoback)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();const R=REST(),keepY=()=>{const s=$('#sheet');if(EO&&s)EO.sy=s.scrollTop};
+ if(a==='eostart'){EO={q:{},open:{},find:''};feReady().catch(()=>{});return eoPickSheet()}
+ if(a==='eoback'){EO={q:{},open:{},find:''};return eoPickSheet()}
+ if(a==='eoopen'){const go=()=>{EO={id:i,q:{},open:{},find:''};const P=eoPlace(i);if(!P){toast('Couldn’t open that menu. Check your signal.');return}if(P.s[0])EO.open[P.s[0].n]=1;eoMenu()};return Promise.all([feReady(),menusReady()]).then(go,go)}
+ if(a==='eonew'){const n=(EO&&EO.find||'').trim().slice(0,40);if(!n)return;const id='o'+Date.now().toString(36);R.own[id]={n,items:[]};save();EO={id,q:{},open:{},find:''};feReady().catch(()=>{});return eoMenu()}
+ if(!EO||!EO.id)return;const P=eoPlace(EO.id);
+ if(a==='eoq'){const k=i,n=Math.max(0,Math.min(20,(EO.q[k]||0)+(+el.dataset.d)));if(n)EO.q[k]=n;else delete EO.q[k];keepY();try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}return eoMenu()}
+ if(a==='eosec'){keepY();EO.open[i]=!EO.open[i];if(el.classList.contains('chip')){EO.open[i]=1;eoMenu();setTimeout(()=>{const s=[...document.querySelectorAll('#sheet .eosec')].find(x=>x.dataset.sec===i);s&&s.scrollIntoView({block:'start',behavior:MRM()?'auto':'smooth'})},40);return}return eoMenu()}
+ if(a==='eoagain'){(R.pl[EO.id].last||[]).forEach(x=>{EO.q[eoKey(x.n)]=x.q||1});keepY();return eoMenu()}
+ if(a==='eoadd'){const q=$('#sheet [data-eoadd]'),v=q?q.value.trim():'';if(!v)return;feReady().then(()=>{const r=dsEst(v);let k=0,p=0,f=0,c=0,sg=0;r.items.forEach(x=>{const m=feMacApp(x);k+=m.k;p+=m.p;f+=m.f;c+=m.c;const s=itSug(x);if(s)sg+=s});if(!k){toast('Couldn’t estimate that. Try other words.');return}
+  const it=[v.charAt(0).toUpperCase()+v.slice(1),Math.round(k),Math.round(p*10)/10,Math.round(f*10)/10,Math.round(c*10)/10,Math.round(sg*10)/10];
+  // a place without a published menu learns it from you; a chain keeps your extras with it
+  const own=R.own[EO.id]||(R.own['x_'+EO.id]=R.own['x_'+EO.id]||{n:P.n+' extras',items:[],hide:1});if(R.own[EO.id])R.own[EO.id].items.push(it);else{own.items.push(it);P.s.push({n:'Your extras',i:own.items})}
+  EO.q[eoKey(it[0])]=1;keepY();save();eoMenu()}).catch(()=>toast('The food list needs a signal the first time.'));return}
+ if(a==='eolog'){const T=eoTot(P);if(!T.n)return;const picked=[];P.s.forEach(s=>s.i.forEach(it=>{const q=EO.q[eoKey(it[0])];if(q&&!picked.some(x=>x.n===it[0]))picked.push({n:it[0],q})}));
+  const nm=`${P.n}: ${picked.map(x=>(x.q>1?x.q+' × ':'')+x.n).join(', ')}`.slice(0,90),x={n:nm,k:Math.round(T.k),p:Math.round(T.p),f:Math.round(T.f),c:Math.round(T.c),out:1};if(T.sAny)x.sug=Math.round(T.sug*10)/10;
+  const d=today();S.meals=S.meals||{};(S.meals[d]=S.meals[d]||[]).push(x);addTot(x,1);const me=R.pl[EO.id]=R.pl[EO.id]||{n:P.n,c:0};me.n=P.n;me.c=(me.c||0)+1;me.at=d;me.last=picked;
+  EO=null;save();sheet(null);render();try{evalDay()}catch(_){}try{fxBurst(null,innerWidth/2,innerHeight/2)}catch(_){}toast(`${P.n} logged: ${x.k} kcal.`);return}},true);
+// own places that are just a chain's extras stay out of the place list
+{const _p=eoPick;eoPick=function(){const R=REST(),hid={};for(const k in R.own)if(R.own[k].hide){hid[k]=R.own[k];delete R.own[k]}const h=_p.apply(this,arguments);Object.assign(R.own,hid);return h}}
+{const _e=eoPlace;eoPlace=function(id){const P=_e.apply(this,arguments);const x=P&&!P.own&&REST().own['x_'+id];if(x&&x.items.length&&!P.s.some(s=>s.n==='Your extras'))P.s=P.s.concat([{n:'Your extras',i:x.items}]);return P}}
+// the button sits with Describe a meal
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);return h.replace('<div class="dscw">','<button class="btn eobtn" data-a="eostart" style="width:100%;margin:0 0 10px">Eaten out? Pick the place</button><div class="dscw">')}}
+// describing a chain dish in the meal box also remembers the place
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2-3 5s1 4 3 4v9"/>',h:'Eaten out?',p:'Pick the restaurant, then add what you had from its menu. Swell prompts for sides, drinks and dessert, remembers your places and last order for next time, and lets you build a menu for smaller places it doesn’t know.'})}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
