@@ -3180,7 +3180,7 @@ async function bcLook(code){if(!BC)return;code=String(code||'').replace(/\D/g,''
  if(navigator.onLine===false&&!PREVIEW){BC.st='off';bcRender();return}
  BC.st='look';bcRender();q.push(Date.now());S.bcq=q;save();
  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),9000);let prod=null,found=null;
- try{const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,categories_tags,quantity,product_quantity,product_quantity_unit`,{signal:ac.signal,headers:{Accept:'application/json'}});
+ try{const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,categories_tags,quantity,product_quantity,product_quantity_unit,additives_tags`,{signal:ac.signal,headers:{Accept:'application/json'}});
   if(r.status===429){q.push(...Array(BCMAX).fill(Date.now()));S.bcq=q;save();clearTimeout(to);return bcLook(code)}
   const j=await r.json();found=j&&j.status===1;if(found)prod=bcProd(j)}catch(_){found=null}clearTimeout(to);if(!BC)return;
  // the preview can't always reach the internet, so it uses a sample product for the demo barcode
@@ -5835,6 +5835,121 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cyset]');
 {const _rp=remPlan;remPlan=function(){const L=_rp.apply(this,arguments);try{const P=npGet();if(cycOn()&&CYC().rem!==false){const n=cycNow();if(n&&n.ph!=='period'&&n.toNext>=2){const d=addDays(n.next,-2),x=at(d,'09:00');if(x.getTime()>Date.now())L.push({k:'cyc|'+d,t:'cyc',at:x,p:{}})}}}catch(_){}return L}}
 {const _rs=remSig;remSig=function(){let n=null;try{n=cycOn()?cycNow():null}catch(_){}return _rs.apply(this,arguments)+JSON.stringify([n&&n.next,S.cyc&&S.cyc.rem])}}
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/>',h:'Cycle tracking',p:'Optional, in Settings. Log your period and symptoms, see your next period forecast and how your cycles run, with training tips for each phase. It stays on your phone.'})}
+
+/* ===== v78: micronutrients from food and supplements: gaps, effects, what's too high, sweeteners ===== */
+// Research notes for this block:
+// - Targets are the UK Reference Nutrient Intakes for adults 19 to 64 (COMA 1991, Dietary Reference Values), vitamin D
+//   10 µg (SACN 2016), and EFSA adequate intakes where the UK has no RNI (vitamins E and K). An RNI covers 97.5% of people,
+//   so being a little under on one day isn't a deficiency. That's why Swell looks at the week, and calls a gap "low" under
+//   two thirds of the RNI on average (around the Estimated Average Requirement, which is about 77% of the RNI).
+// - Upper limits: sodium 2.4 g (6 g salt, SACN 2003), saturated fat 20 g (women) or 30 g (men) and total sugars 90 g
+//   (UK label reference intakes). Safe upper levels for vitamins and minerals come from the Expert Group on Vitamins and
+//   Minerals (EVM 2003). Most high readings come from supplements, so Swell says so.
+// - Sweeteners: WHO's 2023 guideline advises against relying on non-sugar sweeteners to control weight. JECFA (2023) kept
+//   aspartame's acceptable daily intake at 40 mg per kg; at 200 to 300 mg a can, a 70 kg adult would need 9 to 14 cans a
+//   day to pass it. Swell counts sweetened drinks and gives the number for your weight, without alarm.
+// - Coverage: many foods have no nutrient figures, so Swell says how many meals the view is based on.
+// - Supplements count when ticked, read from their name and dose (for example "Vitamin D 25 µg"); a multivitamin is
+//   counted at 100% of the label reference values for vitamins (EU 1169/2011 Annex XIII), which is typical.
+const MN={
+ kp:['Potassium','mg',3500,null,'Keeps your heart rhythm, muscles and nerves working, and helps control blood pressure.','Low levels can bring tiredness, weakness and cramps.','Potatoes, bananas, beans and lentils, spinach, yoghurt.'],
+ ca:['Calcium','mg',700,1500,'Builds and keeps bones and teeth strong, and helps muscles contract.','Low intake over years weakens bones.','Milk, yoghurt, cheese, fortified plant milks, tofu set with calcium, sardines.'],
+ mg:['Magnesium','mg',[300,270],400,'Turns food into energy and helps muscles and nerves work.','Low levels can bring cramps, tiredness and poor sleep.','Nuts, seeds, wholegrains, beans, dark leafy greens, dark chocolate.'],
+ fe:['Iron','mg',[8.7,14.8],17,'Makes the haemoglobin that carries oxygen in your blood.','Low iron brings tiredness, breathlessness and pale skin. Heavy periods raise needs.','Red meat, beans and lentils, fortified cereals, tofu, dark leafy greens (with vitamin C to absorb it).'],
+ zn:['Zinc','mg',[9.5,7],25,'Supports the immune system, wound healing and how you taste and smell.','Low zinc can slow healing and dull appetite.','Meat, shellfish, cheese, beans, nuts and seeds, wholegrains.'],
+ se:['Selenium','µg',[75,60],450,'Protects cells from damage and helps the thyroid and immune system.','Low intake is common in the UK because of soil levels.','Brazil nuts (one or two is plenty), fish, eggs, meat.'],
+ io:['Iodine','µg',140,940,'Makes thyroid hormones, which control how fast your body uses energy.','Low iodine can affect the thyroid. Plant milks often have none.','Milk, yoghurt, fish, eggs, iodine-fortified plant milks.'],
+ va:['Vitamin A','µg',[700,600],1500,'Keeps your eyes, skin and immune system healthy.','Low intake affects night vision and immunity.','Carrots, sweet potato, spinach, eggs, cheese.'],
+ vd:['Vitamin D','µg',10,100,'Helps you absorb calcium for bones, teeth and muscles.','Hard to get from food. The NHS advises 10 µg a day from October to March in the UK.','Oily fish, eggs, fortified cereals and spreads, or a supplement.'],
+ ve:['Vitamin E','mg',[13,11],540,'Protects cells from damage and supports skin and eyes.','Rarely low.','Nuts, seeds, plant oils, avocado.'],
+ vk:['Vitamin K','µg',70,null,'Helps blood clot and keeps bones healthy.','Rarely low in adults.','Leafy greens, broccoli, cabbage, vegetable oils.'],
+ b1:['Thiamin (B1)','mg',[1,.8],null,'Helps release energy from food and keeps nerves healthy.','Low intake brings tiredness and irritability.','Wholegrains, pork, peas, beans, fortified cereals.'],
+ b2:['Riboflavin (B2)','mg',[1.3,1.1],null,'Releases energy from food and keeps skin and eyes healthy.','Low intake can cause sore lips and mouth.','Milk, eggs, mushrooms, fortified cereals.'],
+ b3:['Niacin (B3)','mg',[17,13],null,'Releases energy from food and keeps skin and nerves healthy.','Rarely low.','Meat, fish, wheat flour, eggs, peanuts.'],
+ b6:['Vitamin B6','mg',[1.4,1.2],10,'Helps the body use protein and make red blood cells.','Low intake can cause tiredness and a sore tongue.','Poultry, fish, potatoes, bananas, chickpeas.'],
+ b9:['Folate','µg',200,1000,'Helps make healthy red blood cells. Vital before and in early pregnancy (400 µg folic acid advised).','Low folate can cause a type of anaemia and tiredness.','Leafy greens, broccoli, chickpeas, peas, fortified cereals.'],
+ b12:['Vitamin B12','µg',1.5,2000,'Keeps nerves healthy and helps make red blood cells.','Low B12 brings tiredness and tingling. Vegans need fortified foods or a supplement.','Meat, fish, milk, cheese, eggs, fortified plant milks and yeast extract.'],
+ vc:['Vitamin C','mg',40,1000,'Protects cells, helps wounds heal and helps you absorb iron.','Low intake slows healing and can bring bleeding gums.','Kiwis, peppers, oranges, strawberries, broccoli, potatoes.']};
+const MNK=Object.keys(MN);
+// one or two foods that cover the gap well, for the shopping nudge (item for the list, what to say)
+const MNTIP={kp:['Bananas','a couple of bananas'],ca:['Greek yoghurt','some yoghurt or milk'],mg:['Almonds','a handful of almonds'],fe:['Red lentils','lentils or lean red meat'],zn:['Pumpkin seeds','pumpkin seeds or beef mince'],
+ se:['Brazil nuts','a couple of Brazil nuts'],io:['Milk','milk or yoghurt'],va:['Carrots','carrots or sweet potato'],vd:['Salmon fillets','oily fish, or a vitamin D supplement'],ve:['Sunflower seeds','sunflower seeds or almonds'],
+ vk:['Spinach','spinach or broccoli'],b1:['Peas','peas or wholemeal bread'],b2:['Mushrooms','mushrooms or eggs'],b3:['Chicken breast','chicken or tuna'],b6:['Chickpeas','chickpeas or bananas'],b9:['Broccoli','broccoli or chickpeas'],b12:['Eggs','eggs, fish or fortified plant milk'],vc:['Kiwis','kiwis, peppers or oranges']};
+const male=()=>S.setup&&S.setup.sex==='m';
+const rni=k=>{const v=MN[k][2];return Array.isArray(v)?v[male()?0:1]:v};
+// supplements, read from the name and dose
+const SUPRX=[['vd',/vitamin\s*d|\bd3\b|cholecalciferol/,10],['vc',/vitamin\s*c|ascorb/,null],['b12',/b\s*-?12|cobalamin/,null],['b9',/folic|folate/,400],['fe',/\biron\b|ferrous/,14],['zn',/\bzinc\b/,null],['mg',/magnesium/,null],['ca',/calcium/,null],['io',/iodine|kelp/,null],['se',/selenium/,null],['kp',/potassium/,null],['b6',/\bb\s*-?6\b|pyridoxine/,null],['ve',/vitamin\s*e\b/,null],['va',/vitamin\s*a\b/,null],['vk',/vitamin\s*k/,null]];
+const MULTI={va:800,vd:5,ve:12,vk:75,vc:80,b1:1.1,b2:1.4,b3:16,b6:1.4,b9:200,b12:2.5,fe:14,zn:10,se:55,io:150};
+function supMi(x){const s=`${x.n||''} ${x.dose||''}`.toLowerCase(),o={};if(/multi ?vit|a-?z|centrum|wellman|wellwoman|perfectil/.test(s)){Object.assign(o,MULTI)}
+ SUPRX.forEach(([k,re,def])=>{if(!re.test(s))return;const unit=MN[k][1];let v=null;const m=s.match(/(\d+(?:\.\d+)?)\s*(mg|µg|ug|mcg|iu)\b/);
+  if(m){let n=+m[1],u=m[2];if(u==='iu')n=k==='vd'?n/40:k==='ve'?n*.67:k==='va'?n*.3:n;else if((u==='mg')!==(unit==='mg'))n=u==='mg'?n*1000:n/1000;v=n}else v=def;if(v!=null)o[k]=v});
+ const n=s.match(/(\d+)\s*(tablets?|capsules?|softgels?|gummies)/);const f=n?Math.min(4,+n[1]):1;for(const k in o)o[k]*=f;return o}
+function dayMi(d){const L=(S.meals||{})[d]||[],o={},sup={};let have=0,n=0;L.forEach(x=>{n++;if(x.mi&&Object.keys(x.mi).length){have++;miAdd(o,x.mi)}});
+ const tk=supTaken(d);(SUP().list||[]).forEach(x=>{if(tk.includes(x.id))miAdd(sup,supMi(x))});miAdd(o,sup);return{o,sup,have,n}}
+function miRange(days){const R={},S2={};let have=0,n=0,dn=0;days.forEach(d=>{const r=dayMi(d);if(r.have||Object.keys(r.sup).length){dn++;miAdd(R,r.o);miAdd(S2,r.sup)}have+=r.have;n+=r.n});
+ const per={};MNK.forEach(k=>per[k]=dn?(R[k]||0)/dn:0);return{per,sup:S2,dn,have,n,na:dn?(R.na||0)/dn:0}}
+const miPct=(k,v)=>Math.round(v/rni(k)*100);
+// what to watch today
+function watchList(d){const L=(S.meals||{})[d]||[],r=dayMi(d),out=[];let sug=0,sf=0,anyS=false,anyF=false;L.forEach(x=>{if(x.sug!=null){sug+=+x.sug;anyS=true}if(x.sf!=null){sf+=+x.sf;anyF=true}});
+ const na=r.o.na||0;if(na>2400)out.push(['Salt',`About ${(na*2.5/1000).toFixed(1)} g of salt today, over the 6 g a day guide. Ready meals, bread, cheese and sauces are the usual sources.`]);
+ if(anyS&&sug>90)out.push(['Sugar',`${Math.round(sug)} g of sugars today, over the 90 g label reference.`]);
+ const sfl=male()?30:20;if(anyF&&sf>sfl)out.push(['Saturated fat',`${Math.round(sf)} g today, over the ${sfl} g guide. Butter, cheese, fatty meat and pastry are common sources.`]);
+ MNK.forEach(k=>{const ul=MN[k][3];if(ul&&(r.o[k]||0)>ul)out.push([MN[k][0],`${Math.round(r.o[k])} ${MN[k][1]} today, above the ${ul} ${MN[k][1]} safe upper level${(r.sup[k]||0)>ul*.5?', mostly from supplements. Check the doses':''}.`])});
+ const sw=sweetToday(d);if(sw.n){const kg=bodyKg()||70,cans=Math.round(40*kg/250);out.push(['Sweeteners',`${sw.n} sweetened drink${sw.n===1?'':'s'} today. They’re considered safe in normal amounts: for your weight, the aspartame limit is about ${cans} cans a day. The WHO suggests not relying on sweeteners to manage weight.`])}
+ return out}
+// sweetened drinks: from scanned additives (E950 to E969 and steviol glycosides) or the name
+const SWRE=/\b(diet|zero|sugar[- ]?free|no added sugar|max)\b|sucralose|aspartame|acesulfame|stevia/i;
+function sweetToday(d){let n=0;((S.meals||{})[d]||[]).forEach(x=>{if(x.sw||x.drink&&SWRE.test(x.n||''))n++});((S.drk||{})[d]||[]).forEach(x=>{if(x.sw)n++});((S.cafl||{})[d]||[]).forEach(x=>{if(x.scan&&x.sw&&!x.inMeal)n++});return{n}}
+// scanned products: additives tell us about sweeteners; trivial drinks are remembered for this even though they stay out of the food log
+{const _bp=bcProd;bcProd=function(j){const p=_bp.apply(this,arguments),P=j.product||{},n=P.nutriments||{},ad=(P.additives_tags||[]).join(' '),nm=`${P.product_name||''} ${P.product_name_en||''}`;
+ p.sw=/en:e9(5\d|6[0-9])\b/.test(ad)||SWRE.test(nm)?1:0;const v=x=>x==null||x===''||isNaN(+x)?null:+x;p.sf100=v(n['saturated-fat_100g']);return p}}
+{const _h=bpHook;bpHook=function(v,nm,t){const p=BPD&&BPD.p,g=+(BPD&&BPD.g)||0,L0=((S.meals||{})[t]||[]).length,C0=((S.cafl||{})[t]||[]).length;const r=_h.apply(this,arguments);try{const L=(S.meals||{})[t]||[];
+ if(L.length===L0+1){const x=L[L.length-1];if(p&&p.sw)x.sw=1;if(p&&p.sf100!=null&&g)x.sf=Math.round(p.sf100*g/10)/10}
+ else if(p&&p.drink){S.drk=S.drk||{};(S.drk[t]=S.drk[t]||[]).push({n:nm,ml:g,sw:p.sw?1:0});const C=(S.cafl||{})[t]||[];if(C.length===C0+1&&p.sw)C[C.length-1].sw=1}}catch(_){}return r}}
+// saturated fat for described meals, from the food tables
+{window.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-a=dsuse]');if(!el||!DSC||!DSC.items)return;let sf=0,any=false;DSC.items.forEach(x=>{const ri=x.off?x.off.ri:x.c&&x.c[x.pick];const r=ri!=null&&FE.rows[ri];if(r&&r[8]>=0){sf+=r[8]*x.g/100;any=true}});if(MX)MX.sf=any?Math.round(sf*10)/10:null},true)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=addm]');if(!el||!MX||MX.sf==null)return;const before=((S.meals||{})[today()]||[]).length,sf=MX.sf,k=MX.k;setTimeout(()=>{const L=(S.meals||{})[today()]||[];if(L.length!==before+1)return;const x=L[L.length-1];if(x.sf==null)x.sf=Math.round(sf*(k>0?(+x.k||0)/k:1)*10)/10;save()},0)},true);
+// the Diet card
+let MNV='d';
+function mnRows(per){return MNK.map(k=>[k,per[k]||0]).sort((a,b)=>miPct(a[0],a[1])-miPct(b[0],b[1]))}
+function mnCard(){const t=today(),wk=[...Array(7)].map((_,i)=>addDays(t,-i)).filter(d=>d<=realToday()),R=MNV==='w'?miRange(wk):miRange([t]);
+ const rows=mnRows(R.per),low=rows.filter(([k,v])=>miPct(k,v)<67),cov=rows.length-low.length,W=MNV==='d'?watchList(t):[];
+ const tip=low.length&&R.dn?low.find(([k])=>MNTIP[k]):null;
+ const bars=rows.map(([k,v])=>{const p=miPct(k,v),c=p>=100?'var(--G)':p>=67?'#ffd27a':'#ff8f8f';return`<button class="mnb" data-a="mninfo" data-i="${k}"><span>${esc(MN[k][0])}</span><i><u style="width:${Math.min(100,p)}%;background:${c}"></u></i><b>${R.dn?p+'%':'–'}</b></button>`}).join('');
+ return`<div class="card mnc"><div class="mnh"><h2>Nutrients</h2><div class="seg"><button class="${MNV==='d'?'on':''}" data-a="mnv" data-i="d">Today</button><button class="${MNV==='w'?'on':''}" data-a="mnv" data-i="w">7 days</button></div></div>
+ ${R.dn?`<p class="sm" style="margin:0 0 10px">${cov} of ${rows.length} at a good level${MNV==='w'?' on average':''}${low.length?`. Lowest: ${low.slice(0,3).map(([k])=>MN[k][0].replace(/ \(.*\)/,'')).join(', ')}.`:'.'}</p>`:'<p class="sm" style="margin:0 0 10px">Scan or describe your food and tick off supplements, and Swell shows your vitamins and minerals here.</p>'}
+ ${tip?`<div class="mntip"><span>Low on ${esc(MN[tip[0]][0].replace(/ \(.*\)/,''))}? ${esc(MNTIP[tip[0]][1].replace(/^./,c=>c.toUpperCase()))} would help.</span><button class="chip" data-a="mnshop" data-i="${tip[0]}">Add ${esc(MNTIP[tip[0]][0].toLowerCase())} to list</button></div>`:''}
+ <div class="mnl">${bars}</div>
+ ${W.length?`<div class="mnw"><b>Worth knowing</b>${W.map(([h,p])=>`<p><span>${esc(h)}</span>${esc(p)}</p>`).join('')}</div>`:''}
+ ${R.n?`<p class="dscr" style="margin-top:10px">Based on ${R.have} of ${R.n} meal${R.n===1?'':'s'} with nutrient figures${Object.keys(R.sup).length?', plus supplements you ticked':''}. Against UK reference intakes. Tap a nutrient for what it does.</p>`:''}</div>`}
+(function(){const st=document.createElement('style');st.textContent=`
+.mnh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.mnh h2{margin:0}
+.seg{display:inline-flex;background:rgba(255,255,255,.08);border-radius:999px;padding:3px}.seg button{border:0;background:transparent;color:var(--dim);font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px}.seg button.on{background:#fff;color:#14122b}
+.mnl{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.mnb{display:grid;grid-template-columns:1fr 38px;grid-template-rows:auto 5px;gap:3px 6px;border:0;background:transparent;color:inherit;font:inherit;padding:3px 0;text-align:left}
+.mnb span{grid-column:1;grid-row:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mnb b{grid-column:2;grid-row:1;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.mnb i{grid-row:2;grid-column:1/3;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;display:block}.mnb u{display:block;height:100%;border-radius:3px}
+.mntip{display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;margin:0 0 12px;font-size:13.5px}.mntip .chip{align-self:flex-start;margin:0}
+.mnw{margin-top:12px;display:flex;flex-direction:column;gap:6px}.mnw>b{font-size:14px}.mnw p{margin:0;font-size:13px;color:var(--dim);line-height:1.4}.mnw p span{color:#fff;font-weight:700;margin-right:6px}
+.mnwg{display:flex;flex-direction:column;gap:6px;height:100%;align-items:stretch;text-align:left}.mnwg .wl{justify-content:flex-start;align-self:flex-start}.mnwg .mnl{gap:2px}.mnwg .chips{margin:0}`;document.head.appendChild(st)})();
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);try{if(today()>realToday())return h;const k=h.indexOf('<div class="card shc">')>=0?h.indexOf('<div class="card shc">'):h.indexOf('<div class="card rcl">');if(k>=0)return h.slice(0,k)+mnCard()+h.slice(k)}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mnv],[data-a=mninfo],[data-a=mnshop]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a,k=el.dataset.i;
+ if(a==='mnv'){MNV=k;const c=el.closest('.mnc');if(c){c.outerHTML=mnCard()}return}
+ if(a==='mninfo'){const m=MN[k],t=today(),d=miRange([t]),w=miRange([...Array(7)].map((_,i)=>addDays(t,-i)).filter(x=>x<=realToday()));
+  sheet(`<h2>${esc(m[0])}</h2><p class="sm" style="margin:-2px 0 12px">Daily target ${rni(k)} ${m[1]}${m[3]?` · safe upper level ${m[3]} ${m[1]}`:''}</p>
+  <div class="cyst"><div><b>${d.dn?Math.round(d.per[k]*10)/10+' '+m[1]:'–'}</b><small>Today</small></div><div><b>${w.dn?Math.round(w.per[k]*10)/10+' '+m[1]:'–'}</b><small>Daily average, 7 days</small></div></div>
+  <p style="margin:14px 2px 0"><b>What it does.</b> ${esc(m[4])}</p><p style="margin:10px 2px 0"><b>If you’re low.</b> ${esc(m[5])}</p><p style="margin:10px 2px 0"><b>Good sources.</b> ${esc(m[6])}</p>
+  ${MNTIP[k]?`<button class="btn big" data-a="mnshop" data-i="${k}" style="margin-top:14px">Add ${esc(MNTIP[k][0].toLowerCase())} to my shopping list</button>`:''}<button class="btn big on" data-a="shx">Done</button>`);return}
+ if(a==='mnshop'){const it=MNTIP[k];if(!it)return;const D0=SHD();let st=shStore(D0.cur)||D0.stores[0];if(!st){st={id:'s'+Date.now().toString(36),n:'My shop',items:[]};D0.stores.push(st);D0.cur=st.id}shAdd(st,{n:it[0],q:1});save();toast(`${it[0]} added to your ${st.n} list.`);if($('#sheet'))sheet(null);render();return}},true);
+// Home widget
+NM.micro='Nutrients';
+WIS.leaf=WIS.leaf||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/></svg>';
+{const _wd=wd;wd=function(l){if(!l||l.id!=='micro')return _wd.apply(this,arguments);const t=today(),R=miRange([t]),rows=mnRows(R.per),low=rows.filter(([k,v])=>miPct(k,v)<67),cov=rows.length-low.length;
+ if(!R.dn)return`${wlab('leaf','Nutrients')}<p class="sm" style="margin:8px 0 0">Scan or describe food to see your vitamins and minerals.</p>`;
+ if(l.w===1&&l.h===1)return`<div class="cyw">${wlab('leaf','Nutrients')}<div><div class="big">${cov}<span style="font-size:15px;color:var(--dim);font-weight:600"> / ${rows.length}</span></div><span class="sm" style="margin:0">at a good level today</span></div></div>`;
+ const n=l.h===2?6:3;return`<div class="mnwg">${wlab('leaf','Nutrients')}${l.h===2?`<div class="mnl" style="grid-template-columns:1fr">${rows.slice(0,n).map(([k,v])=>{const p=miPct(k,v),c=p>=100?'var(--G)':p>=67?'#ffd27a':'#ff8f8f';return`<div class="mnb"><span>${esc(MN[k][0])}</span><i><u style="width:${Math.min(100,p)}%;background:${c}"></u></i><b>${p}%</b></div>`}).join('')}</div>`:`<p class="sm" style="margin:0">${cov} of ${rows.length} at a good level. Lowest today:</p><div class="chips">${low.slice(0,3).map(([k])=>`<span class="chip">${esc(MN[k][0].replace(/ \(.*\)/,''))}</span>`).join('')}</div>`}</div>`}}
+document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=micro]');if(!w||ED||e.target.closest('button,input,a'))return;if(Date.now()-WTD>450)return;const b=$('[data-a=tab][data-i=diet]');if(b)b.click();setTimeout(()=>{const c=$('#app .mnc');c&&c.scrollIntoView({block:'start',behavior:MRM()?'auto':'smooth'})},120)});
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Vitamins and minerals',p:'The Diet tab now shows 18 vitamins and minerals from your food and supplements, today and over 7 days, what each does, what to buy to fill a gap, and what’s running high. There’s a Home widget too.'})}
 
 render();periodic();reqShow();
 </script>
