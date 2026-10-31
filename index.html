@@ -3180,7 +3180,7 @@ async function bcLook(code){if(!BC)return;code=String(code||'').replace(/\D/g,''
  if(navigator.onLine===false&&!PREVIEW){BC.st='off';bcRender();return}
  BC.st='look';bcRender();q.push(Date.now());S.bcq=q;save();
  const ac=new AbortController(),to=setTimeout(()=>ac.abort(),9000);let prod=null,found=null;
- try{const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity`,{signal:ac.signal,headers:{Accept:'application/json'}});
+ try{const r=await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,categories_tags,quantity,product_quantity,product_quantity_unit`,{signal:ac.signal,headers:{Accept:'application/json'}});
   if(r.status===429){q.push(...Array(BCMAX).fill(Date.now()));S.bcq=q;save();clearTimeout(to);return bcLook(code)}
   const j=await r.json();found=j&&j.status===1;if(found)prod=bcProd(j)}catch(_){found=null}clearTimeout(to);if(!BC)return;
  // the preview can't always reach the internet, so it uses a sample product for the demo barcode
@@ -3212,7 +3212,7 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el
  bcphoto:()=>bcPhoto(),
  bclabel:()=>{bcClose();if(tab!=='diet'){tab='diet';render()}const f=$('#fi');f&&f.click()},
  bpg:()=>{if(!BPD)return;BPD.g=+el.dataset.i;bpSheet()},
- bpadd:()=>{if(!BPD)return;const v=bpVals(),t=today(),nm=BPD.p.n.slice(0,40);S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:nm,...v});addTot(v,1);BPD=null;sheet(null);save();render();try{evalDay()}catch(_){}toast(`${nm} added to ${dLbl(t)}.`)}};
+ bpadd:()=>{if(!BPD)return;const v=bpVals(),t=today(),nm=BPD.p.n.slice(0,40);let msg=null;if(typeof bpHook==='function'){try{msg=bpHook(v,nm,t)}catch(_){msg=null}}if(msg==null){S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:nm,...v});addTot(v,1)}BPD=null;sheet(null);save();render();try{evalDay()}catch(_){}toast(msg||`${nm} added to ${dLbl(t)}.`)}};
  if(H[a]){e.stopImmediatePropagation();e.preventDefault();H[a]()}},true);
 // Diet: Scan label first, Scan barcode beside it
 {const _d=diet;diet=function(){return _d.apply(this,arguments).replace('<button class="btn big scanb" data-a="scan">Scan label</button>',`<div class="sctiles"><button class="scanb" data-a="scan">${ico('<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>')}<b>Scan label</b><small>Reads the nutrition table on your phone. Works offline.</small></button><button class="bcb" data-a="bcgo">${ico('<path d="M4 6v12M7 6v12M10.5 6v12M14 6v12M16.5 6v12M20 6v12"/>')}<b>Scan barcode</b><small>Quickest. Needs a signal to look it up.</small></button></div>`)}}
@@ -3786,7 +3786,7 @@ function usage(){const L=S.logH||[],eve=L.filter(h=>h>=17),cnt={};eve.forEach(h=
   const days=new Set();L=L.filter(x=>{if(x.t==='meal'&&x.at.getHours()<17){days.add(x.k.split('|')[1]);return false}return true});
   days.forEach(d=>L.push({k:'mealb|'+d,t:'mealb',at:at(d,hhmm((u.logHour??20)*60))}))}
  if(on&&u.logHour!=null)L=L.map(x=>x.t==='log'?{...x,at:at(x.k.split('|')[1],hhmm(Math.max(u.logHour,18)*60+30))}:x);
- if(P.caf){for(let i=0;i<2;i++){const d=addDays(t,i);cafPlan(d).filter(p=>!p.skip).forEach(p=>L.push({k:'caf|'+d+'|'+p.k+'|'+p.t,t:p.k==='pre'?'cafp':'cafw',at:at(d,hhmm(p.t)),p:{n:p.mg+' mg'}}));const c=cutoffFor(100);L.push({k:'cafl|'+d+'|'+c,t:'cafl',at:at(d,hhmm(c-30)),p:{n:hm12(c)}})}}
+ if(P.caf){for(let i=0;i<2;i++){const d=addDays(t,i);cafPlan(d).filter(p=>!p.skip&&!p.done).forEach(p=>L.push({k:'caf|'+d+'|'+p.k+'|'+p.t,t:p.k==='pre'?'cafp':'cafw',at:at(d,hhmm(p.t)),p:{n:p.mg+' mg'}}));const c=cutoffFor(100);L.push({k:'cafl|'+d+'|'+c,t:'cafl',at:at(d,hhmm(c-30)),p:{n:hm12(c)}})}}
  return L.filter(x=>x.at.getTime()>now+60e3).sort((a,b)=>a.at-b.at).slice(0,40)}}
 {const _rs=remSig;remSig=function(){return _rs.apply(this,arguments)+JSON.stringify([S.cafp||0,S.trainAt||'',S.trainT||'',(S.slp||{}).step,(S.slp||{}).ease,S.adapt,usage().batch,usage().logHour,(cafLog(realToday())||[]).length])}}
 NT.push(['caf','Caffeine','Your first-coffee window, pre-workout dose and a last call, if you use the Caffeine widget.',false]);
@@ -3927,7 +3927,7 @@ function pushNeed(){const st=pushState();if(st==='on')return;const msg={off:'All
 {const _cp=cafPlan;cafPlan=function(d){d=d||today();const L=cafLog(d),lim=cafLim(),now=d===realToday()?nowMin():(d<realToday()?1e9:-1);
  // build the plan as if nothing had been drunk, then match what was
  const save0=S.cafl&&S.cafl[d];if(S.cafl)S.cafl[d]=[];let P;try{P=_cp.call(this,d)}finally{if(S.cafl)S.cafl[d]=save0}
- const used=new Set();P.forEach(p=>{const k=L.findIndex((x,j)=>!used.has(j)&&Math.abs(x.t-p.t)<120);if(k>=0){used.add(k);p.done=1;p.mg=L[k].mg}});
+ const used=new Set();P.forEach(p=>{let k=L.findIndex((x,j)=>!used.has(j)&&Math.abs(x.t-p.t)<120);if(k<0)k=L.findIndex((x,j)=>!used.has(j)&&x.t<p.t);if(k>=0){used.add(k);p.done=1;p.mg=L[k].mg}});
  let left=lim-L.reduce((a,x)=>a+x.mg,0);
  P.forEach(p=>{if(p.done||p.skip)return;if(p.t<now-60){p.missed=1;return}p.mg=Math.min(p.mg,Math.max(0,left));if(p.mg<40){p.skip=1;p.why='You’ve already had most of today’s caffeine, so skip this one.'}else left-=p.mg});
  return P}}
@@ -5300,6 +5300,84 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=sh]');if
 {const _sh=sheet;sheet=function(h){if(!h)SHO=SHO&&$('#sheet .shl')?null:SHO;return _sh.apply(this,arguments)}}
 FULLTOUR.splice(Math.max(0,FULLTOUR.findIndex(x=>x.h==='Recipes')),0,{t:'diet',q:'.shc',h:'Shopping lists',p:'A list for each shop. Scan barcodes in store, add what you paid, and see the week’s total before the till. Swell remembers prices for next time.'});if(!TOURESS)tourSet(FULLTOUR);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',h:'Shopping lists',p:'On Diet, keep a list for each shop. Scan barcodes, add prices, tick things off, and see what the week will cost.'})}
+
+/* ---------- v74: fixes from testing on the phone ---------- */
+// Notes: double-tap zoom is turned off with touch-action: manipulation (the cause of the dock appearing half-way up the page:
+// a zoomed page shows fixed bars mid-screen). Caffeine reminders now count an early coffee as your first one. Scanned drinks
+// are measured in ml and count towards water; scanned items with caffeine go into the caffeine log too. Drinks with next to no
+// calories or macros (water, Diet Coke, sugar-free energy drinks) stay out of the food log, where they'd only add clutter.
+(function(){const st=document.createElement('style');st.textContent=`
+html{touch-action:manipulation}
+.wq{flex:none!important;width:auto!important;align-self:center;margin:2px auto!important;padding:4px 6px!important;border-radius:18px}
+.qa{margin:0 0 12px!important;padding:2px 0 4px!important;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.qa .chip{max-width:200px}.qa .chip span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sheet .mebtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}#sheet .mebtns .btn{margin:0;width:100%}
+#sheet .mesv{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 2px 0;font-size:15px}`;document.head.appendChild(st)})();
+// tidy shouty product names ("CHICKEN SATAY SKEWERS" becomes "Chicken satay skewers")
+const niceName=n=>{n=String(n||'').trim();return n.length>3&&n===n.toUpperCase()&&/[A-Z]/.test(n)?n.charAt(0)+n.slice(1).toLowerCase():n};
+{const _q=qaHTML;qaHTML=function(){return _q.apply(this,arguments).replace(/<span>([^<]*)<\/span><small>/g,(m,t)=>`<span>${niceName(t)}</span><small>`)}}
+
+/* 1. tapping the Goal widget opens it, whatever its size */
+document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=goal]');if(!w||ED||e.target.closest('button,input,a,[data-a]'))return;if(S.goal2)goalSheet();else{GF={type:'Lose weight'};sheet(gForm())}});
+(function(){const st=document.createElement('style');st.textContent='.wd[data-id=goal]{cursor:pointer}';document.head.appendChild(st)})();
+
+/* 2. Coming up shows the session after today when Today's workout is already on Home, so the two never say the same thing */
+{const _cu=comingUp;comingUp=function(l){const has=(S.lay||[]).some(x=>x.id==='work'),n=nextUp();if(!has||!n||n.i!==0)return _cu.apply(this,arguments);
+ const _n=nextUp;nextUp=function(){const p=activePlan();if(!p||!p.days.length)return null;ensureSched();const r=realToday();for(let i=1;i<42;i++){const d=addDays(r,i),s=S.sch[d];if(s!=null&&!(S.fd||{})[d])return{i,d,day:p.days[s%p.days.length]}}return null};
+ try{return _cu.apply(this,arguments)}finally{nextUp=_n}}}
+
+/* 4. pop-ups above the keyboard: the backdrop fills the visible screen and the card keeps its place, never pushed under the status bar */
+{const kbFix=()=>{const v=window.visualViewport;if(!v)return;const kb=innerHeight-v.height>120;document.querySelectorAll('#sheet,#req,#mw,#imp,#wn').forEach(o=>{if(!kb){o.style.paddingBottom='';return}
+  const h=Math.min(v.height,innerHeight-(typeof KBMAX!=='undefined'&&KBMAX?KBMAX:innerHeight-v.height));o.style.top=v.offsetTop+'px';o.style.height=v.height+'px';o.style.paddingTop='calc(10px + env(safe-area-inset-top,0px))';o.style.paddingBottom=(12+Math.max(0,v.height-h))+'px';
+  const c=o.querySelector('.mwc');if(c)c.style.maxHeight=Math.max(200,h-24-(v.offsetTop?0:0))+'px'});if(!kb)document.querySelectorAll('#sheet .mwc,#req .mwc,#mw .mwc,#imp .mwc,#wn .mwc').forEach(c=>c.style.maxHeight='')};
+ if(window.visualViewport){visualViewport.addEventListener('resize',()=>setTimeout(kbFix,0));visualViewport.addEventListener('scroll',()=>setTimeout(kbFix,0))}}
+
+/* 6. Edit meal: save it to Saved meals, and the two buttons share the width */
+{const _f=meForm;meForm=function(){let h=_f.apply(this,arguments);const x=ME&&ME.x,sv=x&&(S.saved||[]).some(y=>y.n===x.n&&+y.k===+x.k);
+ h=h.replace('<p class="sm">Your totals for the day update to match.</p>',`<p class="sm">Your totals for the day update to match.</p><label class="mesv"><span>Keep in Saved meals</span><button class="tg ${sv||ME.sv?'on':''}" data-a="mesv" role="switch" aria-checked="${!!(sv||ME.sv)}" aria-label="Keep in Saved meals"></button></label>`);
+ return h.replace('<div class="row"><button class="btn" data-a="medel">Delete meal</button><button class="btn" data-a="shx">Cancel</button></div>','<div class="mebtns"><button class="btn" data-a="medel">Delete meal</button><button class="btn" data-a="shx">Cancel</button></div>')}}
+window.addEventListener('click',e=>{const el=e.target.closest('#sheet [data-a=mesv]');if(!el||!ME)return;e.stopImmediatePropagation();e.preventDefault();ME.sv=!el.classList.contains('on');el.classList.toggle('on',ME.sv);el.setAttribute('aria-checked',ME.sv)},true);
+window.addEventListener('click',e=>{const el=e.target.closest('#sheet [data-a=mesave]');if(!el||!ME)return;const was=(S.saved||[]).findIndex(y=>y.n===ME.x.n),want=ME.sv,idx=ME.i,d0=today();
+ setTimeout(()=>{try{if(want===undefined)return;const L=(S.meals||{})[d0]||[],src=L[idx];if(!src)return;S.saved=S.saved||[];const i=S.saved.findIndex(y=>y.n===src.n);
+  if(want&&i<0){S.saved.push({n:src.n,k:+src.k||0,p:+src.p||0,f:+src.f||0,c:+src.c||0,fb:src.fb});toast('Saved for next time.')}else if(want===false&&i>=0&&was>=0){S.saved.splice(i,1)}save();render()}catch(_){}},0)},true);
+
+/* 9. the tour's highlight follows its target while the page settles, so it always sits on the right thing */
+(function loop(){try{const o=$('#tour');if(o&&typeof TEL!=='undefined'&&TEL&&TEL.isConnected){const rg=o.querySelector('.tring');if(rg&&rg.style.opacity!=='0'){const r0=TEL.getBoundingClientRect(),vh=innerHeight,hh=Math.min(r0.height,vh*.44),pad=8,top=Math.max(4,r0.top-pad),h=Math.min(r0.top+hh+pad,vh-4)-top;
+  const L=Math.round(r0.left-pad),T=Math.round(top),W=Math.round(r0.width+pad*2),H=Math.round(h);if(Math.abs(parseFloat(rg.style.top)-T)>1||Math.abs(parseFloat(rg.style.left)-L)>1||Math.abs(parseFloat(rg.style.height)-H)>1){Object.assign(rg.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'});
+   const cd=o.querySelector('.tcard');if(cd&&cd.dataset.k&&cd.dataset.k!=='end'&&cd.dataset.k!=='ok'){const below=r0.top+hh/2<vh/2;cd.style.top=below?Math.min(T+H+14,vh-260)+'px':'';cd.style.bottom=below?'':Math.min(vh-T+14,vh-260)+'px'}}}}}catch(_){}requestAnimationFrame(loop)})();
+
+/* 12. a refresh keeps you on the tab you were on (a fresh launch still opens on Home) */
+try{const t=sessionStorage.getItem('swTab');if(t&&['diet','plan','timer'].includes(t)&&S.user&&S.setup&&S.setup.done)tab=t}catch(_){}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{sessionStorage.setItem('swTab',tab)}catch(_){}return r}}
+
+/* 14. pulling a full-screen page down shrinks it back into its widget, from wherever you dragged it */
+{const _fc=fsClose;fsClose=function(){const o=$('#fs');if(o&&o.style.transform){const cur=o.style.transform,br=o.style.borderRadius;o.style.transform='';o.style.borderRadius='';if(!MRM())o.animate([{transform:cur,borderRadius:br||'0px'},{transform:'none',borderRadius:'0px'}],{duration:400,easing:typeof FSE!=='undefined'?FSE:'cubic-bezier(.2,.8,.2,1)'})}return _fc.apply(this,arguments)}}
+
+/* 11, 17, 23. scanned drinks: ml, water, caffeine, and only real food in the food log */
+const CAFGUESS=[[/red ?bull/i,32],[/monster|relentless|rockstar|reign|nos\b/i,32],[/prime energy|celsius|ghost energy|c4 energy/i,56],[/diet coke|coke light|coca[- ]cola light/i,12.9],[/coke zero|coca[- ]cola zero|zero sugar cola/i,9.6],[/coca[- ]cola|\bcoke\b/i,9.7],[/pepsi max|pepsi zero/i,13],[/pepsi/i,10.5],[/dr ?pepper/i,12.4],[/irn[- ]bru/i,4.5],[/mountain dew/i,16],[/cold brew|iced coffee|frappuccino|latte|cappuccino|coffee/i,30],[/green tea|matcha/i,12],[/\btea\b/i,10]];
+{const _bp=bcProd;bcProd=function(j){const p=_bp.apply(this,arguments),P=j.product||{},n=P.nutriments||{},cats=(P.categories_tags||[]).join(' '),q=String(P.quantity||''),ss=String(P.serving_size||'');
+ const vol=s=>{const m=String(s).match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|l)\b/i);if(!m)return null;const v=+m[1].replace(',','.');return Math.round(m[2].toLowerCase()==='l'?v*1000:m[2].toLowerCase()==='cl'?v*10:v)};
+ p.ml=vol(q)||(String(P.product_quantity_unit||'').toLowerCase()==='ml'&&+P.product_quantity?Math.round(+P.product_quantity):null);p.sml=vol(ss);
+ p.drink=/en:(beverages|waters|drinks|sodas|energy-drinks|soft-drinks|juices|teas|coffees|milks|plant-milks)/.test(cats)||!!(p.ml&&!/\bg\b/i.test(q))||!!p.sml;
+ p.sug100=n.sugars_100g!=null&&n.sugars_100g!==''?+n.sugars_100g:null;p.sugs=n.sugars_serving!=null&&n.sugars_serving!==''?+n.sugars_serving:null;
+ if(p.caf100==null){const name=[p.b,p.n].join(' ');const g=CAFGUESS.find(([re])=>re.test(name));if(g&&(p.drink||/energy|cola|coffee|tea/i.test(name))&&!/decaf|caffeine[- ]free|0 ?caffeine/i.test(name)){p.caf100=g[1];p.cafGuess=1}}
+ if(p.drink&&p.sml&&!p.sg)p.sg=p.sml;return p}}
+// the amount screen talks in ml for drinks, and offers the whole bottle or can
+{const _bs=bpSheet;bpSheet=function(){_bs.apply(this,arguments);try{const p=BPD&&BPD.p;if(!p||!p.drink)return;const c=$('#sheet .mwc');if(!c)return;
+  c.innerHTML=c.innerHTML.replace('How much did you have? (g)','How much did you drink? (ml)').replace(/>100 g</,'>100 ml<').replace(/\((\d+) g\)/,'($1 ml)');
+  const ch=c.querySelector('.chips');if(ch&&p.ml&&!ch.querySelector(`[data-i="${p.ml}"]`))ch.insertAdjacentHTML('afterbegin',`<button class="chip ${BPD.g===p.ml?'on':''}" data-a="bpg" data-i="${p.ml}">Whole ${p.ml>=1000?(p.ml/1000)+' L':p.ml+' ml'}</button>`);
+  const v=bpVals(),cafmg=p.caf100!=null?Math.round(p.caf100*BPD.g/100):0;const add=[`<b>${BPD.g} ml</b> towards your water`];if(cafmg>=20)add.push(`<b>${cafmg} mg</b> caffeine${p.cafGuess?' (typical for this drink)':''}`);
+  const btn=c.querySelector('[data-a=bpadd]');if(btn)btn.insertAdjacentHTML('beforebegin',`<p class="sm bpx" style="margin:4px 2px 10px">${add.join(' · ')}${bpTrivial(v)?'. Hardly any calories, so it stays out of your food log.':''}</p>`)}catch(_){}}}
+const bpTrivial=v=>(+v.k||0)<5&&(+v.p||0)<1&&(+v.f||0)<1&&(+v.c||0)<1;
+// what happens when you tap Add
+function bpHook(v,nm,t){const p=BPD&&BPD.p;if(!p)return null;nm=niceName(p.b&&!String(p.n||'').toLowerCase().includes(String(p.b).toLowerCase())?`${p.b} ${p.n||''}`.trim():nm).slice(0,50);const g=+BPD.g||0,out=[];const cafmg=p.caf100!=null?Math.round(p.caf100*g/100):0;
+ if(p.sug100!=null)v.sug=Math.round(p.sug100*g/10)/10;
+ const food=!(p.drink&&bpTrivial(v))&&!(cafmg>=20&&bpTrivial(v));
+ if(food){S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push({n:nm,...v,drink:p.drink?1:undefined,ml:p.drink?g:undefined});addTot(v,1);out.push(`${Math.round(v.k)} kcal`)}
+ if(p.drink&&g>0){S.water=S.water||{};S.water[t]=Math.max(0,(+S.water[t]||0)+g);out.push(`${g} ml water`);try{btKick(1)}catch(_){}}
+ if(cafmg>=20){S.cafl=S.cafl||{};(S.cafl[t]=S.cafl[t]||[]).push({t:nowMin(),mg:cafmg,n:nm,k:0,scan:1});out.push(`${cafmg} mg caffeine`);try{remSync(true)}catch(_){}}
+ return`${nm}: ${out.join(', ')||'added'}.`}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M8 2h8l-1 4H9z"/><path d="M9 6c-1 2-2 3-2 6v8a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-8c0-3-1-4-2-6"/>',h:'Scanned drinks count as water',p:'Scan a drink and Swell measures it in ml, adds it to your water, logs any caffeine, and only puts it in your food log if it has calories worth counting.'})}
 
 render();periodic();reqShow();
 </script>
