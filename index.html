@@ -6347,6 +6347,59 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=eo]');if
 // describing a chain dish in the meal box also remembers the place
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2-3 5s1 4 3 4v9"/>',h:'Eaten out?',p:'Pick the restaurant, then add what you had from its menu. Swell prompts for sides, drinks and dessert, remembers your places and last order for next time, and lets you build a menu for smaller places it doesn’t know.'})}
 
+/* ===== v82: pick up where you left off, a lighter footprint in the background, and motion permission done once ===== */
+// Research notes for this block:
+// - iPhone can't keep a home-screen web app running in the background: when you leave it, WebKit suspends it, and under
+//   memory pressure it throws it away, so the next open is a fresh load (WebKit, "Web apps" and process suspension notes).
+//   Apps that keep less in memory are thrown away less often, and the fix Apple recommends for native apps is the same:
+//   save state when you leave and restore it on launch, so a relaunch feels like nothing happened (Apple HIG, "Launching":
+//   "restore the previous state").
+// - So Swell now (1) frees its two big data tables, the food list and restaurant menus (about 20 MB once parsed), a
+//   minute after you leave, reloading them from the phone's cache when needed; (2) saves where you were (tab, page,
+//   scroll, a meal you were typing, a workout in progress) when you leave; (3) on a relaunch within two hours on the same
+//   day, puts you straight back there with no intro animation. No background work runs, so there's no battery cost, and
+//   the saved state is a few kilobytes.
+// - Motion: on iPhone the permission must be asked from a tap, may be forgotten when the app is closed, and can't be
+//   re-asked after Cancel until the app restarts (Apple developer forums). Swell asks once, in its own words, remembers
+//   the answer, quietly re-arms on the first touch of a liquid widget later, and never asks again after "Not now".
+const RES_KEY='swRes',RES_MAX=2*36e5;
+function resSave(){try{const o=$('#fs'),snap={t:Date.now(),d:realToday(),tab,fs:FS||null,fpt:typeof FPT!=='undefined'?FPT:null,y:scrollY,fy:o?o.scrollTop:0,
+  dsc:DSC&&DSC.text&&!DSC.st?DSC.text:null,m:M&&(M.n||M.k)?{n:M.n,k:M.k,p:M.p,f:M.f,c:M.c}:null};
+ try{if(AW)snap.aw=JSON.parse(JSON.stringify(AW))}catch(_){}localStorage.setItem(RES_KEY,JSON.stringify(snap))}catch(_){}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resSave()});addEventListener('pagehide',resSave);
+const RES=(()=>{try{const s=JSON.parse(localStorage.getItem(RES_KEY)||'null');if(s&&Date.now()-s.t<RES_MAX&&s.d===realToday())return s}catch(_){}return null})();
+// a quick relaunch skips the intro
+{const _s=splash;splash=function(){if(RES&&performance.now()<8000)return;return _s.apply(this,arguments)}}
+if(RES&&S.user&&S.setup&&S.setup.done){try{
+ document.querySelectorAll('#splash').forEach(e=>e.remove());document.body.classList.remove('spon');
+ if(['home','diet','plan','timer'].includes(RES.tab))tab=RES.tab;
+ if(RES.m)M={...M,...RES.m};
+ if(RES.aw&&!AW){AW=RES.aw;setTimeout(()=>{try{awr()}catch(_){AW=null}},0)}
+ setTimeout(()=>{try{render();if(RES.dsc&&tab==='diet')dscRun(RES.dsc);
+  requestAnimationFrame(()=>{scrollTo(0,RES.y||0);if(RES.fs){if(RES.fpt&&typeof FPT!=='undefined')FPT=RES.fpt;fsOpen(RES.fs);setTimeout(()=>{const o=$('#fs');if(o)o.scrollTop=RES.fy||0},60)}})}catch(_){}},0)}catch(_){}}
+// free the big tables when the app is in the background, reload from cache when they're needed again
+{let tm=0,had=false;document.addEventListener('visibilitychange',()=>{clearTimeout(tm);if(document.hidden){tm=setTimeout(()=>{try{if(FE.rows){had=true;FE.rows=FE.tok=FE.idx=FE.idf=null;FELOAD=null;FEN=null}if(MENUS){MENUS=null;MNLOAD=null}}catch(_){}},60e3)}
+ else if(had){had=false;(window.requestIdleCallback||setTimeout)(()=>{feReady().then(()=>{if(FS==='food')fsr()}).catch(()=>{})},800)}})}
+/* --- motion permission, asked once --- */
+const MOT={on:false,listeners:new Set(),need:typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'};
+function motStart(){if(MOT.on)return;MOT.on=true;addEventListener('devicemotion',e=>{MOT.listeners.forEach(f=>{try{f(e)}catch(_){}})},{passive:true})}
+function motAsk(){if(!MOT.need){S.motion='yes';save();motStart();return Promise.resolve(true)}
+ return DeviceMotionEvent.requestPermission().then(r=>{const ok=r==='granted';S.motion=ok?'yes':'no';save();if(ok)motStart();return ok}).catch(()=>false)}
+// later launches: if they said yes, re-arm on the first touch of a liquid widget (iOS may or may not ask again; that's Apple's call)
+document.addEventListener('pointerup',e=>{if(MOT.on||S.motion!=='yes')return;if(!e.target.closest('[data-liquid]'))return;motAsk()},true);
+if(!MOT.need&&S.motion==='yes')motStart();
+// the one-time card shows only once there's something that uses motion (the liquid widgets set window.LIQUID)
+function motCard(){return`<div class="card motc"><h2>Let your water move?</h2><p class="sm" style="margin:0 0 10px">Tilt your phone and the water and coffee widgets slosh with it. Swell only uses movement, nothing else, and it stays on your phone.</p><div class="row2"><button class="btn on" data-a="moton">Turn on</button><button class="btn" data-a="motno">Not now</button></div></div>`}
+{const _h=home;home=function(){let h=_h.apply(this,arguments);try{if(window.LIQUID&&!S.motion&&S.user&&S.lay.some(l=>l.id==='water'||l.id==='caf'))h=h.replace(/(<div class="grid)/,motCard()+'$1')}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=moton],[data-a=motno]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ if(el.dataset.a==='motno'){S.motion='no';save();render();toast('No problem. You can turn it on in Settings.');return}
+ motAsk().then(ok=>{render();toast(ok?'Done. Give your phone a tilt.':'Motion is off. The water still ripples when you tap it.')})},true);
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&window.LIQUID&&!L.querySelector('[data-a=motset]')){
+ L.insertAdjacentHTML('beforeend',`<button data-a="motset">${ico('<path d="M7 3h10v18H7z"/><path d="M4 8c-1 2-1 6 0 8M20 8c1 2 1 6 0 8"/>')}<span>Tilt the water widgets<small>${S.motion==='yes'?'On':'Off'}</small></span></button>`);setGroup()}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Look and feel');if(g&&!g[1].includes('motset'))g[1].push('motset')}catch(_){}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=motset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const s=el.querySelector('small');
+ if(S.motion==='yes'){S.motion='no';save();if(s)s.textContent='Off';return}motAsk().then(ok=>{if(s)s.textContent=ok?'On':'Off';if(!ok)toast('iPhone said no. If you tapped Cancel earlier, close Swell fully and try again.')})},true);
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
