@@ -1165,8 +1165,8 @@ function tourShow(){let o=$('#tour');if(TU==null||!S.user||!S.setup.done){TEL=nu
  if(TU>=TOUR.length){TEL=null;if(tab!=='home'){tab='home';return render()}rg.style.opacity=0;bk.style.background='rgba(4,6,12,.76)';bk.style.pointerEvents='';if(cd.dataset.k!=='end')swapCard(cd,'top:30vh',`<h2>You’re all set</h2><p>Put your plan in once and the app does the rest. You can replay this tour any time from Settings at the bottom of Home.</p><button class="btn big on" data-a="tdone2">Let’s go</button>`,'end');return}
  const s=TOUR[TU];if(tab!==s.t){tab=s.t;D=null;return render()}
  const all=[...document.querySelectorAll('#app '+s.q)],el=s.pick?s.pick(all):all[(s.n||0)<0?all.length+s.n:(s.n||0)];if(!el){TU++;TB=null;return tourShow()}
- if(!TB||TB.i!==TU)TB={i:TU,b:s.base?s.base():null};TEL=el;const act=!!s.ok;el.scrollIntoView({block:'center',behavior:cd.innerHTML?'smooth':'auto'});const k=TU;
- setTimeout(()=>{if(TU!==k||tab!==s.t||!el.isConnected)return;const r=el.getBoundingClientRect(),pad=8,vh=innerHeight,top=Math.max(4,r.top-pad),h=Math.min(r.bottom+pad,vh-4)-top,below=r.top+r.height/2<vh/2;
+ if(!TB||TB.i!==TU)TB={i:TU,b:s.base?s.base():null};TEL=el;const act=!!s.ok;const tall=el.offsetHeight>innerHeight*.42;el.style.scrollMarginTop='calc(14px + env(safe-area-inset-top,0px))';el.scrollIntoView({block:tall?'start':'center',behavior:cd.innerHTML?'smooth':'auto'});const k=TU;
+ setTimeout(()=>{if(TU!==k||tab!==s.t||!el.isConnected)return;const r0=el.getBoundingClientRect(),cap=vh0=>vh0*.44,r={left:r0.left,width:r0.width,top:r0.top,height:Math.min(r0.height,cap(innerHeight)),bottom:r0.top+Math.min(r0.height,cap(innerHeight))},pad=8,vh=innerHeight,top=Math.max(4,r.top-pad),h=Math.min(r.bottom+pad,vh-4)-top,below=r.top+r.height/2<vh/2;
   bk.style.background='';bk.style.pointerEvents=act?'none':'';rg.className='tring'+(act?' go':'');Object.assign(rg.style,{opacity:1,left:(r.left-pad)+'px',top:top+'px',width:(r.width+pad*2)+'px',height:h+'px'});
   const pos=below?`top:${Math.min(top+h+14,vh-260)}px`:`bottom:${Math.min(vh-top+14,vh-260)}px`;
   if(cd.dataset.k===String(k)){cd.style.cssText=pos;return}
@@ -1176,7 +1176,7 @@ TOUR.forEach(st=>{if(!st.ok)return;const f=st.ok;st.ok=b=>{if(st._t)return Date.
 document.addEventListener('click',e=>{const el=e.target.closest('[data-a=reqest]');if(!el)return;if(REQS.every(r=>r.ok())){$('#req').remove();save();render();estOpen();EST.req=1;EST.goal='';sheet(estForm())}else{const er=$('#reqerr');er&&(er.hidden=false)}});
 /* ---------- v20: what's new for existing users ---------- */
 /* Add a RELEASES entry (and bump APP_VER) whenever an update brings a new feature. */
-const APP_VER='2026.11.23';
+const APP_VER='2026.11.24';
 const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings and Customise look',p:'Settings now sits at the bottom of Home. Inside, Customise look lets you drag your background lights anywhere, add more and change their colours.'},
  {i:'<path d="M12 7c-2-2-7-1.5-7 4 0 4.5 3 8.5 5 8.5 1 0 1.2-.5 2-.5s1 .5 2 .5c2 0 5-4 5-8.5 0-5.5-5-6-7-4z"/>',h:'Work out my food goals',p:'Get daily calories and macros worked out from your weight, height, age and goal.'},
@@ -5184,6 +5184,122 @@ setTimeout(()=>{try{if(/[?&]newicon=1/.test(location.search)&&!NI_STANDALONE){hi
 {const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{if(NI_STANDALONE&&NI_IOS&&S.iconV<2){const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=niopen]')){L.insertAdjacentHTML('beforeend',`<button data-a="niopen">${ico('<rect x="5" y="5" width="14" height="14" rx="4"/><path d="M9 12h6M12 9v6"/>')}<span>Get the new icon<small>Add Swell to your Home Screen again</small></span></button>`);try{const g=SETG.find(x=>x[0]==='Help');if(g&&!g[1].includes('niopen'))g[1].push('niopen');setGroup()}catch(_){}}}}catch(_){}return r}}
 
 {const R=RELEASES.find(r=>r.v==='2026.11.23');if(R)R.items.push({i:'<path d="M2 16c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 20c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/>',h:'Log a session afterwards',p:'Swam, rode or ran without your phone? On Workout, tap Log a session, say how long and how hard, and Swell works out roughly what you burned. Swims can use laps.'})}
+
+RELEASES.push({v:'2026.11.24',date:'Next update',items:[{i:'<circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4z"/>',h:'A better guided tour',p:'The full tour in Settings now points at every feature, including recipes, water, describe a meal and logging a session.'}]});
+/* ---------- v72: the full tour works from Settings and covers everything that's new ---------- */
+// Found by stepping through it: starting the tour from Settings left the Settings pop-up open over every Home step, so the
+// highlights pointed at things hidden behind it, and an action step completed itself. Tall cards are now scrolled to the top
+// and only their top part is ringed, so the explanation never covers what it's pointing at. Short, task-based steps that
+// point at the real control follow NN/g's guidance on onboarding tutorials (keep them brief, contextual and skippable).
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=tour]');if(!el)return;ED=false;setTimeout(()=>{try{if($('#sheet'))sheet(null);document.querySelectorAll('.ftip').forEach(x=>x.remove());render()}catch(_){}},0)},true);
+{const at=(h,step)=>{const i=FULLTOUR.findIndex(x=>x.h===h);FULLTOUR.splice(i<0?FULLTOUR.length:i+1,0,step)};
+ const fix=(h,f)=>{const s=FULLTOUR.find(x=>x.h===h);if(s)f(s)};
+ const card=t=>a=>a.find(c=>((c.querySelector('h2')||{}).textContent||'').startsWith(t));
+ at('Macros',{t:'home',q:'.wd[data-id=water]',h:'Water',p:'Tap the bottle to add a glass. Open the widget to change sizes, take some off, or count coffee and tea towards your water.'});
+ at('Water',{t:'home',q:'.grid',h:'Your widgets',p:'Each widget is one part of your day: water, caffeine, sleep, supplements, macros and more. Tap one to open it full screen.'});
+ fix('Start workout',s=>{s.p='Guided walks you through a short warm-up, then every set, plate and rest. Log the weight and reps as you go and next time Swell shows what you did and when to add weight.'});
+ at('Scan label or barcode',{t:'diet',q:'.dsc',h:'Describe a meal',p:'No label? Type something like “large bowl of chilli” and Swell estimates the calories, macros and fibre from UK food tables. Check the portion and adjust it.'});
+ at('Saved meals',{t:'diet',q:'.card',pick:card('Recipes'),h:'Recipes',p:'Build a meal you cook often from its ingredients and servings, then log a portion in one tap.'});
+ at('Body metrics',{t:'diet',q:'.trc',h:'Weight trend',p:'Your weigh-ins smoothed into a trend line. After a couple of weeks Swell works out what you really burn and can update your calorie goal.'});
+ at('Start any workout',{t:'plan',q:'.card',pick:card('Did a workout'),h:'Log a session',p:'Swam, rode or ran without your phone? Log how long and how hard afterwards, and Swell works out roughly what you burned.'});
+ // keep the live tour in step if it's the full one
+ if(!TOURESS)tourSet(FULLTOUR)}
+/* ---------- v73: shopping lists, one per store, with prices, barcode scanning and a running total ---------- */
+// Research: a written list and a set budget are the two habits most linked to spending less on food (WRAP's household food
+// research; Which? advice on cutting the supermarket bill: plan meals, write a list, compare unit prices between shops).
+// Swell remembers what you paid for each product at each store, so the list can show the week's cost before you go and which of
+// your stores would be cheaper for the same list. Prices are only ever what you've entered, never fetched.
+(function(){const st=document.createElement('style');st.textContent=`
+.shc .chips{padding:2px 0 8px}.shc .shs{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:2px 2px 10px}.shc .shs b{font-size:24px}
+#sheet .shl .shi{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
+#sheet .shl .shi:first-child{border-top:0}
+#sheet .shl .shi.dn .nm{opacity:.45;text-decoration:line-through}
+#sheet .shl .ck{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:none;padding:0;display:grid;place-items:center;color:#10121a}
+#sheet .shl .shi.dn .ck{background:var(--G);border-color:var(--G)}
+#sheet .shl .nm{min-width:0;font-size:15px}#sheet .shl .nm small{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+#sheet .shl .qp{display:flex;align-items:center;gap:6px}
+#sheet .shl .qp button{width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;padding:0}
+#sheet .shl .qp b{min-width:18px;text-align:center;font-variant-numeric:tabular-nums}
+#sheet .shl .pr{display:flex;align-items:center;gap:4px;margin-top:6px}#sheet .shl .pr input{width:84px;margin:0;padding:6px 8px}
+#sheet .shl .pr small{color:var(--dim)}
+#sheet .shadd{display:flex;gap:8px;margin:6px 0 4px}#sheet .shadd input{flex:1;margin:0}#sheet .shadd .btn{margin:0;flex:none}
+#sheet .shtot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 6px}#sheet .shtot div{background:rgba(255,255,255,.07);border-radius:14px;padding:10px}#sheet .shtot b{display:block;font-size:20px}#sheet .shtot small{color:var(--dim);font-size:12px}
+#sheet .shcmp{font-size:13.5px;background:rgba(59,130,255,.14);border:1px solid rgba(143,190,255,.3);border-radius:14px;padding:9px 12px;margin:6px 0}
+#sheet .shacts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}#sheet .shacts .btn{margin:0;flex:1 1 45%;font-size:15px;padding:10px 8px;white-space:nowrap}`;document.head.appendChild(st)})();
+const SHD=()=>{S.shop=S.shop||{stores:[],cur:null};return S.shop};
+const shStore=id=>SHD().stores.find(s=>s.id===id);
+const shKey=x=>x.bc?'b'+x.bc:'n'+String(x.n||'').trim().toLowerCase().replace(/\s+/g,' ');
+const money=v=>'£'+(Math.round((+v||0)*100)/100).toFixed(2);
+// what you last paid for something at a store
+const shPrice=(sid,x)=>{const P=((S.prices||{})[sid]||{})[shKey(x)];return P?P.p:null};
+const shRemember=(sid,x)=>{if(!(+x.p>0))return;S.prices=S.prices||{};(S.prices[sid]=S.prices[sid]||{})[shKey(x)]={p:+x.p,d:realToday(),n:x.n}};
+function shTot(st){let t=0,dn=0,miss=0;(st.items||[]).forEach(x=>{const p=+x.p||0,q=+x.q||1;if(!p)miss++;t+=p*q;if(x.done)dn+=p*q});return{t,dn,miss,n:(st.items||[]).length}}
+// the same list priced at your other stores, using what you've paid there
+function shCompare(st){const out=[];SHD().stores.forEach(o=>{if(o.id===st.id)return;let t=0,k=0;(st.items||[]).forEach(x=>{const p=shPrice(o.id,x);if(p!=null){t+=p*(+x.q||1);k++}});if(k&&k>=Math.ceil((st.items||[]).length*.6))out.push({n:o.n,t,k})});
+ const mine=shTot(st).t;out.sort((a,b)=>a.t-b.t);return out.length&&out[0].t<mine-0.5?out[0]:null}
+function shCard(){const D0=SHD(),L=D0.stores;const cur=shStore(D0.cur)||L[0];
+ if(!L.length)return`<div class="card shc"><h2>Shopping lists</h2><p class="sm">Keep a list for each shop you use. Scan barcodes as you go, add prices, and see what the week will cost before you get to the till.</p><button class="btn" data-a="shnew" style="width:100%">Add a shop</button></div>`;
+ const t=shTot(cur);return`<div class="card shc"><h2>Shopping lists</h2><div class="chips">${L.map(s=>`<button class="chip ${s===cur?'on':''}" data-a="shpick" data-i="${s.id}">${esc(s.n)}</button>`).join('')}<button class="chip" data-a="shnew">+ Shop</button></div>
+ <div class="shs"><span><b>${money(t.t)}</b> <span class="sm">for ${t.n} item${t.n===1?'':'s'}${t.miss?`, ${t.miss} without a price`:''}</span></span></div><button class="btn on" data-a="shopen" data-i="${cur.id}" style="width:100%">Open ${esc(cur.n)} list</button></div>`}
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);return h.includes('<div class="card rcl">')?h.replace('<div class="card rcl">',shCard()+'<div class="card rcl">'):h.replace('<div class="card"><h2>Saved meals</h2>',shCard()+'<div class="card"><h2>Saved meals</h2>')}}
+let SHO=null;
+function shItems(st){const L=(st.items||[]);if(!L.length)return'<p class="sm" style="margin:6px 0">Nothing on the list yet.</p>';
+ const ord=[...L.keys()].sort((a,b)=>(L[a].done?1:0)-(L[b].done?1:0));
+ return ord.map(i=>{const x=L[i],lp=x.p?null:shPrice(st.id,x);return`<div class="shi ${x.done?'dn':''}"><button class="ck" data-a="shck" data-i="${i}" aria-label="${x.done?'Untick':'Tick'} ${esc(x.n)}">${x.done?'✓':''}</button>
+  <div class="nm"><span data-a="shnm" data-i="${i}" style="cursor:text">${esc(x.n)}</span>${x.amt?`<small>${esc(x.amt)}</small>`:''}<div class="pr"><small>£</small><input type="number" inputmode="decimal" step="0.01" data-shp="${i}" value="${x.p??''}" placeholder="${lp!=null?lp.toFixed(2):'price'}" aria-label="Price each"><small>${+x.q>1&&+x.p?`each · ${money(x.p*x.q)}`:'each'}</small></div></div>
+  <div class="qp"><button data-a="shq" data-i="${i}" data-d="-1" aria-label="One fewer">−</button><b>${+x.q||1}</b><button data-a="shq" data-i="${i}" data-d="1" aria-label="One more">+</button></div></div>`}).join('')}
+function shParts(st){const t=shTot(st),c=shCompare(st);return{
+ tot:`<div><b>${money(t.t)}</b><small>Whole list${t.miss?` (${t.miss} unpriced)`:''}</small></div><div><b>${money(t.dn)}</b><small>In your trolley</small></div>`,
+ cmp:c?`<div class="shcmp">This list would be about <b>${money(c.t)}</b> at ${esc(c.n)}, going by what you’ve paid there.</div>`:''}}
+function shSheet(id){const st=shStore(id);if(!st)return;SHO={id};const P=shParts(st);
+ sheet(`<div class="shl-wrap"><h2>${esc(st.n)}</h2><div class="shtot">${P.tot}</div><div class="shcmpw">${P.cmp}</div>
+ <div class="shadd"><input data-shq placeholder="Add an item, e.g. 2 x milk" enterkeyhint="done" autocomplete="off"><button class="btn on" data-a="shadd">Add</button></div>
+ <div class="shacts"><button class="btn" data-a="shscan">Scan barcode</button><button class="btn" data-a="shrc">Add recipe</button></div>
+ <div class="shl">${shItems(st)}</div>
+ <div class="shacts" style="margin-top:14px"><button class="btn" data-a="shweek">New week</button><button class="btn" data-a="shclr">Clear ticked</button><button class="btn" data-a="shcopy">Copy list</button><button class="btn" data-a="shren">Rename</button></div>
+ <button class="btn big" data-a="shx">Done</button></div>`)}
+function shPaint(){const st=SHO&&shStore(SHO.id);if(!st)return;const l=$('#sheet .shl');if(!l)return shSheet(SHO.id);l.innerHTML=shItems(st);const P=shParts(st),t=$('#sheet .shtot'),c=$('#sheet .shcmpw');if(t)t.innerHTML=P.tot;if(c)c.innerHTML=P.cmp}
+// "6 eggs", "2 x milk", "chicken breast 500g": a leading number becomes the quantity, the rest stays as written
+function shParse(v){let q=1,n=v.trim();const m=n.match(/^(\d{1,2})\s*(?:x|×)\s*(.+)$/i)||n.match(/^(.+?)\s*(?:x|×)\s*(\d{1,2})$/i);if(m){const num=/^\d+$/.test(m[1])?m[1]:m[2],rest=/^\d+$/.test(m[1])?m[2]:m[1];q=+num;n=rest.trim()}return{n:n.charAt(0).toUpperCase()+n.slice(1),q:Math.max(1,Math.min(99,q)),amt:''}}
+function shAdd(st,x){st.items=st.items||[];const k=shKey(x),ex=st.items.find(y=>shKey(y)===k&&!y.done);if(ex){ex.q=Math.min(99,(+ex.q||1)+(+x.q||1));return ex}
+ const lp=shPrice(st.id,x);const it={n:x.n,q:+x.q||1,amt:x.amt||'',bc:x.bc||'',p:x.p!=null?x.p:(lp!=null?lp:null),done:false,at:Date.now()};st.items.push(it);return it}
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||t.dataset.shp==null||!SHO)return;const st=shStore(SHO.id),x=st&&st.items[+t.dataset.shp];if(!x)return;const v=numIn(t.value);x.p=t.value===''||isNaN(v)?null:Math.max(0,Math.min(999,v));shRemember(st.id,x);save();
+ const P=shParts(st),tt=$('#sheet .shtot'),c=$('#sheet .shcmpw');if(tt)tt.innerHTML=P.tot;if(c)c.innerHTML=P.cmp});
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.shp!=null&&SHO)shPaint()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-shq]')){e.preventDefault();const b=$('#sheet [data-a=shadd]');b&&b.click()}});
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=sh]');if(!el)return;const a=el.dataset.a;if(!/^sh(new|pick|open|add|scan|rc|rcp|ck|q|week|clr|copy|ren|rename|del|mk|nm|nmok)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ const D0=SHD(),st=SHO&&shStore(SHO.id);
+ if(a==='shnew'){const sugg=['Sainsbury’s','Tesco','Aldi','Lidl','Asda','Morrisons','Co-op','M&S','Waitrose','Iceland'].filter(n=>!D0.stores.some(s=>s.n===n));
+  sheet(`<h2>Add a shop</h2><div class="chips" style="flex-wrap:wrap">${sugg.map(n=>`<button class="chip" data-a="shmk" data-i="${esc(n)}">${esc(n)}</button>`).join('')}</div><input data-shname placeholder="Or type a name" maxlength="30"><button class="btn big on" data-a="shmk">Add shop</button><button class="btn big" data-a="shx">Cancel</button>`);return}
+ if(a==='shmk'){const n=(el.dataset.i||($('#sheet [data-shname]')||{}).value||'').trim();if(!n)return;const s={id:'s'+Date.now().toString(36),n:n.slice(0,30),items:[]};D0.stores.push(s);D0.cur=s.id;save();sheet(null);render();setTimeout(()=>shSheet(s.id),30);return}
+ if(a==='shpick'){D0.cur=el.dataset.i;save();render();return}
+ if(a==='shopen'){D0.cur=el.dataset.i;save();return shSheet(el.dataset.i)}
+ if(!st)return;
+ if(a==='shadd'){const q=$('#sheet [data-shq]'),v=q?q.value.trim():'';if(!v)return;shAdd(st,shParse(v));save();q.value='';shPaint();q.focus({preventScroll:true});return}
+ if(a==='shck'){const x=st.items[+el.dataset.i];if(x){x.done=!x.done;try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}save();return shPaint()}
+ if(a==='shq'){const x=st.items[+el.dataset.i];if(!x)return;const nq=(+x.q||1)+(+el.dataset.d);if(nq<1){st.items.splice(+el.dataset.i,1);toast(`${x.n} removed.`)}else x.q=Math.min(99,nq);save();return shPaint()}
+ if(a==='shweek'){(st.items||[]).forEach(x=>x.done=false);save();toast('Everything’s back on the list for this week.');return shPaint()}
+ if(a==='shclr'){const n0=st.items.length;st.items=st.items.filter(x=>!x.done);save();toast(n0-st.items.length?`${n0-st.items.length} ticked item${n0-st.items.length===1?'':'s'} cleared.`:'Nothing ticked yet.');return shPaint()}
+ if(a==='shcopy'){const t=`${st.n} list\n`+st.items.filter(x=>!x.done).map(x=>`${+x.q>1?x.q+' × ':''}${x.n}${x.p?` (${money(x.p*(+x.q||1))})`:''}`).join('\n')+`\nTotal: ${money(shTot(st).t)}`;try{navigator.clipboard.writeText(t);toast('List copied.')}catch(_){toast('Couldn’t copy on this phone.')}return}
+ if(a==='shren'){sheet(`<h2>${esc(st.n)}</h2><input data-shname value="${esc(st.n)}" maxlength="30"><button class="btn big on" data-a="shrename">Save name</button><button class="btn big" data-a="shdel">Delete this list</button><button class="btn big" data-a="shopen" data-i="${st.id}">Back</button>`);return}
+ if(a==='shrename'){const n=(($('#sheet [data-shname]')||{}).value||'').trim();if(n)st.n=n.slice(0,30);save();render();return shSheet(st.id)}
+ if(a==='shdel'){D0.stores=D0.stores.filter(s=>s!==st);D0.cur=(D0.stores[0]||{}).id||null;SHO=null;save();sheet(null);render();toast('List deleted.');return}
+ if(a==='shrc'){const R=S.recipes||[];if(!R.length){toast('Save a recipe first, then add its ingredients here.');return}
+  sheet(`<h2>Add a recipe</h2><p class="sm" style="margin:0 0 8px">Its ingredients go on your ${esc(st.n)} list.</p><div class="fopt">${R.map((r,i)=>`<button data-a="shrcp" data-i="${i}"><span><b>${esc(r.n)}</b><small>${r.items.length} ingredient${r.items.length===1?'':'s'}</small></span></button>`).join('')}</div><button class="btn big" data-a="shopen" data-i="${st.id}">Back</button>`);return}
+ if(a==='shrcp'){const r=(S.recipes||[])[+el.dataset.i];if(!r)return;r.items.forEach(x=>{const nm=(x.nm||x.q||'').split(',')[0].trim();shAdd(st,{n:nm.charAt(0).toUpperCase()+nm.slice(1),q:1,amt:x.g?x.g+' g':''})});save();shSheet(st.id);toast(`${r.items.length} ingredient${r.items.length===1?'':'s'} from ${r.n} added.`);return}
+ if(a==='shscan'){SHO.scan=1;bcOpen('shop');return}
+ if(a==='shnm'){const x=st.items[+el.dataset.i];if(!x)return;sheet(`<h2>Rename item</h2><input data-shname value="${esc(x.n)}" maxlength="50"><button class="btn big on" data-a="shnmok" data-i="${el.dataset.i}">Save</button><button class="btn big" data-a="shopen" data-i="${st.id}">Back</button>`);const i=$('#sheet [data-shname]');i&&i.focus();return}
+ if(a==='shnmok'){const x=st.items[+el.dataset.i],n=(($('#sheet [data-shname]')||{}).value||'').trim();if(x&&n)x.n=n.slice(0,50);save();return shSheet(st.id)}},true);
+// a barcode Open Food Facts doesn't know still goes on the list, ready to name
+{const _br=bcRender;bcRender=function(){if(BC&&BC.mode==='shop'&&(BC.st==='nf'||BC.st==='off')){const p={n:'',b:''};setTimeout(()=>{if(BC&&BC.mode==='shop'){bcDone(p);const st=SHO&&shStore(SHO.id);const it=st&&st.items[st.items.length-1];if(it&&!it.n){it.n='New item';save();shPaint()}toast('Couldn’t find that one. Tap its name to rename it.')}},0);return}return _br.apply(this,arguments)}}
+// barcode scanning for the list: the product name comes from Open Food Facts (straight from the phone), the price from you
+{const _bd=bcDone;bcDone=function(p){if(!BC||BC.mode!=='shop')return _bd.apply(this,arguments);const code=BC.code;bcClose();const st=SHO&&shStore(SHO.id);if(!st)return;
+ const it=shAdd(st,{n:[p.b,p.n].filter(Boolean).join(' ').slice(0,50)||'New item',q:1,bc:code||'',amt:p.ss||''});save();shSheet(st.id);
+ setTimeout(()=>{const i=st.items.indexOf(it),inp=$(`#sheet [data-shp="${i}"]`);if(inp){inp.scrollIntoView({block:'center'});if(!it.p)inp.focus()}},120);toast(it.p?`${it.n} added at ${money(it.p)}.`:`${it.n} added. Pop the price in.`)}}
+{const _bl=bcLook;bcLook=function(code){if(BC&&BC.mode==='shop'){const c=String(code).replace(/\D/g,''),h=(S.bc||{})[c];if(h&&h.n){BC.code=c;return bcDone(h)}}return _bl.apply(this,arguments)}}
+{const _sh=sheet;sheet=function(h){if(!h)SHO=SHO&&$('#sheet .shl')?null:SHO;return _sh.apply(this,arguments)}}
+FULLTOUR.splice(Math.max(0,FULLTOUR.findIndex(x=>x.h==='Recipes')),0,{t:'diet',q:'.shc',h:'Shopping lists',p:'A list for each shop. Scan barcodes in store, add what you paid, and see the week’s total before the till. Swell remembers prices for next time.'});if(!TOURESS)tourSet(FULLTOUR);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 4h2l2.4 10.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/>',h:'Shopping lists',p:'On Diet, keep a list for each shop. Scan barcodes, add prices, tick things off, and see what the week will cost.'})}
 
 render();periodic();reqShow();
 </script>
