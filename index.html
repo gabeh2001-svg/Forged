@@ -5480,7 +5480,7 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=sugx]');i
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[data-a=sugx]')){e.preventDefault();e.target.click()}});
 
 /* --- 15: describe a meal --- */
-FEALIAS.push([/\b(french )?fries\b/,'french fries chips frozen deep fried'],[/^(a )?(side |green |mixed )?salad$/,'salad green']);
+FEALIAS.push([/\bblack beans?\b/,'beans black turtle boiled'],[/\b(sweet ?)?corn\b(?! ?flakes| ?flour|ed)/,'sweetcorn kernels canned water drained'],[/\b(uncooked|dry|dried|raw) (white |basmati |long[- ]grain )?rice\b/,'rice white basmati raw'],[/\bfrench fries\b|\bfries\b/,'french fries chips frozen deep fried'],[/^(a )?(side |green |mixed )?salad$/,'salad green']);
 let FEN=null;const feRow=n=>{if(!FEN){FEN=new Map();FE.rows.forEach((r,i)=>{if(!FEN.has(r[0]))FEN.set(r[0],i)})}const i=FEN.get(n);if(i!=null)return i;const c=feMatch(n);return c.length?c[0]:null};
 function offRow(ri,nm){const r=FE.rows[ri];return{n:nm||r[0],k:r[1],p:r[2],f:r[3],c:r[4],fb:r[6]>=0?r[6]:null,sug:r[7]>=0?r[7]:null,ri}}
 const ZOFF={n:'None',k:0,p:0,f:0,c:0,fb:0,sug:0};
@@ -5950,6 +5950,269 @@ WIS.leaf=WIS.leaf||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
  const n=l.h===2?6:3;return`<div class="mnwg">${wlab('leaf','Nutrients')}${l.h===2?`<div class="mnl" style="grid-template-columns:1fr">${rows.slice(0,n).map(([k,v])=>{const p=miPct(k,v),c=p>=100?'var(--G)':p>=67?'#ffd27a':'#ff8f8f';return`<div class="mnb"><span>${esc(MN[k][0])}</span><i><u style="width:${Math.min(100,p)}%;background:${c}"></u></i><b>${p}%</b></div>`}).join('')}</div>`:`<p class="sm" style="margin:0">${cov} of ${rows.length} at a good level. Lowest today:</p><div class="chips">${low.slice(0,3).map(([k])=>`<span class="chip">${esc(MN[k][0].replace(/ \(.*\)/,''))}</span>`).join('')}</div>`}</div>`}}
 document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=micro]');if(!w||ED||e.target.closest('button,input,a'))return;if(Date.now()-WTD>450)return;const b=$('[data-a=tab][data-i=diet]');if(b)b.click();setTimeout(()=>{const c=$('#app .mnc');c&&c.scrollIntoView({block:'start',behavior:MRM()?'auto':'smooth'})},120)});
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Vitamins and minerals',p:'The Diet tab now shows 18 vitamins and minerals from your food and supplements, today and over 7 days, what each does, what to buy to fill a gap, and what’s running high. There’s a Home widget too.'})}
+
+/* ===== v79: Food plan: a week planner, an automatic shopping list in aisle order, shop day, history, recipe method and paste ===== */
+// Research notes for this block:
+// - Planning: people who plan meals ahead eat a more varied diet that's closer to guidelines (Ducrot et al. 2017, IJBNPA,
+//   40,000 adults in NutriNet-Santé). Planning has to stay quick or people stop, so recipes drop into days with one tap
+//   or a drag, last week copies across in one tap, and the shopping list writes itself.
+// - The week balance score is worked out on the phone: days within 10% of your calorie goal and at 90% of protein, how much
+//   of the UK reference intake for each vitamin and mineral the week covers, and variety. For variety Swell counts
+//   different plant foods, aiming for 30 a week (McDonald et al. 2018, American Gut Project, mSystems).
+// - Aisle order: most UK supermarkets put fruit and veg by the entrance (Vogel et al. 2021, PLoS Medicine, Iceland stores),
+//   then bakery, meat and fish, dairy and chilled, the cupboard aisles, drinks, and frozen near the tills. The Food
+//   Standards Agency advises picking chilled and frozen food last so it stays cold, so frozen always comes last on the list.
+// - The list rolls over on your shop day: ticked items go into history, anything you didn't get stays, and next week's
+//   planned meals are added. No pop-ups: a gentle prompt sits in the widget and on the Diet tab only.
+// - Pasted recipes are tidied into ingredients and numbered steps, with US cups, ounces, pounds and °F converted
+//   (cup weights from King Arthur Baking and USDA household measures) and US food words changed to UK ones.
+(function(){const st=document.createElement('style');st.textContent=`
+.fp .seg{width:100%;display:flex;margin:0 0 14px}.fp .seg button{flex:1;padding:9px 0;font-size:14px}
+.fpwk{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}.fpwk b{font-size:17px}.fpwk .nav2{display:flex;gap:6px}
+.fpwk .nav2 button{width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;padding:0}
+.fptray{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.fptray::-webkit-scrollbar{display:none}
+.fptray button{flex:none;border:0;border-radius:14px;padding:9px 12px;background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:14px;text-align:left;touch-action:pan-x;user-select:none;-webkit-user-select:none}
+.fptray button small{display:block;color:var(--dim);font-size:11.5px}.fptray button.held{background:#fff;color:#14122b}.fptray button.held small{color:#5b5870}
+.fptray button.nw{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25)}
+.fpd{display:grid;grid-template-columns:46px 1fr;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.07);align-items:start;transition:background .2s}
+.fpd.tgt{background:rgba(255,255,255,.06);border-radius:14px}.fpd.over{background:rgba(127,208,255,.16);border-radius:14px}
+.fpd .dl{text-align:center;padding-top:4px}.fpd .dl b{display:block;font-size:17px}.fpd .dl small{color:var(--dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+.fpd .dl.td b{color:#7fd0ff}
+.fpm{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.fpm button.pl{border:0;border-radius:12px;padding:7px 10px;background:rgba(255,255,255,.09);color:#fff;font:inherit;font-size:13.5px}
+.fpm button.pl small{color:var(--dim);margin-left:4px}.fpm button.ad{border:0;border-radius:12px;padding:7px 10px;background:transparent;color:var(--dim);font:inherit;font-size:13.5px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.14)}
+.fpd .mac{grid-column:2;font-size:12px;color:var(--dim);margin-top:2px}
+.fpsc{display:flex;align-items:center;gap:14px;margin-bottom:8px}.fpsc .n{font-size:34px;font-weight:800;letter-spacing:-.02em}.fpsc small{color:var(--dim)}
+.fprow{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}.fprow span:last-child{color:var(--dim);text-align:right}
+.fpl .aisle{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:14px 2px 4px}
+.fpi{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.06);transition:opacity .25s,transform .25s}
+.fpi .ck{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:transparent;color:#14122b;display:grid;place-items:center;padding:0}
+.fpi .ck svg{width:14px;height:14px;opacity:0}.fpi.dn .ck{background:var(--G);border-color:var(--G)}.fpi.dn .ck svg{opacity:1}
+.fpi .nm{min-width:0}.fpi .nm b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fpi .nm small{color:var(--dim);font-size:12px}
+.fpi.dn .nm b{text-decoration:line-through;opacity:.55}.fpi .pr{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.fpi.gone{opacity:0;transform:translateX(24px)}
+.fpadd{display:flex;gap:8px;margin:4px 0 6px}.fpadd input{flex:1;margin:0}.fpadd .btn{margin:0;flex:none}
+.fpst{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.fpst::-webkit-scrollbar{display:none}.fpst .chip{flex:none;margin:0}
+.fpday{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;margin:8px 0 2px}.fpday select{width:auto;margin:0;padding:6px 26px 6px 10px;font-size:14px}
+.fptot{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 0}.fptot b{font-size:20px}
+.fpc .fpq{display:flex;gap:8px;margin-top:10px}.fpc .fpq .btn{flex:1;margin:0}
+.fpw{display:flex;flex-direction:column;height:100%;gap:4px;align-items:stretch;text-align:left}.fpw .wl{align-self:flex-start}
+.fpw .big{font-size:19px;font-weight:800;letter-spacing:-.01em;line-height:1.15;margin-top:auto}
+.fpw{overflow:hidden}.fpw .wi{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:center;padding:2px 0;transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.fpw .wi .ck{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:transparent;padding:0;display:grid;place-items:center;color:#14122b}
+.fpw .wi .ck svg{width:12px;height:12px;opacity:0}.fpw .wi.dn .ck{background:var(--G);border-color:var(--G)}.fpw .wi.dn .ck svg{opacity:1}.fpw .wi.dn span{text-decoration:line-through;opacity:.5}
+.fpw .wi span{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fpw .ai{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+.fpghost{position:fixed;z-index:200;pointer-events:none;border-radius:14px;padding:9px 12px;background:#fff;color:#14122b;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.45);transform:translate(-50%,-120%)}
+.rcst{display:flex;flex-direction:column;gap:6px;margin:4px 0}.rcst div{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:start}
+.rcst div>b{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:12.5px;margin-top:8px}
+.rcst textarea{margin:0;min-height:44px;font:inherit;font-size:16px;resize:vertical;padding:9px 11px;border-radius:12px;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:#fff;width:100%;box-sizing:border-box}
+.rcmeth{counter-reset:s;list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:10px}.rcmeth li{display:grid;grid-template-columns:26px 1fr;gap:10px;font-size:15px;line-height:1.45}
+.rcmeth li::before{counter-increment:s;content:counter(s);width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-size:13px;font-weight:700}
+.rcpaste{width:100%;min-height:220px;box-sizing:border-box;font:inherit;font-size:16px;padding:12px;border-radius:14px;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:#fff}`;document.head.appendChild(st)})();
+
+/* --- data --- */
+const FP=()=>{S.fp=S.fp||{};S.fp.d=S.fp.d||{};S.fp.skip=S.fp.skip||{};return S.fp};
+const rcId=r=>{if(!r.id)r.id='r'+Math.random().toString(36).slice(2,9);return r.id};
+const rcById=id=>(S.recipes||[]).find(r=>rcId(r)===id);
+const shopDay=()=>{const v=SHD().day;return v==null||v===''?null:+v};
+// the week the list is for: from the next shop day (today if it's shop day), or from today if no shop day is set
+function fpWs(off){const t=realToday(),sd=shopDay();let s=t;if(sd!=null){const w=new Date(t+'T12:00').getDay();s=addDays(t,(sd-w+7)%7)}return addDays(s,7*(off||0))}
+const fpDays=ws=>[...Array(7)].map((_,i)=>addDays(ws,i));
+const fpOf=d=>FP().d[d]||[];
+const rcPer=r=>{const t=rcTot(r),sv=Math.max(1,+r.sv||1);return{k:t.k/sv,p:t.p/sv,f:t.f/sv,c:t.c/sv}};
+function fpDayMac(d){const o={k:0,p:0,f:0,c:0};fpOf(d).forEach(e=>{const r=rcById(e.r);if(!r)return;const m=rcPer(r);for(const k in o)o[k]+=m[k]*(+e.sv||1)});return o}
+function rcMi(r){const o={};(r.items||[]).forEach(x=>{if(x.ri!=null&&x.g)miAdd(o,rowMi(x.ri,x.g))});return o}
+const PLANT=/fruit|veg|apple|banana|orange|pear|grape|berr|melon|mango|pineapple|kiwi|peach|plum|cherr|tomato|carrot|cucumber|lettuce|pepper|celery|avocado|onion|garlic|leek|broccoli|cauliflower|cabbage|kale|spinach|courgette|zucchini|aubergine|mushroom|potato|sweet potato|squash|pumpkin|pea|bean|lentil|chickpea|oat|rice|quinoa|barley|wheat|bread|pasta|noodle|nut|almond|cashew|walnut|peanut|seed|herb|basil|coriander|parsley|mint|ginger|chilli|corn|beetroot|radish|rocket|arugula|lemon|lime/i;
+function fpScore(ws){const days=fpDays(ws).filter(d=>fpOf(d).length),g=S.setup||{};if(!days.length)return null;let kOk=0,pOk=0;const mi={},plants=new Set();
+ days.forEach(d=>{const m=fpDayMac(d);if(+g.k&&Math.abs(m.k-g.k)<=g.k*.1)kOk++;if(+g.p&&m.p>=g.p*.9)pOk++;fpOf(d).forEach(e=>{const r=rcById(e.r);if(!r)return;const f=(+e.sv||1)/Math.max(1,+r.sv||1);miAdd(mi,rcMi(r),f);(r.items||[]).forEach(x=>{const nm=(x.nm||x.q||'').toLowerCase();if(PLANT.test(nm)&&!/oil|sugar|flour|syrup|juice|sauce/.test(nm))plants.add(nm.split(',')[0].replace(/s$/,'').trim())})})});
+ const cov=MNK.map(k=>[k,Math.min(1,(mi[k]||0)/days.length/rni(k))]),cv=cov.reduce((a,x)=>a+x[1],0)/cov.length,low=cov.filter(x=>x[1]<.67).sort((a,b)=>a[1]-b[1]);
+ const mac=(kOk+pOk)/(2*days.length),vr=Math.min(1,plants.size/30),score=Math.round((mac*.4+cv*.4+vr*.2)*100);return{score,days:days.length,kOk,pOk,cv,low,plants:plants.size}}
+/* --- aisles --- */
+const AIS=[['fv','Fruit and veg',/fruit|veg|apple|banana|orange|pear|grape|berr|melon|mango|pineapple|kiwi|peach|plum|cherr|tomato|carrot|cucumber|lettuce|salad|pepper(?!corn)|celery|avocado|onion|garlic|leek|broccoli|cauliflower|cabbage|kale|spinach|courgette|aubergine|mushroom|potato|squash|pumpkin|beetroot|radish|rocket|lemon|lime|herb|basil|coriander|parsley|mint|ginger|chilli(?! sauce)|spring onion|sweetcorn cob|satsuma|clementine/i],
+ ['bk','Bakery',/bread|loaf|roll|bagel|wrap|tortilla|pitta|naan|croissant|crumpet|muffin|bun\b|brioche|baguette/i],
+ ['mf','Meat and fish',/chicken|beef|pork|lamb|turkey|mince|steak|bacon|sausage|ham\b|gammon|salmon|cod|tuna steak|haddock|prawn|fish|duck|chorizo/i],
+ ['dy','Dairy and eggs',/milk|yoghurt|yogurt|cheese|cheddar|mozzarella|feta|halloumi|butter|cream|egg|skyr|kefir|quark|cottage/i],
+ ['ch','Chilled and deli',/houmous|hummus|tofu|tempeh|pesto|fresh pasta|coleslaw|dip|ready meal|deli|quorn/i],
+ ['bf','Breakfast and spreads',/cereal|oats|porridge|granola|muesli|flakes|weetabix|jam|honey|marmalade|peanut butter|nut butter|spread|syrup/i],
+ ['cp','Cupboard',/rice|pasta|spaghetti|penne|noodle|couscous|quinoa|lentil|chickpea|bean|tin|tinned|canned|tomatoes|passata|stock|gravy|sauce|ketchup|mayo|mustard|vinegar|oil|flour|sugar|salt|pepper|spice|cumin|paprika|curry|herbs dried|baking|yeast|stock cube|soy|nuts|almond|cashew|seed|raisin|dried|tuna|protein powder|whey|sweetcorn|\bcorn\b/i],
+ ['sn','Snacks and sweets',/crisps|chocolate|biscuit|sweets|popcorn|bar\b|cake|cookie/i],
+ ['dr','Drinks',/water|juice|squash|cola|coke|lemonade|tea\b|coffee|beer|wine|lager|cider|energy drink|electrolyte|smoothie/i],
+ ['fz','Frozen',/frozen|ice cream|ice\b|chips frozen|peas frozen|fish fingers/i],
+ ['hh','Household and health',/vitamin|supplement|tablet|creatine|toothpaste|shampoo|soap|toilet|kitchen roll|washing|bin bag|foil|cling|deodorant|plasters/i]];
+const AISN=Object.fromEntries(AIS.map(a=>[a[0],a[1]]));const AISO=Object.fromEntries(AIS.map((a,i)=>[a[0],i]));
+function aisleOf(x){if(x.ai&&AISN[x.ai])return x.ai;const n=String(x.n||'');if(/frozen/i.test(n))return'fz';for(const [k,,re] of AIS)if(re.test(n))return k;return'ot'}
+AISN.ot='Other';AISO.ot=99;
+/* --- plan to list --- */
+// "500g chicken breast" -> Chicken breast, 500 g; "6 eggs" -> Eggs, 6
+function ingName(x){let s=String(x.q||'').toLowerCase().replace(/\(.*?\)/g,' ').replace(/^[\s\-•▢*]+/,'');s=s.replace(FEDROP,' ').replace(/\b(of|grated|chopped|diced|sliced|minced|fresh|large|small|medium|tin|tins|can|cans|pack|packs|boneless|skinless|raw|uncooked|drained|plain|finely|roughly)\b/g,' ').replace(/[,.;].*$/,'').replace(/\s+/g,' ').trim();
+ if(!s||s.length<3)s=String(x.nm||'').split(',')[0].toLowerCase();return s.charAt(0).toUpperCase()+s.slice(1)}
+function ingCount(x){const m=String(x.q||'').trim().match(/^(\d+(?:\.\d+)?)\s+(?!g\b|kg|ml|l\b|tbsp|tsp|cups?|oz|lb)/i);return m?+m[1]:null}
+function fpNeed(ws){const need={};fpDays(ws).forEach(d=>fpOf(d).forEach(e=>{const r=rcById(e.r);if(!r)return;const f=(+e.sv||1)/Math.max(1,+r.sv||1);(r.items||[]).forEach(x=>{const n=ingName(x),k=n.toLowerCase(),c=ingCount(x),o=need[k]=need[k]||{n,g:0,c:0,from:new Set()};if(c!=null)o.c+=c*f;else o.g+=(+x.g||0)*f;o.from.add(r.n)})}));return need}
+const fpAmt=o=>{const liq=/milk|water|stock|broth|juice|oil|cream(?! cheese)|vinegar|wine/i.test(o.n),u=liq?['ml','L']:['g','kg'];return[o.c?`${Math.ceil(o.c)}`:'',o.g?(o.g>=1000?`${(o.g/1000).toFixed(1).replace(/\.0$/,'')} ${u[1]}`:`${Math.ceil(o.g/10)*10} ${u[0]}`):''].filter(Boolean).join(' + ')};
+function fpCur(){const D0=SHD();let st=shStore(D0.cur)||D0.stores[0];if(!st){st={id:'s'+Date.now().toString(36),n:'My shop',items:[]};D0.stores.push(st);D0.cur=st.id}return st}
+function fpSync(){const st=fpCur(),ws=fpWs(0),need=fpNeed(ws);st.items=st.items||[];const have=new Set();
+ st.items=st.items.filter(x=>{if(!x.auto)return true;const k=x.ak;if(need[k]){have.add(k);x.amt=fpAmt(need[k]);x.why=[...need[k].from].slice(0,2).join(', ');return true}return x.done});
+ Object.entries(need).forEach(([k,o])=>{if(have.has(k))return;if(st.items.some(y=>!y.auto&&String(y.n).toLowerCase()===k&&!y.done))return;const it=shAdd(st,{n:o.n,q:1,amt:fpAmt(o)});it.auto=1;it.ak=k;it.why=[...o.from].slice(0,2).join(', ')});save()}
+// shop day: archive what was bought, keep what wasn't, add next week's plan
+function fpRoll(){const D0=SHD();if(shopDay()==null)return;const ws=fpWs(0);if(D0.ws===ws)return;if(D0.ws){D0.hist=D0.hist||[];D0.stores.forEach(st=>{const got=(st.items||[]).filter(x=>x.done);if(got.length)D0.hist.unshift({ws:D0.ws,sid:st.id,sn:st.n,items:got.map(x=>({n:x.n,q:x.q,amt:x.amt,p:x.p,ai:x.ai}))});st.items=(st.items||[]).filter(x=>!x.done&&!x.auto)});D0.hist=D0.hist.slice(0,12)}D0.ws=ws;fpSync()}
+/* --- the page --- */
+let FPT='plan',FPW=0,FPH=null;
+const fpLbl=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+const TK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
+function fpPlanTab(){const ws=fpWs(FPW),R=S.recipes||[],t=realToday(),g=S.setup||{},sc=fpScore(ws);R.forEach(rcId);
+ const tray=`<div class="fptray">${R.map(r=>{const m=rcPer(r);return`<button data-a="fphold" data-i="${r.id}" class="${FPH===r.id?'held':''}">${esc(r.n)}<small>${Math.round(m.k)} kcal · ${Math.round(m.p)}g protein</small></button>`}).join('')}<button class="nw" data-a="rcnew">New recipe<small>From ingredients</small></button><button class="nw" data-a="rcpaste">Paste a recipe<small>From a website</small></button></div>`;
+ const days=fpDays(ws).map(d=>{const L=fpOf(d),m=fpDayMac(d),dt=new Date(d+'T12:00');
+  return`<div class="fpd ${FPH?'tgt':''}" data-fpd="${d}"><div class="dl ${d===t?'td':''}"><small>${dt.toLocaleDateString('en-GB',{weekday:'short'})}</small><b>${dt.getDate()}</b></div><div><div class="fpm">${L.map((e,i)=>{const r=rcById(e.r);return r?`<button class="pl" data-a="fpent" data-i="${d}|${i}">${esc(r.n)}${+e.sv!==1?`<small>×${e.sv}</small>`:''}</button>`:''}).join('')}<button class="ad" data-a="fpadd" data-i="${d}" aria-label="Add to ${dt.toLocaleDateString('en-GB',{weekday:'long'})}">${FPH?'Drop here':'+ Add'}</button></div>
+  ${L.length?`<div class="mac">${Math.round(m.k)}${+g.k?` of ${g.k}`:''} kcal · ${Math.round(m.p)}g protein</div>`:''}</div></div>`}).join('');
+ const bal=sc?`<div class="card"><h2>Week balance</h2><div class="fpsc"><span class="n">${sc.score}</span><small>out of 100, for the ${sc.days} day${sc.days===1?'':'s'} you’ve planned</small></div>
+  <div class="fprow"><span>Calories on target</span><span>${+g.k?`${sc.kOk} of ${sc.days} days`:'Set a goal first'}</span></div><div class="fprow"><span>Protein on target</span><span>${+g.p?`${sc.pOk} of ${sc.days} days`:'Set a goal first'}</span></div>
+  <div class="fprow"><span>Vitamins and minerals</span><span>${Math.round(sc.cv*100)}% covered</span></div><div class="fprow"><span>Different plant foods</span><span>${sc.plants} of 30</span></div>
+  ${sc.low.length?`<p class="sm" style="margin:10px 2px 6px">Low this week: ${sc.low.slice(0,3).map(([k])=>esc(MN[k][0].replace(/ \(.*\)/,''))).join(', ')}.</p><div class="chips">${sc.low.slice(0,3).filter(([k])=>MNTIP[k]).map(([k])=>`<button class="chip" data-a="mnshop" data-i="${k}">+ ${esc(MNTIP[k][0])}</button>`).join('')}</div>`:''}</div>`:'';
+ return`<div class="fpwk"><b>${FPW===0?'This shop week':FPW===1?'Next week':'Week of '+fpLbl(ws)}<small class="sm" style="display:block;font-weight:500;margin:2px 0 0">${fpLbl(ws)} to ${fpLbl(addDays(ws,6))}</small></b><div class="nav2"><button data-a="fpwk" data-i="-1" aria-label="Previous week" ${FPW<=-4?'disabled':''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m15 6-6 6 6 6"/></svg></button><button data-a="fpwk" data-i="1" aria-label="Next week"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button></div></div>
+ <div class="card"><p class="sm" style="margin:0 0 8px">${R.length?(FPH?'Now tap a day to drop it in. Tap the recipe again to let go.':'Tap a recipe, then a day. Or drag it onto a day.'):'Add a recipe first. Paste one from a website, or build it from ingredients.'}</p>${tray}${days}
+ <div class="fpq" style="display:flex;gap:8px;margin-top:10px"><button class="btn" data-a="fpcopy" style="flex:1;margin:0">Copy last week</button><button class="btn" data-a="fpclear" style="flex:1;margin:0">Clear week</button></div></div>${bal}`}
+function fpItems(st,lim){const L=(st.items||[]).map((x,i)=>({x,i})),open=L.filter(o=>!o.x.done).sort((a,b)=>(AISO[aisleOf(a.x)]-AISO[aisleOf(b.x)])||(a.x.at||0)-(b.x.at||0)),got=L.filter(o=>o.x.done);return{open:lim?open.slice(0,lim):open,got,n:open.length}}
+function fpListTab(){const D0=SHD(),st=fpCur(),I=fpItems(st),sd=shopDay(),tot=shTot(st),cmp=shCompare(st);let last='';
+ const row=o=>{const x=o.x,a=aisleOf(x);let h='';if(!x.done&&a!==last){last=a;h+=`<div class="aisle">${esc(AISN[a])}</div>`}
+  return h+`<div class="fpi ${x.done?'dn':''}" data-fpi="${o.i}"><button class="ck" data-a="fpck" data-i="${o.i}" aria-label="${x.done?'Untick':'Tick'} ${esc(x.n)}">${TK}</button><div class="nm" data-a="fpitem" data-i="${o.i}"><b>${+x.q>1?x.q+' × ':''}${esc(x.n)}</b><small>${[x.amt,x.auto&&x.why?'for '+x.why:''].filter(Boolean).map(esc).join(' · ')}</small></div><span class="pr">${x.p?money(x.p*(+x.q||1)):''}</span></div>`};
+ return`<div class="fpst">${D0.stores.map(s=>`<button class="chip ${s===st?'on':''}" data-a="fpstore" data-i="${s.id}">${esc(s.n)}</button>`).join('')}<button class="chip" data-a="shnew">+ Shop</button></div>
+ <div class="fpday"><span class="sm" style="margin:0">${sd==null?'Set your usual shop day and the list gets ready each week':`For your shop on ${new Date(fpWs(0)+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}`}</span><select data-fpsd aria-label="Usual shop day"><option value="" ${sd==null?'selected':''}>Shop day</option>${[1,2,3,4,5,6,0].map(n=>`<option value="${n}" ${sd===n?'selected':''}>${WK7[n]}</option>`).join('')}</select></div>
+ <div class="card fpl"><div class="fpadd"><input data-fpq placeholder="Add an item, like 2 x milk" enterkeyhint="done" autocomplete="off"><button class="btn on" data-a="fpaddi">Add</button></div>
+ <div style="display:flex;gap:8px"><button class="btn" data-a="fpscan" style="flex:1;margin:0">Scan barcode</button><button class="btn" data-a="fpsync" style="flex:1;margin:0">Add from plan</button></div>
+ ${I.open.length?I.open.map(row).join(''):'<p class="sm" style="margin:12px 2px 0">Nothing to get yet. Plan some meals and the ingredients appear here, in aisle order.</p>'}
+ ${I.got.length?`<div class="aisle">In your trolley (${I.got.length})</div>${I.got.map(row).join('')}`:''}
+ <div class="fptot"><span class="sm" style="margin:0">${tot.miss&&tot.n?`${tot.n-tot.miss} of ${tot.n} priced`:'Estimated total'}</span><b>${money(tot.t)}</b></div>${cmp?`<p class="sm" style="margin:4px 2px 0">About ${money(cmp.t)} at ${esc(cmp.n)}, going by what you’ve paid there.</p>`:''}</div>
+ <div class="card"><h2>Previous weeks</h2>${(D0.hist||[]).length?(D0.hist||[]).slice(0,6).map((h,j)=>`<button class="fprow" data-a="fphist" data-i="${j}" style="width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left"><span>${esc(h.sn)}, week of ${fpLbl(h.ws)}</span><span>${h.items.length} items${h.items.some(x=>x.p)?' · '+money(h.items.reduce((a,x)=>a+(+x.p||0)*(+x.q||1),0)):''}</span></button>`).join(''):'<p class="sm" style="margin:0">Each week’s shop is kept here after your shop day, so you can bring it back in one tap.</p>'}
+ <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" data-a="shcopy2" style="flex:1;margin:0">Copy list</button><button class="btn" data-a="fpren" style="flex:1;margin:0">Rename shop</button></div></div>`}
+function fpRecTab(){const R=S.recipes||[];return`<div class="card">${R.length?R.map((r,i)=>{const m=rcPer(r);return`<button class="fprow" data-a="fprec" data-i="${i}" style="width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:10px 0"><span><b>${esc(r.n)}</b><br><small class="sm">${r.items.length} ingredient${r.items.length===1?'':'s'}${(r.steps||[]).length?` · ${r.steps.length} steps`:''}</small></span><span>${Math.round(m.k)} kcal<br>${Math.round(m.p)}g protein</span></button>`}).join(''):'<p class="sm" style="margin:0">No recipes yet.</p>'}
+ <div style="display:flex;gap:8px;margin-top:12px"><button class="btn on" data-a="rcpaste" style="flex:1;margin:0">Paste a recipe</button><button class="btn" data-a="rcnew" style="flex:1;margin:0">Build one</button></div></div>`}
+function foodV(){fpRoll();return`<h1>Food plan</h1><div class="fp"><div class="seg" role="tablist"><button class="${FPT==='plan'?'on':''}" data-a="fptab" data-i="plan" role="tab">Plan</button><button class="${FPT==='list'?'on':''}" data-a="fptab" data-i="list" role="tab">Shopping${(()=>{const n=fpItems(fpCur()).n;return n?` (${n})`:''})()}</button><button class="${FPT==='rec'?'on':''}" data-a="fptab" data-i="rec" role="tab">Recipes</button></div>
+ ${FPT==='plan'?fpPlanTab():FPT==='list'?fpListTab():fpRecTab()}</div>`}
+FSX.food=foodV;NM.food='Food plan';
+// the Diet card takes the place of the old shopping card
+function fpCard(){const ws=fpWs(0),pl=fpDays(ws).filter(d=>fpOf(d).length).length,st=SHD().stores.length?fpCur():null,n=st?fpItems(st).n:0,sk=FP().skip[ws],sc=pl?fpScore(ws):null;
+ const nudge=!pl&&!sk&&(S.recipes||[]).length;return`<div class="card fpc"><h2>Food plan</h2>${nudge?`<p class="sm" style="margin:0">Plan the week ahead? Drop a few recipes into days and Swell writes your shopping list in aisle order.</p>`:`<p class="sm" style="margin:0">${pl?`${pl} day${pl===1?'':'s'} planned${sc?` · balance ${sc.score}`:''}`:'Plan meals for the week, or just keep a shopping list.'}${n?` · ${n} thing${n===1?'':'s'} to get`:''}.</p>`}
+ <div class="fpq"><button class="btn ${nudge?'on':''}" data-a="fpopen" data-i="plan">Plan the week</button><button class="btn ${!nudge&&n?'on':''}" data-a="fpopen" data-i="list">Shopping list</button></div>${nudge?'<button class="glink" data-a="fpskip" style="margin-top:8px">Not this week</button>':''}</div>`}
+{const _d=diet;diet=function(){let h=_d.apply(this,arguments);try{const i=h.indexOf('<div class="card shc">');if(i>=0){const j=h.indexOf('<div class="card rcl">',i);h=h.slice(0,i)+fpCard()+(j>=0?h.slice(j):'')}}catch(_){}return h}}
+/* --- widget --- */
+NM.shop='Shopping list';
+WIS.cart=WIS.cart||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h11L21 8H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/></svg>';
+{const _wd=wd;wd=function(l){if(!l||l.id!=='shop')return _wd.apply(this,arguments);try{fpRoll()}catch(_){}const st=SHD().stores.length?fpCur():null,I=st?fpItems(st,l.h===2?6:3):{open:[],n:0},sd=shopDay(),ws=fpWs(0),when=sd==null?'':new Date(ws+'T12:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}),pl=fpDays(ws).some(d=>fpOf(d).length);
+ if(l.w===1&&l.h===1)return`<div class="fpw">${wlab('cart','Shopping')}<div class="big">${I.n?`${I.n} to get`:pl?'All got':'Upcoming shop'}</div><span class="sm" style="margin:0">${when?(ws===realToday()?'Shop day today':when):I.n?esc(st.n):'Plan your week'}</span></div>`;
+ let last='';const rows=I.open.map(o=>{const a=aisleOf(o.x),hd=l.h===2&&a!==last?(last=a,`<div class="ai">${esc(AISN[a])}</div>`):'';return hd+`<div class="wi" data-wi="${o.i}"><button class="ck" data-a="fpwck" data-i="${o.i}" aria-label="Tick ${esc(o.x.n)}">${TK}</button><span>${+o.x.q>1?o.x.q+' × ':''}${esc(o.x.n)}</span></div>`}).join('');
+ return`<div class="fpw">${wlab('cart',when?`Shop · ${when}`:'Shopping list')}${rows||`<p class="sm" style="margin:6px 0 0">${pl?'Everything’s in the trolley.':'Nothing on the list. Plan your week and it fills itself.'}</p>`}${I.n>I.open.length?`<span class="sm" style="margin:auto 0 0">and ${I.n-I.open.length} more</span>`:''}</div>`}}
+// ticking on the widget: the item fades out and the rest slide up, without opening anything
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=fpwck]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const st=fpCur(),x=st.items[+el.dataset.i];if(!x)return;x.done=true;save();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}
+ const row=el.closest('.wi'),box=el.closest('.fpw');row.classList.add('dn');const pre=new Map([...box.querySelectorAll('.wi')].map(r=>[r.dataset.wi,r.getBoundingClientRect().top]));
+ setTimeout(()=>{row.style.opacity='0';row.style.transform='translateX(18px)';setTimeout(()=>{const w=box.closest('.wd'),l=S.lay.find(z=>z.id==='shop')||{w:2,h:1};const h=wd({...l});const tmp=document.createElement('div');tmp.innerHTML=h;const nb=tmp.querySelector('.fpw');if(nb){box.replaceWith(nb);nb.querySelectorAll('.wi').forEach(r=>{const y=pre.get(r.dataset.wi);if(y!=null){const dy=y-r.getBoundingClientRect().top;if(dy)r.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'})}else r.animate([{opacity:0},{opacity:1}],{duration:260})})}},230)},260)},true);
+document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=shop]');if(!w||ED||e.target.closest('button,input,a,[data-a]'))return;if(Date.now()-WTD>450)return;FPT='list';fsOpen('food')});
+/* --- interactions --- */
+const fpRe=()=>{if(FS==='food')fsr();else render()};
+function fpPut(d,id){const L=FP().d[d]=FP().d[d]||[];L.push({r:id,sv:1});save();const r=rcById(id);if(FPW===0)fpSync();try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}toast(`${r?r.n:'Recipe'} added to ${new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long'})}.`)}
+function fpPick(d){const R=S.recipes||[];if(!R.length){toast('Add a recipe first.');return}sheet(`<h2>${new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</h2><div class="fopt">${R.map(r=>{const m=rcPer(r);return`<button data-a="fpput" data-i="${d}|${rcId(r)}"><span><b>${esc(r.n)}</b><small>${Math.round(m.k)} kcal · ${Math.round(m.p)}g protein a serving</small></span></button>`}).join('')}</div><button class="btn big" data-a="shx">Cancel</button>`)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=fp],[data-a=shcopy2],[data-a=rcpaste]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(fpopen|fpskip|fptab|fpwk|fphold|fpadd|fpput|fpent|fpsv|fpmv|fprm|fpcopy|fpclear|fpstore|fpaddi|fpscan|fpsync|fpck|fpitem|fpai|fphist|fphadd|fpren|fprec|shcopy2|rcpaste|rcpgo)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ if(a==='fpopen'){FPT=i||'plan';FPW=0;FPH=null;const w=$('#app .grid .wd[data-id=food]');return fsOpen('food')}
+ if(a==='fpskip'){FP().skip[fpWs(0)]=1;save();return render()}
+ if(a==='fptab'){FPT=i;FPH=null;return fsr()}
+ if(a==='fpwk'){FPW=Math.max(-4,Math.min(8,FPW+(+i)));return fsr()}
+ if(a==='fphold'){FPH=FPH===i?null:i;return fsr()}
+ if(a==='fpadd'){if(FPH){fpPut(i,FPH);return fsr()}return fpPick(i)}
+ if(a==='fpput'){const [d,id]=i.split('|');sheet(null);fpPut(d,id);return fpRe()}
+ if(a==='fpent'){const [d,k]=i.split('|'),e2=fpOf(d)[+k],r=e2&&rcById(e2.r);if(!r)return;FPE={d,k:+k};
+  sheet(`<h2>${esc(r.n)}</h2><p class="sm" style="margin:-2px 0 10px">${new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</p><p class="sm" style="margin:0 2px 6px">Servings you’ll eat</p><div class="chips">${[.5,1,1.5,2,3].map(n=>`<button class="chip ${+e2.sv===n?'on':''}" data-a="fpsv" data-i="${n}">${n===.5?'Half':n===1.5?'1½':n}</button>`).join('')}</div>
+  <p class="sm" style="margin:12px 2px 6px">Move to</p><div class="chips">${fpDays(fpWs(FPW)).map(x=>`<button class="chip ${x===d?'on':''}" data-a="fpmv" data-i="${x}">${new Date(x+'T12:00').toLocaleDateString('en-GB',{weekday:'short'})}</button>`).join('')}</div>
+  ${(r.steps||[]).length?`<p class="sm" style="margin:14px 2px 0"><b>Method</b></p><ol class="rcmeth">${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`:''}
+  <button class="btn big dng" data-a="fprm" style="margin-top:14px">Remove from plan</button><button class="btn big on" data-a="shx">Done</button>`);return}
+ if(a==='fpsv'&&FPE){const e2=fpOf(FPE.d)[FPE.k];if(e2){e2.sv=+i;save();fpSync()}document.querySelectorAll('#sheet [data-a=fpsv]').forEach(b=>b.classList.toggle('on',b===el));return fpRe()}
+ if(a==='fpmv'&&FPE){const L=fpOf(FPE.d),[e2]=L.splice(FPE.k,1);if(e2){(FP().d[i]=FP().d[i]||[]).push(e2);save();fpSync()}FPE=null;sheet(null);return fpRe()}
+ if(a==='fprm'&&FPE){fpOf(FPE.d).splice(FPE.k,1);save();fpSync();FPE=null;sheet(null);return fpRe()}
+ if(a==='fpcopy'){const ws=fpWs(FPW),pw=addDays(ws,-7);let n=0;fpDays(pw).forEach((d,j)=>{const L=fpOf(d);if(L.length){FP().d[addDays(ws,j)]=(fpOf(addDays(ws,j))).concat(L.map(x=>({...x})));n+=L.length}});save();if(FPW===0)fpSync();toast(n?`${n} meal${n===1?'':'s'} copied from last week.`:'Nothing was planned last week.');return fsr()}
+ if(a==='fpclear'){fpDays(fpWs(FPW)).forEach(d=>delete FP().d[d]);save();if(FPW===0)fpSync();toast('Week cleared.');return fsr()}
+ if(a==='fpstore'){SHD().cur=i;save();return fsr()}
+ if(a==='fpaddi'){const q=$('#fs [data-fpq]'),v=q?q.value.trim():'';if(!v)return;shAdd(fpCur(),shParse(v));save();fsr();const n=$('#fs [data-fpq]');n&&n.focus({preventScroll:true});return}
+ if(a==='fpscan'){SHO={id:fpCur().id,scan:1,fp:1};return bcOpen('shop')}
+ if(a==='fpsync'){fpSync();toast('Shopping list updated from your plan.');return fsr()}
+ if(a==='fpck'){const st=fpCur(),x=st.items[+i];if(!x)return;x.done=!x.done;save();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}const row=el.closest('.fpi');if(row&&x.done){row.classList.add('dn');setTimeout(()=>{row.classList.add('gone');setTimeout(fsr,220)},180)}else fsr();return}
+ if(a==='fpitem'){const st=fpCur(),x=st.items[+i];if(!x)return;FPE={it:+i};const cur=aisleOf(x);
+  sheet(`<h2>${esc(x.n)}</h2><input data-fpin value="${esc(x.n)}" maxlength="50"><label>Price each (£)<input type="number" inputmode="decimal" step="0.01" data-fpip value="${x.p??''}" placeholder="${(shPrice(st.id,x)??'')}"></label>
+  <p class="sm" style="margin:12px 2px 6px">Aisle</p><div class="chips">${AIS.map(([k,n])=>`<button class="chip ${cur===k?'on':''}" data-a="fpai" data-i="${k}">${esc(n)}</button>`).join('')}</div>
+  <div class="chips" style="margin-top:12px"><button class="chip" data-a="shq" data-i="${i}" data-d="-1">One fewer</button><button class="chip" data-a="shq" data-i="${i}" data-d="1">One more</button></div><button class="btn big on" data-a="shx" style="margin-top:12px">Done</button>`);SHO={id:st.id};return}
+ if(a==='fpai'&&FPE&&FPE.it!=null){const x=fpCur().items[FPE.it];if(x){x.ai=i;save()}document.querySelectorAll('#sheet [data-a=fpai]').forEach(b=>b.classList.toggle('on',b===el));return fsr()}
+ if(a==='fphist'){const h=(SHD().hist||[])[+i];if(!h)return;sheet(`<h2>${esc(h.sn)}, week of ${fpLbl(h.ws)}</h2><div class="fpl">${h.items.map(x=>`<div class="fprow"><span>${+x.q>1?x.q+' × ':''}${esc(x.n)}</span><span>${x.p?money(x.p*(+x.q||1)):''}</span></div>`).join('')}</div><button class="btn big on" data-a="fphadd" data-i="${i}" style="margin-top:12px">Add all to this week’s list</button><button class="btn big" data-a="shx">Close</button>`);return}
+ if(a==='fphadd'){const h=(SHD().hist||[])[+i];if(!h)return;const st=fpCur();h.items.forEach(x=>{const it=shAdd(st,{n:x.n,q:x.q,amt:x.amt});if(x.ai)it.ai=x.ai});save();sheet(null);toast(`${h.items.length} items added.`);return fsr()}
+ if(a==='fpren'){const st=fpCur();SHO={id:st.id};sheet(`<h2>${esc(st.n)}</h2><input data-shname value="${esc(st.n)}" maxlength="30"><button class="btn big on" data-a="shrename">Save name</button><button class="btn big" data-a="shdel">Delete this shop</button><button class="btn big" data-a="shx">Cancel</button>`);return}
+ if(a==='shcopy2'){const st=fpCur(),I=fpItems(st);let last='',t=`${st.n} list\n`;I.open.forEach(o=>{const ai=aisleOf(o.x);if(ai!==last){last=ai;t+=`\n${AISN[ai]}\n`}t+=`- ${+o.x.q>1?o.x.q+' × ':''}${o.x.n}${o.x.amt?` (${o.x.amt})`:''}\n`});try{navigator.clipboard.writeText(t);toast('List copied, in aisle order.')}catch(_){toast('Couldn’t copy on this phone.')}return}
+ if(a==='fprec'){return rcLogSheet(+i)}
+ if(a==='rcpaste'){RCP='';sheet(`<h2>Paste a recipe</h2><p class="sm" style="margin:-2px 0 10px">Copy the ingredients and method from any website or post, and paste them here. Swell turns it into a recipe with numbered steps, in UK measures and words.</p><textarea class="rcpaste" data-rcp placeholder="Paste here"></textarea><button class="btn big on" data-a="rcpgo">Tidy it up</button><button class="btn big" data-a="shx">Cancel</button>`);setTimeout(()=>{const t=$('#sheet [data-rcp]');t&&t.focus()},60);return}
+ if(a==='rcpgo'){const t=($('#sheet [data-rcp]')||{}).value||'';if(!t.trim()){toast('Paste a recipe first.');return}el.disabled=true;el.textContent='Tidying…';feReady().then(()=>{const r=rcFromText(t);RCD={n:r.n,sv:r.sv||'',items:r.items,steps:r.steps,msg:`${r.items.length} ingredient${r.items.length===1?'':'s'} and ${r.steps.length} step${r.steps.length===1?'':'s'}${r.conv?', converted to UK measures':''}. Check the amounts, then save.`};rcSheet()}).catch(()=>{el.disabled=false;el.textContent='Tidy it up';toast('The food list needs a signal the first time.')});return}},true);
+let FPE=null,RCP='';
+document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-fpsd]')){SHD().day=t.value===''?null:+t.value;SHD().ws=null;save();fpRoll();fsr()}},true);
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-fpq]')){e.preventDefault();const b=$('#fs [data-a=fpaddi]');b&&b.click()}});
+document.addEventListener('input',e=>{const t=e.target;if(!FPE||FPE.it==null||!t.matches)return;const st=fpCur(),x=st.items[FPE.it];if(!x)return;if(t.matches('[data-fpin]')){x.n=t.value.slice(0,50);save()}if(t.matches('[data-fpip]')){const v=numIn(t.value);x.p=t.value===''||isNaN(v)?null:Math.max(0,Math.min(999,v));shRemember(st.id,x);save()}});
+{const _sh=sheet;sheet=function(h){const r=_sh.apply(this,arguments);if(!h&&FS==='food'){FPE=null;setTimeout(()=>{if(FS==='food'&&!$('#sheet'))fsr()},260)}return r}}
+// the old list sheet now opens the Food plan list
+{const _s=shSheet;shSheet=function(id){if(FS==='food'||SHO&&SHO.fp){SHD().cur=id;sheet(null);SHO=null;FPT='list';if(FS!=='food')fsOpen('food');else fsr();return}return _s.apply(this,arguments)}}
+// drag a recipe onto a day
+{let D=null;window.addEventListener('pointerdown',e=>{const b=e.target.closest('#fs .fptray [data-a=fphold]');if(!b)return;D={id:b.dataset.i,x:e.clientX,y:e.clientY,b,on:false,t:setTimeout(()=>{if(D&&!D.mv)start()},280)};const start=()=>{if(!D)return;D.on=true;D.g=document.createElement('div');D.g.className='fpghost';D.g.textContent=b.childNodes[0].textContent;document.body.appendChild(D.g);D.g.style.left=D.x+'px';D.g.style.top=D.y+'px';document.querySelectorAll('#fs .fpd').forEach(x=>x.classList.add('tgt'));try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}};D.start=start},true);
+ window.addEventListener('pointermove',e=>{if(!D)return;const dx=e.clientX-D.x,dy=e.clientY-D.y;if(!D.on){if(Math.abs(dy)>12&&Math.abs(dy)>Math.abs(dx)){clearTimeout(D.t);D.start()}else if(Math.abs(dx)>10){clearTimeout(D.t);D=null}return}e.preventDefault();D.g.style.left=e.clientX+'px';D.g.style.top=e.clientY+'px';
+  document.querySelectorAll('#fs .fpd').forEach(x=>{const r=x.getBoundingClientRect();x.classList.toggle('over',e.clientY>=r.top&&e.clientY<=r.bottom)});const o=$('#fs');if(o){if(e.clientY>innerHeight-80)o.scrollTop+=12;else if(e.clientY<120)o.scrollTop-=12}},{passive:false,capture:true});
+ const end=e=>{if(!D)return;clearTimeout(D.t);if(D.on){const t=$('#fs .fpd.over');D.g.remove();document.querySelectorAll('#fs .fpd').forEach(x=>x.classList.remove('tgt','over'));const id=D.id;D=null;DRG=Date.now();if(t){fpPut(t.dataset.fpd,id);fsr()}return}D=null};
+ window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true);
+ window.addEventListener('click',e=>{if(Date.now()-DRG<400&&e.target.closest('#fs .fptray')){e.stopImmediatePropagation();e.preventDefault()}},true)}
+let DRG=0;
+/* --- recipes: method steps and pasting --- */
+const USUK=[[/\buncooked\b/gi,'raw'],[/\bzucchinis?\b/gi,'courgette'],[/\beggplants?\b/gi,'aubergine'],[/\bcilantro\b/gi,'coriander'],[/\bscallions?\b|\bgreen onions?\b/gi,'spring onions'],[/\bground beef\b/gi,'beef mince'],[/\bground turkey\b/gi,'turkey mince'],[/\bground chicken\b/gi,'chicken mince'],[/\bground pork\b/gi,'pork mince'],
+ [/\ball[- ]purpose flour\b/gi,'plain flour'],[/\bpowdered sugar\b|\bconfectioners'? sugar\b/gi,'icing sugar'],[/\bsuperfine sugar\b/gi,'caster sugar'],[/\bheavy (whipping )?cream\b/gi,'double cream'],[/\bhalf[- ]and[- ]half\b/gi,'single cream'],[/\bbaking soda\b/gi,'bicarbonate of soda'],[/\bcornstarch\b/gi,'cornflour'],
+ [/\bbell peppers?\b/gi,'peppers'],[/\bgarbanzo beans?\b/gi,'chickpeas'],[/\bshrimp\b/gi,'prawns'],[/\barugula\b/gi,'rocket'],[/\bromaine\b/gi,'cos lettuce'],[/\bcanola oil\b/gi,'rapeseed oil'],[/\bkosher salt\b/gi,'sea salt'],[/\bskim milk\b/gi,'skimmed milk'],[/\b2% milk\b/gi,'semi-skimmed milk'],[/\bnonfat\b/gi,'fat-free'],
+ [/\bplastic wrap\b/gi,'cling film'],[/\baluminum foil\b/gi,'foil'],[/\bparchment paper\b/gi,'baking paper'],[/\bcookie sheet\b|\bsheet pan\b/gi,'baking tray'],[/\bskillet\b/gi,'frying pan'],[/\bbroil(ed|ing)?\b/gi,(m,s)=>'grill'+(s==='ed'?'ed':s==='ing'?'ing':'')],[/\bbroiler\b/gi,'grill'],[/\bstovetop\b/gi,'hob'],[/\bcandy\b/gi,'sweets'],[/\bmolasses\b/gi,'black treacle'],[/\bsnow peas\b/gi,'mangetout'],[/\bgreek yogurt\b/gi,'Greek yoghurt'],[/\byogurt\b/gi,'yoghurt'],
+ [/\bcolor/gi,'colour'],[/\bflavor/gi,'flavour'],[/\bfavorite/gi,'favourite'],[/\bcenter\b/gi,'centre'],[/\bliters?\b/gi,m=>m.toLowerCase().replace('liter','litre')],[/\bfiber\b/gi,'fibre'],[/\bgray\b/gi,'grey']];
+// typical weights of one US cup (King Arthur Baking ingredient weight chart, USDA household measures)
+const CUPG=[[/coriander|cilantro|parsley|basil|mint|dill|chives|herb/,16],[/flour/,125],[/icing sugar/,120],[/brown sugar/,220],[/sugar/,200],[/butter/,227],[/oat/,90],[/rice/,185],[/quinoa/,170],[/yoghurt|yogurt/,245],[/peanut butter|nut butter/,256],[/grated cheese|cheese/,100],[/berr|blueberr|strawberr|raspberr/,150],[/spinach|kale|rocket|lettuce/,30],[/chocolate chip/,170],[/nut|almond|walnut|cashew/,140],[/honey|maple|syrup/,340],[/protein powder|whey/,100],[/breadcrumb/,110],[/cocoa/,85],[/coconut/,80],[/sweetcorn|corn|peas|beans|chickpea/,165],[/pasta|macaroni/,100],[/onion|pepper|carrot|celery/,130],[/tomato/,180]];
+const FRAC={'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125};
+const numOf=s=>{s=s.trim().replace(/[½¼¾⅓⅔⅛]/g,m=>' '+FRAC[m]);let t=0;s.split(/\s+/).filter(Boolean).forEach(p=>{if(/^\d+\/\d+$/.test(p)){const [a,b]=p.split('/');t+=+a/+b}else if(!isNaN(+p))t+=+p});return t};
+function usUk(line){let s=line,conv=false;const q='((?:\\d+\\s+)?\\d+\\/\\d+|\\d+(?:\\.\\d+)?(?:\\s*[½¼¾⅓⅔⅛])?|[½¼¾⅓⅔⅛])';
+ s=s.replace(/(\d{3})\s*°?\s*F\b|(\d{3})\s*degrees\s*F(ahrenheit)?/gi,(m,a,b)=>{const f=+(a||b),c=Math.round((f-32)*5/9/10)*10;conv=true;return`${c}°C (${c-20}°C fan)`});
+ s=s.replace(new RegExp(q+'\\s*(cups?|c\\.)\\s+(?:of\\s+)?([^,;(]*)','gi'),(m,n,u,rest)=>{const v=numOf(n),r=rest.toLowerCase();conv=true;if(/milk|water|stock|broth|juice|cream(?! cheese)|oil|wine|vinegar|sauce|liquid/.test(r))return`${Math.round(v*240/5)*5} ml ${rest}`;const g=(CUPG.find(([re])=>re.test(r))||[0,null])[1];return g?`${Math.round(v*g/5)*5} g ${rest}`:`${Math.round(v*240/5)*5} ml ${rest}`});
+ s=s.replace(new RegExp(q+'\\s*sticks?\\s+(?:of\\s+)?butter','gi'),(m,n)=>{conv=true;return`${Math.round(numOf(n)*113)} g butter`});
+ s=s.replace(new RegExp(q+'\\s*(?:fl\\.?\\s*oz|fluid ounces?)\\b','gi'),(m,n)=>{conv=true;return`${Math.round(numOf(n)*30)} ml`});
+ s=s.replace(new RegExp(q+'\\s*(?:oz|ounces?)\\b','gi'),(m,n)=>{conv=true;return`${Math.round(numOf(n)*28.35)} g`});
+ s=s.replace(new RegExp(q+'\\s*(?:lbs?|pounds?)\\b','gi'),(m,n)=>{conv=true;return`${Math.round(numOf(n)*453.6/5)*5} g`});
+ s=s.replace(new RegExp(q+'\\s*quarts?\\b','gi'),(m,n)=>{conv=true;return`${Math.round(numOf(n)*946/10)*10} ml`});
+ s=s.replace(/\b(\d+)\s*-?\s*inch(es)?\b|\b(\d+)"/gi,(m,a,_,b)=>{conv=true;return`${Math.round(+(a||b)*2.54)} cm`});
+ s=s.replace(/\bTbsp\b|\btbs\b|\bT\b(?=\s)/g,'tbsp').replace(/\bTsp\b|\bt\b(?=\s)/g,'tsp');
+ USUK.forEach(([re,to])=>{const n=s.replace(re,to);if(n!==s){s=n}});return{s,conv}}
+const JUNK=/^(advertisement|jump to|print( recipe)?|pin( it)?|save|rate this|share|nutrition( facts| information)?|calories|protein|carbs|carbohydrates|fat|sugar|fibre|fiber|sodium|serving size|prep time|cook time|total time|course|cuisine|keyword|author|notes?:?$|video|watch)\b/i;
+function rcFromText(txt){let conv=false;const raw=txt.replace(/\r/g,'').split('\n').map(l=>l.replace(/[•▢☐□✓•*·\-–]+\s*/,'').replace(/\s+/g,' ').trim()).filter(Boolean);
+ let n='',sv=null,mode=null;const ing=[],steps=[];
+ const isIng=l=>/^((?:\d+\s+)?\d+\/\d+|\d+(?:\.\d+)?|[½¼¾⅓⅔⅛]|a |an |one |two |pinch|handful|dash|splash)/i.test(l)&&l.length<90;
+ raw.forEach((l,i)=>{const m=l.match(/\b(?:serves|servings?|makes|yield)\s*:?\s*(\d+)/i)||l.match(/^(\d+)\s+servings?\b/i);if(m&&!sv){sv=+m[1];if(l.length<30)return}
+  if(/^ingredients?\b:?/i.test(l)&&l.length<30){mode='i';return}if(/^(method|instructions?|directions?|steps?|preparation|how to make( it)?)\b:?/i.test(l)&&l.length<40){mode='s';return}
+  if(JUNK.test(l)&&l.length<60)return;
+  if(!n&&i<3&&l.length<70&&!isIng(l)&&mode==null){n=l;return}
+  const st=l.replace(/^(step\s*)?\d+[\.\):]\s*/i,'');
+  if(mode==='i'||(mode==null&&isIng(l)))ing.push(l);else if(mode==='s'||l.length>=40||/^(step\s*)?\d+[\.\):]/i.test(l))steps.push(st);else if(mode==null)ing.push(l)});
+ // one long paragraph of method becomes sentences
+ let S2=steps.length===1&&steps[0].length>180?steps[0].split(/(?<=[.!?])\s+(?=[A-Z])/):steps;
+ S2=S2.map(s=>{const r=usUk(s);conv=conv||r.conv;return r.s.replace(/^./,c=>c.toUpperCase())}).filter(s=>s.length>2);
+ const items=ing.map(l=>{const r=usUk(l);conv=conv||r.conv;const t=r.s;const x=rcItem(t);return x||{q:t,nm:t,g:0,k:0,p:0,f:0,c:0,fb:null,ri:null}});
+ return{n:(n||'My recipe').slice(0,60),sv,items,steps:S2,conv}}
+// method steps in the recipe editor
+{const _p=rcParts;rcParts=function(r){const P=_p.apply(this,arguments);r.steps=r.steps||[];P.st=`<div class="rcst">${r.steps.map((s,j)=>`<div><b>${j+1}</b><textarea data-rcs="${j}" rows="2" aria-label="Step ${j+1}">${esc(s)}</textarea><button class="glink" data-a="rcsrm" data-i="${j}" style="margin-top:10px">Remove</button></div>`).join('')}</div>`;return P}}
+{const _s=rcSheet;rcSheet=function(){if(RCD&&!RCD.steps)RCD.steps=RCD.i!=null&&S.recipes[RCD.i]?(S.recipes[RCD.i].steps||[]).slice():[];_s.apply(this,arguments);try{const P=rcParts(RCD),t=$('#sheet .rctot');if(t&&!$('#sheet .rcstw')){t.insertAdjacentHTML('beforebegin',`<div class="rcstw"><p class="sm" style="margin:14px 0 4px"><b>Method</b></p>${P.st}<div class="rcadd"><input data-rcsq placeholder="Add a step" enterkeyhint="done" autocomplete="off"><button class="btn" data-a="rcsadd">Add</button></div></div>`)}
+ const h=$('#sheet h2');if(h&&RCD.i==null&&!RCD.items.length&&!$('#sheet [data-a=rcpaste]'))h.insertAdjacentHTML('afterend','<button class="btn" data-a="rcpaste" style="width:100%;margin:0 0 10px">Paste a recipe instead</button>')}catch(_){}}}
+const rcStPaint=()=>{const w=$('#sheet .rcst');if(w)w.outerHTML=rcParts(RCD).st};
+document.addEventListener('input',e=>{const t=e.target;if(RCD&&t.dataset&&t.dataset.rcs!=null){RCD.steps[+t.dataset.rcs]=t.value}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches&&e.target.matches('[data-rcsq]')){e.preventDefault();const b=$('#sheet [data-a=rcsadd]');b&&b.click()}});
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=rcsadd],[data-a=rcsrm]');if(!el||!RCD)return;e.stopImmediatePropagation();e.preventDefault();RCD.steps=RCD.steps||[];
+ if(el.dataset.a==='rcsadd'){const q=$('#sheet [data-rcsq]'),v=q?q.value.trim():'';if(!v)return;RCD.steps.push(usUk(v).s);q.value='';rcStPaint();q.focus({preventScroll:true})}else{RCD.steps.splice(+el.dataset.i,1);rcStPaint()}},true);
+// saving keeps steps and the recipe's id; the plan and the list update
+let PRS=null;window.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-a=rcsave]');if(!el||!RCD)return;const i=RCD.i;PRS={st:(RCD.steps||[]).map(x=>String(x).trim()).filter(Boolean),i,id:i!=null&&S.recipes[i]?rcId(S.recipes[i]):null,n:(S.recipes||[]).length,at:Date.now()}},true);
+{const _r=render;render=function(){const r=_r.apply(this,arguments);if(PRS&&Date.now()-PRS.at<4000&&!RCD){const P=PRS;PRS=null;const L=S.recipes||[],x=P.i!=null?L[P.i]:L.length>P.n?L[L.length-1]:null;if(x){x.steps=P.st;if(P.id)x.id=P.id;rcId(x);save();if(FS==='food'){fpSync();setTimeout(fsr,0)}}}return r}}
+// the recipe view shows its method
+{const _l=rcLogSheet;rcLogSheet=function(i){_l.apply(this,arguments);try{const r=S.recipes[i];if(r&&(r.steps||[]).length){const b=$('#sheet [data-a=rclog]');if(b)b.insertAdjacentHTML('beforebegin',`<p class="sm" style="margin:12px 2px 0"><b>Method</b></p><ol class="rcmeth" style="margin-bottom:14px">${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`)}
+ const b2=$('#sheet [data-a=rcedit]');if(b2)b2.insertAdjacentHTML('afterend',`<button class="btn big" data-a="fpopen" data-i="plan">Add to my week</button>`)}catch(_){}}}
+// prompt stays in the Diet tab and the widget; make sure the list is current when the app opens
+try{fpRoll()}catch(_){}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 4h2l2.4 11h11L21 8H7"/>',h:'Food plan and shopping',p:'Plan your week by dropping recipes into days. Swell scores the week’s balance, writes your shopping list in aisle order, and gets it ready on your usual shop day. Paste recipes from any website and they come out as numbered steps in UK measures. There’s a Shopping widget too.'})}
 
 render();periodic();reqShow();
 </script>
