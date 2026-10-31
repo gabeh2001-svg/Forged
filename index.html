@@ -5670,6 +5670,30 @@ window.addEventListener('click',e=>{const el=e.target.closest('#sheet [data-a=se
  {i:'<path d="M6 12h12M12 6v12"/>',h:'Sugar under Carbs',p:'Tap Carbs on the Diet tab to see how much sugar you’ve had today.'},
  {i:'<path d="M4 12h3l2-5 4 10 2-5h5"/>',h:'Supplements for training days',p:'Set a supplement to “On days I’m training” and it follows your plan.'})}
 
+/* ===== v76: smoother on phones, a clean landing when a page collapses into its widget, deadline tile that fits ===== */
+// Research notes for this block:
+// - Frame budget: smooth motion needs each frame done in about 16 ms (web.dev, RAIL model). On iPhone the costliest thing on
+//   screen is backdrop blur: WebKit has to blur again every frame that anything behind the glass changes. The drifting
+//   background lights sat behind every card, so each card re-blurred all the time. They now pause while you scroll, touch,
+//   or have a page or sheet open, and carry on when you stop, which is when you would notice them.
+// - The dark flash after collapsing a page: the widget's numbers had changed, so it was treated as a new card and faded in
+//   from transparent, and a half-transparent glass card shows the dark backdrop for a moment. Widgets are now matched by
+//   which widget they are, not by their text, and no entrance animation runs while a page is landing back.
+(function(){const st=document.createElement('style');st.textContent=`
+html.busy #bgl.drift i,html.ovr #bgl.drift i{animation-play-state:paused}
+.gdl{display:flex;flex-direction:column;height:100%;justify-content:center;gap:4px;text-align:center}
+.gdl .when{font-size:13px}.gdl b{font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gdl .gdb{display:flex;gap:6px;margin-top:6px}.gdl .gdb .btn{flex:1;margin:0;padding:8px 0;font-size:14px;min-height:0}`;document.head.appendChild(st)})();
+{let tm=0;const busy=()=>{document.documentElement.classList.add('busy');clearTimeout(tm);tm=setTimeout(()=>document.documentElement.classList.remove('busy'),400)};
+ addEventListener('scroll',busy,{passive:true,capture:true});addEventListener('touchstart',busy,{passive:true});addEventListener('touchmove',busy,{passive:true});addEventListener('touchend',busy,{passive:true});
+ const ovr=()=>{const s=$('#sheet');document.documentElement.classList.toggle('ovr',!!($('#fs')||$('#lx2')||$('#aw')||$('#bcs')||(s&&s.classList.contains('on'))))};
+ new MutationObserver(ovr).observe(document.body,{childList:true,attributes:true,attributeFilter:['class'],subtree:false});ovr()}
+{const _k=fxKey;fxKey=function(el){if(el.matches&&el.matches('.wd[data-id]'))return'wd|'+el.dataset.id;return _k.apply(this,arguments)}}
+let FXQ=0;
+{const _fa=fxApply;fxApply=function(root,pre,same){if(Date.now()-FXQ<1500)return _fa.call(this,root,pre,false);return _fa.apply(this,arguments)}}
+{const _fc=fsClose;fsClose=function(){if(FS)FXQ=Date.now();return _fc.apply(this,arguments)}}
+{const _g=goalW;goalW=function(l){const G=S.goal2;if(G&&G.due&&G.due<=realToday()&&l&&l.w===1&&l.h===1)return`<div class="gdl"><span class="when">Deadline reached</span><b>Did you hit “${esc(G.name)}”?</b><div class="gdb"><button class="btn on" data-a="gyes2">Yes</button><button class="btn" data-a="gno2">Not yet</button></div></div>`;return _g.apply(this,arguments)}}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
