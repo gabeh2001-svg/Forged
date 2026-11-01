@@ -9476,6 +9476,49 @@ document.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.ob
   h=h.replace(/(<label style="display:block;margin-top:12px">Know your BMR\?)/,q+'$1')}catch(_){}return h}}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=esst]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const X=S.setup.est=S.setup.est||{};X.steps=+el.dataset.i;save();sheet(estForm())},true);
 
+/* ===== v123: calmer session switch, centred picker and sheet handle, Food plan label, and wording that fits your phone ===== */
+// Research notes for this block:
+// - Changing the session swaps one card; replaying the whole page's entrance on every change reads as a flicker
+//   (one motion per change; Material "choreography"). Only the session card cross-fades now.
+// - The picker: a native <select> can't be styled consistently (iOS draws its own text box), so the visible control is
+//   our own label and chevron, with the real select laid invisibly over it. Tapping still opens the phone's native
+//   picker (best for accessibility and long lists, Apple HIG "Pickers"), and the label is centred however long it is,
+//   trimmed with an ellipsis.
+// - Platform language: people look for the names their phone uses (Apple Health on iPhone; Health Connect, Google Fit
+//   or Samsung Health on Android), and step counts sit in different places, so copy names the right one (NN/g,
+//   "Match between system and the real world"). Detection is from the browser's user agent and only changes wording.
+// - Layout already follows the screen: width-based layout, safe-area insets for notches, Dynamic Island and the home
+//   bar (viewport-fit=cover with env(safe-area-inset-*)); this block also checks small screens (320 px wide, iPhone SE
+//   and older Androids) where long labels could overflow.
+(function(){const st=document.createElement('style');st.textContent=`
+.shg{max-width:none!important;width:calc(100% + 36px)!important;margin-left:-18px!important;margin-right:0!important;box-sizing:border-box;align-self:auto}
+.fpwg2 .wl{gap:8px}.fpwg2 .wl em{margin-left:auto;text-align:right;white-space:nowrap}
+.selw{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;min-width:120px;max-width:60%;padding:0 14px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);box-sizing:border-box;color:#F3F1EC;font-size:15px;font-weight:700}
+.selw .selv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.selw svg{flex:none;width:14px;height:14px;opacity:.75}
+.selw select{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;opacity:0!important;margin:0!important;padding:0!important;cursor:pointer;font-size:16px}
+@media (max-width:350px){.chips.g2>*{font-size:14px;padding:9px 8px}.fht .big{font-size:38px}.obw h1{font-size:34px}.wkL .nm{font-size:32px}.hdr .tl{font-size:44px}}`;document.head.appendChild(st)})();
+
+/* ---------- 1. switching session: only the card changes ---------- */
+let QFX=0;
+document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('.wkst'))QFX=Date.now()},true);
+{const _fa=fxApply;fxApply=function(root,pre,same){if(root&&root.id==='app'&&Date.now()-QFX<700){QFX=0;try{const h=root.querySelector('.wkhero,.whero,[class*=wkh]');if(h&&!MRM())h.animate([{opacity:.4},{opacity:1}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(_){}return}return _fa.apply(this,arguments)}}
+
+/* ---------- 2. the session picker: our label, the phone's picker ---------- */
+const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10l4-4 4 4M8 14l4 4 4-4"/></svg>';
+function selWrap(){document.querySelectorAll('.wkst>label>select:not([data-sw])').forEach(s=>{s.dataset.sw=1;const w=document.createElement('span');w.className='selw';s.parentNode.insertBefore(w,s);w.appendChild(s);
+ const v=document.createElement('span');v.className='selv';w.insertBefore(v,s);w.insertAdjacentHTML('beforeend',CHEV);const upd=()=>{const o=s.options[s.selectedIndex];v.textContent=o?o.textContent:''};upd();s.addEventListener('change',upd)})}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{selWrap()}catch(_){}return r}}
+
+/* ---------- 3. wording that matches the phone ---------- */
+const DEV=(()=>{const u=navigator.userAgent||'',ios=/iPhone|iPad|iPod/.test(u)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1,and=/Android/.test(u),sam=/SM-|Samsung/i.test(u);return{ios,and,sam,health:ios?'the Health app':sam?'Samsung Health':and?'Google Fit or Health Connect':'your phone’s health or fitness app'}})();
+const devCopy=s=>String(s).replace(/your phone’s Health app shows this/g,`${DEV.health} shows this`).replace(/your phone's Health app/g,DEV.health);
+{const _s=obStep;obStep=function(){return devCopy(_s.apply(this,arguments))}}
+{const _e=estForm;estForm=function(){return devCopy(_e.apply(this,arguments))}}
+// saving the report: say how on this phone
+{const _o=rpOpen;rpOpen=function(){_o.apply(this,arguments);try{const b=$('#rpt .rpbar b');if(b&&!b.dataset.dv){b.dataset.dv=1;b.title=DEV.ios?'Save as PDF opens the print sheet: tap the share button there to save or send the PDF.':DEV.and?'Save as PDF opens Print: choose “Save as PDF” as the printer.':''}}catch(_){}}}
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=rppdf]'))return;if(DEV.ios)toast('In the print sheet, tap Share to save or send the PDF.');else if(DEV.and)toast('Choose “Save as PDF” as the printer.')},true);
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
