@@ -7165,7 +7165,7 @@ lqDraw=function(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s
  body();const g=x.createLinearGradient(0,top,0,H),T=K.top,M=K.mid||K.top,B=K.bot;g.addColorStop(0,`rgba(${T},.95)`);g.addColorStop(.45,`rgba(${M},.97)`);g.addColorStop(1,`rgba(${B},.99)`);x.fillStyle=g;x.fill();
  x.save();body();x.clip();
  // light shafts from the surface
- if(!LRM()){x.globalCompositeOperation='lighter';for(let j=0;j<3;j++){const cx=W*(.2+j*.3)+Math.sin(t*.012+j*1.9)*W*.06,w=W*(.07+j*.02),lg=x.createLinearGradient(0,top,0,H);lg.addColorStop(0,'rgba(255,255,255,.10)');lg.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=lg;x.beginPath();x.moveTo(cx-w,top);x.lineTo(cx+w,top);x.lineTo(cx+w*2.2+W*.12,H);x.lineTo(cx-w*.4+W*.12,H);x.closePath();x.fill()}
+ if(!LRM()&&k!=='caf'){x.globalCompositeOperation='lighter';for(let j=0;j<3;j++){const cx=W*(.2+j*.3)+Math.sin(t*.012+j*1.9)*W*.06,w=W*(.07+j*.02),lg=x.createLinearGradient(0,top,0,H);lg.addColorStop(0,'rgba(255,255,255,.10)');lg.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=lg;x.beginPath();x.moveTo(cx-w,top);x.lineTo(cx+w,top);x.lineTo(cx+w*2.2+W*.12,H);x.lineTo(cx-w*.4+W*.12,H);x.closePath();x.fill()}
  // caustics: a moving web of light, strongest near the top
   const C=lqCaus(),sc=1.6*d,ox=(t*.35)%(128*sc),oy=(t*.18)%(128*sc);x.globalAlpha=k==='caf'?.05:.13;const pat=x.createPattern(C,'repeat'),m=new DOMMatrix();
   pat.setTransform(m.translate(-ox,-oy).scale(sc));x.fillStyle=pat;x.fillRect(0,top,W,(H-top)*.75);
@@ -7175,8 +7175,8 @@ lqDraw=function(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s
  const ub=x.createLinearGradient(0,top,0,top+12*d);ub.addColorStop(0,'rgba(255,255,255,.16)');ub.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=ub;x.fillRect(0,top,W,12*d);
  // drifting specks and bubbles
  s.sp=s.sp||[...Array(14)].map(()=>({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.1,v:(Math.random()-.5)*.0006}));x.fillStyle='rgba(255,255,255,.22)';
- s.sp.forEach(p=>{p.x=(p.x+p.v+1)%1;p.y=(p.y+Math.sin(t*.01+p.x*9)*.0003+1)%1;const py=top+p.y*(H-top);x.beginPath();x.arc(p.x*W,py,p.r*d,0,7);x.fill()});
- s.bub.forEach(b=>{const bx=b.x*W,by=b.y*H;x.beginPath();x.arc(bx,by,b.r*d,0,7);x.strokeStyle='rgba(255,255,255,.5)';x.lineWidth=d*.8;x.stroke();x.beginPath();x.arc(bx-b.r*d*.35,by-b.r*d*.35,b.r*d*.3,0,7);x.fillStyle='rgba(255,255,255,.75)';x.fill()});
+ (k==='caf'?[]:s.sp).forEach(p=>{p.x=(p.x+p.v+1)%1;p.y=(p.y+Math.sin(t*.01+p.x*9)*.0003+1)%1;const py=top+p.y*(H-top);x.beginPath();x.arc(p.x*W,py,p.r*d,0,7);x.fill()});
+ (k==='caf'?[]:s.bub).forEach(b=>{const bx=b.x*W,by=b.y*H;x.beginPath();x.arc(bx,by,b.r*d,0,7);x.strokeStyle='rgba(255,255,255,.5)';x.lineWidth=d*.8;x.stroke();x.beginPath();x.arc(bx-b.r*d*.35,by-b.r*d*.35,b.r*d*.3,0,7);x.fillStyle='rgba(255,255,255,.75)';x.fill()});
  x.restore();
  // crema, then the meniscus: a bright line with a darker edge under it
  if(K.crema){x.save();path();x.lineTo(W,sy(n-1)+7*d);for(let i=n-1;i>=0;i--)x.lineTo(i/(n-1)*W,sy(i)+7*d);x.closePath();const cg=x.createLinearGradient(0,top,0,top+8*d);cg.addColorStop(0,`rgba(${K.crema},.95)`);cg.addColorStop(1,`rgba(${K.crema},.6)`);x.fillStyle=cg;x.fill();x.restore()}
@@ -7185,7 +7185,7 @@ lqDraw=function(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s
  x.fillStyle='rgba(255,255,255,.85)';for(let j=0;j<2;j++){const i=((t*.15+j*13)|0)%n;x.beginPath();x.ellipse(i/(n-1)*W,sy(i)+2.5*d,5*d,1.1*d,0,0,7);x.fill()}
  // the numbers: crisp above the surface; under it, dimmer and wavier, as if seen through the water
  const off=lqText(k,V,W,H,d);x.save();path();x.lineTo(W,0);x.lineTo(0,0);x.closePath();x.clip();x.drawImage(off,0,0);x.restore();
- x.save();body();x.clip();x.globalAlpha=.58;const step=2*d;for(let y=Math.max(0,(top|0)-step);y<H;y+=step){const dx=LRM()?0:(Math.sin(y*.085/d+t*.11)*1.6+Math.sin(y*.031/d-t*.07)*1.1)*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}
+ x.save();body();x.clip();x.globalAlpha=k==='caf'?.38:.58;const step=2*d;for(let y=Math.max(0,(top|0)-step);y<H;y+=step){const dx=LRM()?0:(Math.sin(y*.085/d+t*.11)*1.6+Math.sin(y*.031/d-t*.07)*1.1)*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}
  x.globalAlpha=.10;x.fillStyle=`rgb(${M})`;x.fillRect(0,top,W,H-top);x.restore()};
 // the tank is filled right to the brim when you reach your goal
 // Edit Home: one dock at the bottom with your looks, Add widget and Done
@@ -7331,6 +7331,181 @@ function dietDress(){if(!S.nat||!NAT[S.nat]||tab!=='diet')return;const A=$('#app
 window.addEventListener('click',e=>{const h=e.target.closest('#app.dv .dacc>h2');if(h){const c=h.parentElement,id=c.dataset.acc;c.classList.toggle('open');c.classList.contains('open')?DGO.acc.add(id):DGO.acc.delete(id);return}
  const m=e.target.closest('[data-a=mnmore]');if(m){e.stopImmediatePropagation();e.preventDefault();DGO.mn=!DGO.mn;const c=m.closest('.mnc');c.classList.toggle('all',DGO.mn);m.textContent=DGO.mn?'Show fewer':`Show all ${c.querySelectorAll('.mnl .mnb').length}`}},true);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="13" r="7"/><path d="M12 3v3"/>',h:'A cleaner Diet page',p:'What’s left today up top, four quick ways to add food, and the page grouped so you can find things at a glance.'})}
+/* ===== v94: sliding pill toggles, a cleaner scanner close, look previews with your own colours, coffee that looks like coffee ===== */
+// Research notes for this block:
+// - A selection pill that slides between options shows where you came from and where you went, which helps people keep
+//   track of state changes (Material Design motion, "transitions show relationships"; Apple HIG, Motion). It runs for
+//   about 300 ms with a slight overshoot, quick enough not to slow anyone down (NN/g, "Animation duration": 200 to 500 ms).
+// - The scanner closes with a standard X in the corner, where people expect to find it (Apple HIG, Modality: a clear,
+//   consistent way to dismiss).
+// - Each look is shown as a tiny version of the app (background, glow, a glass card and the accent), which is easier to
+//   judge than abstract colour dots: people pick themes by recognising how they'll look (recognition rather than recall).
+// - Custom colours keep text readable whatever you choose: the accent is lightened until it has at least 4.5:1 contrast
+//   on the dark glass (WCAG 2.2, 1.4.3), and the page text switches between dark and light with the background.
+// - Coffee is opaque, with no bubbles or light rays, and a thicker crema, which is what tells people it's coffee rather
+//   than cola: colour, opacity and a foam layer are the main cues for recognising a drink (Spence and Piqueras-Fiszman
+//   2014, "The Perfect Meal").
+(function(){const st=document.createElement('style');st.textContent=`
+.seg:has(>button){position:relative;background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;gap:2px}
+.seg:has(>button)>button{position:relative;z-index:1;background:transparent!important;transition:color .25s}
+.seg:has(>button)>button.on{color:#14122b!important}
+.seg>.segi{position:absolute;left:0;top:0;border-radius:999px;background:#fff;z-index:0;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.seg>.segi.go{transition:transform .32s cubic-bezier(.3,1.25,.5,1),width .32s cubic-bezier(.3,1.25,.5,1)}
+#bcs .glink[data-a=bcx],#bcs .bca [data-a=bcx]{display:none!important}
+.bcxx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;z-index:5;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(20,20,20,.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;display:grid;place-items:center;padding:0}
+.bcxx svg{width:18px;height:18px}
+.fpday{align-items:center!important}.fpday>.sm{flex:1;font-size:13px!important;line-height:1.35!important;margin:0!important}
+.eddock .lk i,.eddock .lk i::after{all:unset}
+.eddock .lk .lkp{position:relative;display:block;width:44px;height:58px;border-radius:13px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),0 4px 12px rgba(0,0,0,.35);transition:transform .2s}
+.eddock .lk .lkp>em{position:absolute;inset:0}
+.eddock .lk .lkp>u{position:absolute;left:6px;right:6px;bottom:6px;height:22px;border-radius:7px;background:rgba(14,14,14,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.eddock .lk .lkp>u::after{content:"";position:absolute;left:5px;top:8px;width:16px;height:5px;border-radius:3px;background:var(--a)}
+.eddock .lk .lkp>s{position:absolute;left:6px;top:7px;width:20px;height:4px;border-radius:2px;background:var(--t)}
+.eddock .lk button.on .lkp{transform:translateY(-2px);box-shadow:0 0 0 2px #141414,0 0 0 4px #fff,0 8px 16px rgba(0,0,0,.4)}
+.eddock .lk .lkp.cu{background:conic-gradient(from 200deg,#E0643A,#B4BF55,#4F98B8,#8C3E6A,#FF8E7A,#E0643A);display:grid;place-items:center}
+.eddock .lk .lkp.cu b{width:24px;height:24px;border-radius:50%;background:rgba(14,14,14,.7);color:#fff;display:grid;place-items:center;font-size:18px;line-height:1}
+.cupk{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 14px}.cupk label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--dim)}
+.cupk input[type=color]{width:100%;height:52px;padding:0;border:1px solid rgba(255,255,255,.15);border-radius:14px;background:none}
+.cuprev{height:150px;border-radius:20px;position:relative;overflow:hidden;margin:4px 0 10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.cuprev .cpg{position:absolute;left:14px;right:14px;bottom:14px;padding:12px 14px;border-radius:16px;color:#F3F1EC;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.cuprev .cpg b{display:block;font-size:22px;font-weight:900;font-family:'Archivo',system-ui,sans-serif;font-stretch:72%}
+.cuprev .cpg i{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:10px;font-style:normal;font-weight:800;font-size:13px}
+.cuprev h4{position:absolute;left:16px;top:12px;margin:0;font-size:24px;font-weight:900;font-family:'Archivo',system-ui,sans-serif;font-stretch:74%}`;document.head.appendChild(st)})();
+// 1. the sliding pill
+const SEGP={};
+function segSlide(){document.querySelectorAll('.seg').forEach(sg=>{const B=[...sg.querySelectorAll(':scope>button')];if(B.length<2)return;const on=B.find(b=>b.classList.contains('on'));let i=sg.querySelector(':scope>.segi');
+ if(!on){i&&i.remove();return}if(!i){i=document.createElement('i');i.className='segi';sg.prepend(i)}
+ const key=B.map(b=>(b.dataset.a||'')+(b.dataset.i||'')).join('|'),x=on.offsetLeft,y=on.offsetTop,w=on.offsetWidth,h=on.offsetHeight,P=SEGP[key];
+ i.style.height=h+'px';i.style.top=y+'px';
+ if(P&&P.x!==x&&!LRM()){i.classList.remove('go');i.style.width=P.w+'px';i.style.transform=`translateX(${P.x}px)`;void i.offsetWidth;i.classList.add('go');i.style.width=w+'px';i.style.transform=`translateX(${x}px)`}
+ else{i.style.width=w+'px';i.style.transform=`translateX(${x}px)`}SEGP[key]={x,w}})}
+// any toggle that's redrawn, by any part of the app, gets its pill placed before the next paint
+{let busy=false;new MutationObserver(ms=>{if(busy)return;if(!ms.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches('.seg')||n.querySelector&&n.querySelector('.seg')))))return;busy=true;try{segSlide()}catch(_){}busy=false}).observe(document.body,{childList:true,subtree:true})}
+// 2. the scanner closes with an X
+{const _br=bcRender;bcRender=function(){const r=_br.apply(this,arguments);try{const o=$('#bcs');if(o&&!o.querySelector('.bcxx'))o.insertAdjacentHTML('beforeend','<button class="bcxx" data-a="bcx" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>')}catch(_){}return r}}
+// 3. looks: a small preview of each, your own colours at the end, and no Classic
+function hexRGB(h){h=String(h||'').replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255]}
+const rgbHex=a=>'#'+a.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('').toUpperCase();
+const lum=a=>{const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(a[0])+.7152*f(a[1])+.0722*f(a[2])};
+const cRatio=(a,b)=>{const x=lum(a),y=lum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+function natCustom(c){const tone=hexRGB(c.tone),p=hexRGB(c.p),s2=hexRGB(c.s),light=lum(tone)>.35,glass=[22,22,22];let ac=p.slice();for(let i=0;i<20&&cRatio(ac,glass)<4.5;i++)ac=ac.map(v=>v+(255-v)*.12);
+ const dk=tone.map(v=>v*.18);return{n:'Custom',from:'Your colours',g:light?'l':'d',tone:rgbHex(tone),p:rgbHex(p),s:rgbHex(s2),ac:rgbHex(ac),on:lum(ac)>.4?'#121212':'#FFFFFF',cg:`rgba(${dk.map(Math.round).join(',')},${light?.82:.55})`}}
+if(S.natc)NAT.custom=natCustom(S.natc);
+function lkTile(k,L){const t=L.g==='l'?'rgba(30,30,30,.55)':'rgba(255,255,255,.7)';return`<span class="lkp" style="--a:${L.ac};--t:${t}"><em style="background:radial-gradient(120% 70% at 90% 0%,${L.p}88,transparent 60%),${L.tone}"></em><s></s><u></u></span>`}
+edDock=function(){const L=Object.entries(NAT).filter(([k])=>k!=='custom');
+ return`<div class="eddock" role="toolbar" aria-label="Edit Home"><div class="lk">${L.map(([k,v])=>`<button class="${S.nat===k?'on':''}" data-a="edlook" data-i="${k}" aria-label="${esc(v.n)} look">${lkTile(k,v)}${esc(v.n)}</button>`).join('')}${NAT.custom?`<button class="${S.nat==='custom'?'on':''}" data-a="edlook" data-i="custom" aria-label="Your colours">${lkTile('custom',NAT.custom)}Yours</button>`:''}<button data-a="natcu" aria-label="Make your own colours"><span class="lkp cu"><b>+</b></span>${NAT.custom?'Edit':'Custom'}</button></div><div class="row"><button class="btn" data-a="wgal">Add widget</button><button class="btn on" data-a="edone">Done</button></div></div>`};
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const dk=$('.eddock');if(dk&&ED&&tab==='home'&&!dk.querySelector('.lkp')){dk.remove();document.body.insertAdjacentHTML('beforeend',edDock())}}catch(_){}return r}}
+let NCU=null;
+function natCuSheet(){const c=NCU||(NCU={...(S.natc||{tone:NAT[S.nat]?NAT[S.nat].tone:'#121212',p:NAT[S.nat]?NAT[S.nat].p:'#E0643A',s:NAT[S.nat]?NAT[S.nat].s:'#5A544E'})}),L=natCustom(c),tx=L.g==='l'?'#22231E':'#F3F1EC';
+ sheet(`<h2>Your colours</h2><p class="sm" style="margin:-2px 0 8px">Pick three. Swell keeps the text readable whatever you choose.</p>
+ <div class="cuprev" data-cup style="background:radial-gradient(120% 80% at 90% 0%,${L.p}88,transparent 60%),${L.tone};color:${tx}"><h4>Sunday</h4><div class="cpg" style="background:${L.cg};backdrop-filter:blur(10px)"><b>1,013</b><i style="background:${L.ac};color:${L.on}">START</i></div></div>
+ <div class="cupk"><label>Background<input type="color" data-cu="tone" value="${c.tone}"></label><label>Accent<input type="color" data-cu="p" value="${c.p}"></label><label>Second<input type="color" data-cu="s" value="${c.s}"></label></div>
+ <button class="btn big on" data-a="natcusave">Use these colours</button><button class="btn big" data-a="shx">Cancel</button>`)}
+document.addEventListener('input',e=>{const t=e.target;if(!t.matches||!t.matches('[data-cu]')||!NCU)return;NCU[t.dataset.cu]=t.value;const L=natCustom(NCU),b=$('#sheet [data-cup]');if(b){b.style.background=`radial-gradient(120% 80% at 90% 0%,${L.p}88,transparent 60%),${L.tone}`;b.style.color=L.g==='l'?'#22231E':'#F3F1EC';const g=b.querySelector('.cpg');g.style.background=L.cg;const i=b.querySelector('i');i.style.background=L.ac;i.style.color=L.on}});
+{let P=null;window.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-a=natcu]');if(el){P={x:e.clientX,y:e.clientY};e.stopImmediatePropagation()}},true);
+ window.addEventListener('pointerup',e=>{const p=P;P=null;if(!p||!e.target.closest('[data-a=natcu]')||Math.hypot(e.clientX-p.x,e.clientY-p.y)>10)return;e.stopImmediatePropagation();NCU=null;natCuSheet()},true);
+ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=natcu],[data-a=natcusave]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();if(el.dataset.a==='natcu'){if(!$('#sheet [data-cup]')){NCU=null;natCuSheet()}return}
+  S.natc={...NCU};NAT.custom=natCustom(S.natc);sheet(null);natSet('custom');toast('Your colours are on.')},true)}
+// the Settings sheet too: no Classic, and a way in to your own colours
+{const _n=natSheet;natSheet=function(){_n.apply(this,arguments);try{const c=$('#sheet [data-a=natpick][data-i=""]');if(c)c.outerHTML='<button class="btn big" data-a="natcu">Make your own colours</button>';const cu=$('#sheet .natl [data-i=custom] small');if(cu)cu.textContent='Your colours'}catch(_){}}}
+// 4. coffee: opaque, a thick crema, no bubbles or light rays
+Object.assign(LQK.caf,{top:[96,58,34],mid:[60,34,18],bot:[28,14,6],crema:[198,152,104]});
+// 5. the Diet "Check it" tile says what it does
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const b=$('#app .dtiles [data-a=rtgo]');if(b&&!b.dataset.v94){b.dataset.v94=1;b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" opacity=".35"/><path d="M12 3.5a8.5 8.5 0 0 1 7.6 12.3"/></svg>Rate it';b.setAttribute('aria-label','Rate a product out of 100')}}catch(_){}return r}}
+/* ===== v95: meal slots, drag meals between days, and a Food plan widget built around your next meal ===== */
+// Research notes for this block:
+// - Plans hold up better when they say when, not just what ("I'll have the burrito bowl this evening"): implementation
+//   intentions roughly double follow-through (Gollwitzer and Sheeran 2006). So each planned meal has a slot, in the
+//   detail you prefer: Morning, Afternoon and Evening; Meal 1, 2, 3; or exact times.
+// - Plans change, so changing one should be cheap: drag a meal to another day, or tap Later to push it back a slot.
+//   Flexible plans are kept for longer than rigid ones (Lally et al. 2010 on habit formation: missing one occasion
+//   doesn't derail a habit, as long as it's easy to pick back up).
+// - The widget leads with the one thing you need next (the next meal and when), with the week as a strip you can drop
+//   it onto. One primary item per widget keeps it glanceable (Apple HIG, Widgets).
+(function(){const st=document.createElement('style');st.textContent=`
+.fpwg2{display:flex;flex-direction:column;width:100%;height:100%;gap:7px}
+.fpwg2 .wl{display:flex;justify-content:space-between;width:100%;margin:0}
+.fpwg2 .wl em{font-style:normal;font-size:12px;color:rgba(243,241,236,.66);letter-spacing:0;text-transform:none;font-weight:500}
+.fpnx{display:flex;align-items:center;gap:10px;padding:7px 8px 7px 12px;border-radius:15px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:grab;min-width:0}
+.fpnx .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.fpnx small{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ac)}
+.fpnx b{font-size:15.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fpnx span.m{font-size:12px;color:rgba(243,241,236,.6)}
+.fpnx .lt{flex:none;all:unset;cursor:pointer;display:flex;align-items:center;gap:4px;padding:7px 10px;border-radius:11px;background:rgba(255,255,255,.1);font-size:12.5px;font-weight:700;color:#F3F1EC}
+.fpnx .lt svg{width:14px;height:14px}
+.fpnx.none{cursor:pointer}
+.fpw7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:auto}
+.fpw7 span{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0 5px;border-radius:10px;font-size:10.5px;font-weight:800;color:rgba(243,241,236,.55);transition:background .15s,transform .15s}
+.fpw7 span i{display:flex;gap:2px;height:5px}.fpw7 span i u{width:5px;height:5px;border-radius:50%;background:var(--ac)}.fpw7 span i u.o{background:none;box-shadow:inset 0 0 0 1.2px rgba(243,241,236,.3)}
+.fpw7 span.now{background:rgba(255,255,255,.09);color:#F3F1EC}
+.fpw7 span.hot,.fpd.hot{background:color-mix(in srgb,var(--ac) 30%,transparent)!important;transform:scale(1.06)}
+.fpwl2{display:flex;flex-direction:column;font-size:13px;overflow:hidden}
+.fpwl2 div{display:flex;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}.fpwl2 b{width:30px;flex:none;font-size:11.5px;color:rgba(243,241,236,.55)}
+.fpwl2 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fpwl2 .no span{color:rgba(243,241,236,.4)}
+.fpghost2{position:fixed;z-index:90;pointer-events:none;padding:9px 14px;border-radius:14px;background:#F3F1EC;color:#141412;font-weight:700;font-size:14px;box-shadow:0 14px 30px rgba(0,0,0,.45);transform:translate(-50%,-120%) rotate(-2deg)}
+#fs .fpm .pl{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#fs .fpm .pl .sl{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-bottom:1px}
+#fs .fpm .pl.drag{opacity:.35}
+.fpmode{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:0 2px 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}.fpmode .seg button{font-size:13px;padding:7px 12px;letter-spacing:0;text-transform:none}`;document.head.appendChild(st)})();
+// slots
+const FPSM=()=>S.fpsm||'tod';
+const TOD=[['am','Morning',8*60],['pm','Afternoon',13*60],['ev','Evening',19*60]];
+function slotOf(e,i){const m=FPSM();let v=e.sl;
+ if(m==='tod'){if(!TOD.some(x=>x[0]===v))v=TOD[Math.min(i,2)][0];const T=TOD.find(x=>x[0]===v);return{v,lbl:T[1],min:T[2]}}
+ if(m==='num'){v=+v>0&&+v<9?+v:i+1;return{v,lbl:'Meal '+v,min:[0,8,13,19,21,22,22,23,23][v]*60}}
+ if(!/^\d\d:\d\d$/.test(v||''))v=['08:00','13:00','19:00','21:00'][Math.min(i,3)];return{v,lbl:hm12f(toMin(v)),min:toMin(v)}}
+function fpSort(d){const L=fpOf(d);if(!L.length)return;const k=L.map((e,i)=>({e,s:slotOf(e,i).min,i}));k.sort((a,b)=>a.s-b.s||a.i-b.i);FP().d[d]=k.map(x=>{x.e.sl=slotOf(x.e,x.i).v;return x.e})}
+function fpEnsure(){try{Object.keys(FP().d).forEach(d=>{if(fpOf(d).some(x=>x.sl==null))fpSort(d)})}catch(_){}}
+function fpNext(){fpEnsure();const t=realToday(),now=new Date(),nm=now.getHours()*60+now.getMinutes();for(let o=0;o<7;o++){const d=addDays(t,o),L=fpOf(d);for(let i=0;i<L.length;i++){const s=slotOf(L[i],i),r=rcById(L[i].r);if(!r)continue;if(o>0||s.min+90>nm)return{d,i,e:L[i],r,s}}}return null}
+function fpLater(d,i){fpEnsure();const L=fpOf(d),e=L[i];if(!e)return;const m=FPSM(),s=slotOf(e,i);let nd=d,nv=s.v;
+ if(m==='tod'){const k=TOD.findIndex(x=>x[0]===s.v);if(k<2)nv=TOD[k+1][0];else{nd=addDays(d,1);nv='am'}}
+ else if(m==='num'){if(s.v<6)nv=s.v+1;else{nd=addDays(d,1);nv=1}}
+ else{const t=s.min+30;if(t>22*60){nd=addDays(d,1);nv='08:00'}else nv=`${pad2(Math.floor(t/60))}:${pad2(t%60)}`}
+ L.splice(i,1);e.sl=nv;(FP().d[nd]=FP().d[nd]||[]).push(e);fpSort(nd);save();try{fpSync()}catch(_){}
+ const nl=slotOf(e,0).lbl;toast(nd===d?`Moved to ${m==='time'?nl:nl.toLowerCase()}.`:`Moved to ${new Date(nd+'T12:00').toLocaleDateString('en-GB',{weekday:'long'})}${m==='time'?' at '+nl:m==='num'?', '+nl:' '+nl.toLowerCase()}.`)}
+function fpMove(d,i,nd){if(d===nd)return;const L=fpOf(d),[e]=L.splice(i,1);if(!e)return;(FP().d[nd]=FP().d[nd]||[]).push(e);fpSort(nd);save();try{fpSync()}catch(_){}try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+ const r=rcById(e.r);toast(`${r?r.n:'Meal'} moved to ${new Date(nd+'T12:00').toLocaleDateString('en-GB',{weekday:'long'})}.`)}
+const dayWord=(d)=>{const t=realToday();return d===t?'Today':d===addDays(t,1)?'Tomorrow':new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long'})};
+// the widget
+{const _wd=wd;wd=function(l){if(!l||l.id!=='food')return _wd.apply(this,arguments);let I;try{I=fpWeekInfo()}catch(_){return _wd.apply(this,arguments)}const N=fpNext(),r=realToday();
+ const head=`<div class="wl">${WIS.cal7}<span>Food plan</span>${I.sc&&l.w===2?`<em>Week balance ${I.sc.score}/100</em>`:''}</div>`;
+ const mac=N?(()=>{const m=rcPer(N.r),f=(+N.e.sv||1);return`${Math.round(m.k*f)} kcal · ${Math.round(m.p*f)}g protein`})():'';
+ const nx=N?`<div class="fpnx" data-fpnx="${N.d}|${N.i}"><div class="tx"><small>${esc(dayWord(N.d))} · ${esc(N.s.lbl)}</small><b>${esc(N.r.n)}</b>${l.w===2&&l.h===2?`<span class="m">${mac}</span>`:''}</div>${l.w===2?`<button class="lt" data-a="fplater" data-i="${N.d}|${N.i}" aria-label="Push back">${ico('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>')}Later</button>`:''}</div>`
+  :`<button class="fpnx none" data-a="fpopen" data-i="plan"><div class="tx"><small>Nothing planned</small><b>${(S.recipes||[]).length?'Plan your week':'Add a recipe'}</b></div></button>`;
+ const strip=`<div class="fpw7">${I.days.map(d=>{const n=fpOf(d).length,w=new Date(d+'T12:00').getDay();return`<span class="${d===r?'now':''}" data-fpday="${d}">${'SMTWTFS'[w]}<i>${n?[...Array(Math.min(3,n))].map(()=>'<u></u>').join(''):'<u class="o"></u>'}</i></span>`}).join('')}</div>`;
+ if(l.w===1)return`<div class="fpwg2" data-a="fpopen" data-i="plan">${head}${nx}</div>`;
+ if(l.h===1)return`<div class="fpwg2">${head}${nx}${strip}</div>`;
+ return`<div class="fpwg2">${head}${nx}<div class="fpwl2">${I.days.map(d=>{const L=fpOf(d),w=new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short'});return`<div class="${L.length?'':'no'}"><b>${w}</b><span>${L.length?L.map((e,i)=>{const x=rcById(e.r);return x?esc(x.n):''}).filter(Boolean).join(', '):'Nothing yet'}</span></div>`}).join('')}</div>${strip}</div>`}}
+// taps: Later; the empty parts of the widget open the planner
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=fplater],[data-a=fpsm],[data-a=fpsl]');if(el){e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+  if(a==='fplater'){const [d,i]=el.dataset.i.split('|');fpLater(d,+i);if(FS==='food')fsr();else render();return}
+  if(a==='fpsm'){S.fpsm=el.dataset.i;Object.keys(FP().d).forEach(d=>{fpOf(d).forEach(x=>delete x.sl);fpSort(d)});save();return fsr()}
+  if(a==='fpsl'&&FPE){const L=fpOf(FPE.d),x=L[FPE.k];if(x){x.sl=FPSM()==='num'?+el.dataset.i:el.dataset.i;fpSort(FPE.d);FPE.k=fpOf(FPE.d).indexOf(x);save()}document.querySelectorAll('#sheet [data-a=fpsl]').forEach(b=>b.classList.toggle('on',b===el));if(FS==='food')fsr();return}}
+ if(FPDG&&FPDG.done){e.stopImmediatePropagation();e.preventDefault();FPDG=null;return}
+ const w=e.target.closest('#app .wd[data-id=food] .fpwg2');if(w&&!e.target.closest('.fpnx:not(.none),[data-a=fplater]')&&!ED){e.stopImmediatePropagation();FPT='plan';FPW=0;fsOpen('food')}
+ const n=e.target.closest('#app .wd[data-id=food] .fpnx:not(.none)');if(n&&!ED){e.stopImmediatePropagation();FPT='plan';FPW=0;fsOpen('food')}},true);
+// the planner: slot labels on each meal, a choice of how detailed, and slot chips in the meal sheet
+{const _p=fpPlanTab;fpPlanTab=function(){Object.keys(FP().d).forEach(d=>{if(fpOf(d).some(x=>x.sl==null))fpSort(d)});let h=_p.apply(this,arguments);
+ h=h.replace(/<button class="pl" data-a="fpent" data-i="([^"|]+)\|(\d+)">/g,(m,d,i)=>{const e=fpOf(d)[+i];return e?`${m}<span class="sl">${esc(slotOf(e,+i).lbl)}</span>`:m});
+ const md=FPSM(),seg=`<div class="fpmode"><span>Plan meals by</span><div class="seg"><button class="${md==='tod'?'on':''}" data-a="fpsm" data-i="tod">Time of day</button><button class="${md==='num'?'on':''}" data-a="fpsm" data-i="num">Meal 1, 2, 3</button><button class="${md==='time'?'on':''}" data-a="fpsm" data-i="time">Times</button></div></div>`;
+ return h.replace('<div class="card"><p class="sm" style="margin:0 0 8px">',seg+'<div class="card"><p class="sm" style="margin:0 0 8px">').replace('Tap a recipe, then a day. Or drag it onto a day.','Tap a recipe, then a day, or drag it onto a day. Hold a planned meal to drag it to another day.')}}
+{const _s=sheet;sheet=function(h){const r=_s.apply(this,arguments);try{if(h&&FPE&&$('#sheet [data-a=fpmv]')&&!$('#sheet [data-a=fpsl]')){const x=fpOf(FPE.d)[FPE.k];if(x){const cur=slotOf(x,FPE.k).v,m=FPSM();
+  const opts=m==='tod'?TOD.map(t=>[t[0],t[1]]):m==='num'?[1,2,3,4,5].map(n=>[n,'Meal '+n]):['07:00','08:00','10:00','12:00','13:00','15:00','18:00','19:00','20:00'].map(t=>[t,hm12f(toMin(t))]);
+  const mv=$('#sheet [data-a=fpmv]').parentElement;mv.insertAdjacentHTML('afterend',`<p class="sm" style="margin:12px 2px 6px">When</p><div class="chips">${opts.map(([v,l])=>`<button class="chip ${String(v)===String(cur)?'on':''}" data-a="fpsl" data-i="${v}">${l}</button>`).join('')}</div>`)}}}catch(_){}return r}}
+// drag a planned meal to another day: in the planner, and from the widget onto its week strip
+let FPDG=null;
+function fpdStart(el,lbl,src,x,y){FPDG={src,on:true,done:false,el};el.classList.add('drag');const g=document.createElement('div');g.className='fpghost2';g.textContent=lbl;document.body.appendChild(g);FPDG.g=g;g.style.left=x+'px';g.style.top=y+'px';try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}}
+function fpdTarget(x,y){const t=document.elementFromPoint(x,y);return t&&(t.closest('#fs .fpd[data-fpd]')||t.closest('.fpw7 [data-fpday]'))}
+{let P=null;
+ window.addEventListener('pointerdown',e=>{if(ED)return;const pl=e.target.closest('#fs .fpm .pl[data-a=fpent]'),nx=e.target.closest('#app .wd[data-id=food] .fpnx[data-fpnx]');const el=pl||nx;if(!el||e.target.closest('[data-a=fplater]'))return;
+  const [d,i]=(pl?pl.dataset.i:nx.dataset.fpnx).split('|'),en=fpOf(d)[+i],r=en&&rcById(en.r);if(!r)return;
+  P={x:e.clientX,y:e.clientY,t:setTimeout(()=>{if(P){fpdStart(el,r.n,{d,i:+i},P.x,P.y)}},300)}},true);
+ window.addEventListener('pointermove',e=>{if(P&&!FPDG&&Math.hypot(e.clientX-P.x,e.clientY-P.y)>8){clearTimeout(P.t);P=null;return}if(P){P.x=e.clientX;P.y=e.clientY}
+  if(!FPDG||!FPDG.on)return;FPDG.g.style.left=e.clientX+'px';FPDG.g.style.top=e.clientY+'px';document.querySelectorAll('.hot').forEach(x=>x.classList.remove('hot'));const t=fpdTarget(e.clientX,e.clientY);t&&t.classList.add('hot')},true);
+ const end=e=>{if(P){clearTimeout(P.t);P=null}if(!FPDG||!FPDG.on)return;const t=fpdTarget(e.clientX,e.clientY);FPDG.g.remove();FPDG.el.classList.remove('drag');document.querySelectorAll('.hot').forEach(x=>x.classList.remove('hot'));FPDG.on=false;FPDG.done=true;
+  const nd=t&&(t.dataset.fpd||t.dataset.fpday);if(nd)fpMove(FPDG.src.d,FPDG.src.i,nd);setTimeout(()=>{FPDG=null},350);if(FS==='food')fsr();else render()};
+ window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true);
+ document.addEventListener('touchmove',e=>{if(FPDG&&FPDG.on&&e.cancelable)e.preventDefault()},{passive:false,capture:true})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
