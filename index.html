@@ -5758,7 +5758,7 @@ const cycLine=n=>!n?'Log your last period to start the forecast.':n.ph==='period
 let CYMO=null;
 function cycMonth(ym){const c=CYC(),n=cycNow(),st=cycStats(),t=realToday(),[y,m]=ym.split('-').map(Number),first=new Date(y,m-1,1),off=(first.getDay()+6)%7,days=new Date(y,m,0).getDate();
  const per=new Set();st.P.forEach(x=>{const e=x.e||(cyDD(x.s,t)<10?(t>x.s?t:x.s):addDays(x.s,st.pl-1));for(let d=x.s;d<=e;d=addDays(d,1))per.add(d)});
- const pred=new Set(),fw=new Set();if(n){for(let k=0;k<4;k++){const s=addDays(n.next,k*st.len);for(let i=0;i<st.pl;i++){const d=addDays(s,i);if(d>t)pred.add(d)}if(c.fert){const o=addDays(s,-14);for(let i=-5;i<=1;i++)fw.add(addDays(o,i))}}if(n.ph!=='period'&&n.toNext<0)pred.clear()}
+ const pred=new Set(),fw=new Set();if(n){for(let k=0;k<13;k++){const s=addDays(n.next,k*st.len);for(let i=0;i<st.pl;i++){const d=addDays(s,i);if(d>t)pred.add(d)}if(c.fert){const o=addDays(s,-14);for(let i=-5;i<=1;i++)fw.add(addDays(o,i))}}if(n.ph!=='period'&&n.toNext<0)pred.clear()}
  let h=['M','T','W','T','F','S','S'].map(x=>`<span class="dw">${x}</span>`).join('');for(let i=0;i<off;i++)h+='<span></span>';
  for(let i=1;i<=days;i++){const d=`${y}-${String(m).padStart(2,'0')}-${String(i).padStart(2,'0')}`,lg=c.d[d],cl=[per.has(d)?'p':pred.has(d)&&!per.has(d)?'pr':'',fw.has(d)&&!per.has(d)?'fw':'',d===t?'td':'',d>t&&!pred.has(d)?'':''].filter(Boolean).join(' ');
   h+=`<button class="${cl}" data-a="cyday" data-i="${d}" aria-label="${cyFmt(d)}${per.has(d)?', period':pred.has(d)?', period forecast':''}">${i}${lg&&(lg.sy&&lg.sy.length||lg.note)?'<i></i>':''}</button>`}
@@ -8690,7 +8690,7 @@ function pmsLen(){if(PMSL&&PMSL.t===S.cyc?.d&&PMSL.n===Object.keys(S.cyc?.d||{})
 
 /* ---------- 2. every phase on the calendar ---------- */
 function cyPhaseOf(d){const st=cycStats(),n=cycNow(),t=realToday(),len=st.len||28,pl=st.pl||5,S0=st.P.map(x=>x.s);if(!S0.length)return null;
- if(n)for(let k=0;k<4;k++)S0.push(addDays(n.next,k*len));const starts=[...new Set(S0)].sort();
+ if(n)for(let k=0;k<14;k++)S0.push(addDays(n.next,k*len));const starts=[...new Set(S0)].sort();
  let s=null,nx=null;for(const x of starts){if(x<=d)s=x;else{nx=x;break}}if(!s)return null;if(!nx)nx=addDays(s,len);
  const day=cyDD(s,d)+1,toN=cyDD(d,nx);if(cyDD(s,nx)>45)return null;
  if(day<=pl)return'period';if(Math.abs(toN-14)<=1)return'o';if(toN<=pmsLen())return'pms';if(toN<14)return'l';return'f'}
@@ -8730,6 +8730,194 @@ cyFoodCard=function(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.
   .replace('<div class="npr"><div><b>Heads-up before my period</b>',`<div class="npr"><div><b>Heads-up before PMS</b><small>Around ${pmsLen()} days before your period${(()=>{try{return Object.values(CYC().d).filter(v=>(v.sy||[]).length).length>3?', from your logs':''}catch(_){return''}})()}.</small></div><button class="tg ${CYC().pmsr!==false?'on':''}" data-a="cypmsr" role="switch" aria-checked="${CYC().pmsr!==false}" aria-label="Heads-up before PMS"></button></div><div class="npr"><div><b>Heads-up before my period</b>`)}catch(_){}return h};FSX.cyc=cycV}
 // the report questions, shorter
 {const _s=rpSheet;rpSheet=function(){const r=_s.apply(this,arguments);try{const p=$('#sheet .rps>p.sm');if(p)p.textContent='Your cycles and symptoms in one page for a GP. Stays on your phone unless you share it.'}catch(_){}return r}}
+
+/* ===== v112: expanded widgets rebuilt in the cycle page's style, report margins, forecasts a year ahead ===== */
+// Research notes for this block:
+// - One pattern everywhere: a status hero (a ring with the number beside it), then the week, then settings. Consistency
+//   lets people transfer what they learnt on one screen to the next (Nielsen's heuristic 4, consistency and standards);
+//   the cycle page is the model because people found it easiest to read.
+// - Rings and progress bars for goals: a visible gap to a goal raises effort as it closes (goal-gradient effect, Kivetz,
+//   Urminsky & Zheng 2006, J Marketing Research); one big number with one plain line is the quickest thing to read at a
+//   glance (NN/g, "Dashboards: making charts and graphs easier to understand").
+// - Settings people change once a month don't need the same space as things they use daily: they're gathered into one
+//   card under a "Settings" heading, and long helper text is cut to two lines with tap to read more (progressive
+//   disclosure, NN/g; "How users read on the web").
+// - Motion: the level and ring move from where they were to where they are when you add something, so the change is
+//   seen, not just the result (Material motion, "informative"; Chang & Ungar 1993). Waves are a CSS transform loop,
+//   cheap on the GPU, and stop with Reduce motion.
+// - Report: printed and PDF pages need a white margin; at least 12 to 15 mm is the common office default and keeps
+//   text clear of printer edges (A4 conventions). Set inside the page so phones that ignore @page margins still get it.
+// - Forecasts 12 months ahead, recomputed from your own last six cycles every time you log (median, as in v77; Bull et
+//   al. 2019 found length varies within people, so a range is shown once there are three or more cycles). Diet,
+//   training and sleep can't predict cycle length reliably, so they aren't used to move the date; when a period is
+//   late or a cycle runs long, Swell points out anything in your logs that's known to delay one (low energy intake,
+//   a jump in training, short sleep: Endocrine Society 2017; NHS "Irregular periods").
+(function(){const st=document.createElement('style');st.textContent=`
+@media print{@page{size:A4;margin:0}.rp .rppg{padding:14mm 15mm!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;overflow:hidden}html,body,#rpt{width:100%!important;margin:0!important}}
+.rp .rppg{overflow:hidden}
+#fs .fsw>h1{margin-bottom:2px}#fs .fsw>.sub2{margin:0 2px 10px;color:var(--dim)}
+.fhero .fh1{display:flex;align-items:center;gap:18px}
+.gz{width:118px;height:118px;flex:none;overflow:visible}
+.gz .gza{transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+.gz .gzl{transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.gz .gzw1{animation:gzw 5.5s linear infinite}.gz .gzw2{animation:gzw2 8s linear infinite}
+@keyframes gzw{from{transform:translateX(0)}to{transform:translateX(120px)}}@keyframes gzw2{from{transform:translateX(0)}to{transform:translateX(-120px)}}
+@media (prefers-reduced-motion:reduce){.gz .gzw1,.gz .gzw2{animation:none}.gz .gza,.gz .gzl{transition:none}}
+.fht{min-width:0;flex:1}.fht .big{display:block;font-family:'Archivo',system-ui,sans-serif;font-size:46px;font-weight:900;font-stretch:72%;line-height:.95;letter-spacing:-.01em}
+.fht .big small{font-size:17px;font-weight:700;font-stretch:80%;color:var(--dim);margin-left:4px;letter-spacing:0}
+.fht .l1{margin:6px 0 0;font-size:15px;line-height:1.35}.fht .l2{margin:3px 0 0;font-size:13px;color:var(--dim)}
+.fhero .fha{margin-top:16px}.fhero .fha .rowm{margin:0!important}.fhero .fha .chips{padding:10px 0 0;justify-content:flex-start}
+.fhero .fha .glink{margin-top:10px!important}
+.fhero .sbar2{margin-top:18px}
+.fwk h2{display:flex;justify-content:space-between;align-items:baseline}.fwk h2 span{font-size:13px;font-weight:600;color:var(--dim)}
+.fwb{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:96px;align-items:end;margin:10px 0 0}
+.fwb .c{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.fwb .c i{display:block;width:100%;max-width:30px;border-radius:7px 7px 4px 4px;background:rgba(255,255,255,.16);min-height:4px;transform-origin:bottom;transition:height .5s}
+.fwb .c.hit i{background:var(--fc,var(--ac))}.fwb .c.now i{box-shadow:0 0 0 1.5px rgba(255,255,255,.75)}
+.fwb .c span{font-size:11px;color:var(--dim)}.fwb .c.now span{color:inherit;font-weight:800}
+.fwb .gl{position:absolute;left:0;right:0;border-top:1.5px dashed rgba(255,255,255,.3);pointer-events:none}
+.ftl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.ftl div{background:rgba(255,255,255,.05);border-radius:14px;padding:10px 12px}
+.ftl b{display:block;font-size:19px;letter-spacing:-.01em}.ftl small{color:var(--dim);font-size:11.5px;line-height:1.25;display:block;margin-top:2px}
+.fsec{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:22px 4px 8px}
+.fset2 .fg{padding:14px 0;border-top:1px solid rgba(255,255,255,.09)}.fset2 .fg:first-child{border-top:0;padding-top:2px}.fset2 .fg:last-child{padding-bottom:0}
+.fset2 .fg>h3{font-size:15px;margin:0 0 6px}.fset2 .fg .npr{padding:0;border:0}.fset2 .fg .chips{padding:8px 0 0}
+.clp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}.clp.open{display:block}
+.clp:not(.open)::after{content:''}
+.fsin>*{animation:fsin .38s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes fsin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fsin>*:nth-child(2){animation-delay:0ms}.fsin>*:nth-child(3){animation-delay:45ms}.fsin>*:nth-child(4){animation-delay:90ms}.fsin>*:nth-child(5){animation-delay:135ms}.fsin>*:nth-child(6){animation-delay:180ms}.fsin>*:nth-child(7){animation-delay:225ms}.fsin>*:nth-child(8){animation-delay:270ms}.fsin>*:nth-child(9){animation-delay:315ms}
+@media (prefers-reduced-motion:reduce){.fsin>*{animation:none}}
+.fsp .spadd2{margin-top:10px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. forecasts a year ahead, with a range ---------- */
+// cycMonth and cyPhaseOf look 4 cycles ahead; both now look 13 ahead (about a year)
+/*__V112_FORECAST__*/
+function cyFactors(){const t=realToday(),out=[];try{
+ const dsum=(a,b,f)=>{let s=0,n=0;for(let d=a;d<=b;d=addDays(d,1)){const v=f(d);if(v!=null&&v>0){s+=v;n++}}return n?{avg:s/n,n}:null};
+ const kc=d=>{const m=(S.macros||{})[d];return m&&+m.k?+m.k:null},g=+S.setup.k||0;
+ const k1=dsum(addDays(t,-42),t,kc);if(k1&&k1.n>=10&&g&&k1.avg<g*.75)out.push('eating well under your target lately');
+ const tr=(a,b)=>{let n=0;for(let d=a;d<=b;d=addDays(d,1))if((S.fd||{})[d])n++;return n},a=tr(addDays(t,-42),t),bb=tr(addDays(t,-126),addDays(t,-43));
+ if(a>=6&&a>bb/2*1.5)out.push('training more than usual');
+ const sl=dsum(addDays(t,-42),t,d=>{const x=(S.sleep||{})[d];return x&&x.b>x.a?(x.b-x.a)/60:null});if(sl&&sl.n>=10&&sl.avg<6.5)out.push('short sleep');}catch(_){}return out}
+{const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{const n=cycNow(),st=cycStats();if(!n)return h;
+  if(st.n>=3&&st.sd>=1&&n.ph!=='period'&&n.toNext>0)h=h.replace(` · next around ${cyFmt(n.next)}`,` · next around ${cyFmt(n.next)}, give or take ${Math.max(1,Math.round(st.sd))} day${Math.round(st.sd)>1?'s':''}`);
+  const lastLen=st.L[st.L.length-1],long=lastLen&&st.n>=3&&lastLen-st.len>=7,F=(n.ph==='late'||long)?cyFactors():[];
+  if(F.length)h=h.replace('<div class="cyb">',`<p class="sm" style="margin:10px 2px 0"><b style="color:inherit">From your logs:</b> ${esc(F.join(', '))}. These can delay a period.</p><div class="cyb">`)}catch(_){}return h};FSX.cyc=cycV}
+
+/* ---------- 2. the hero ring ---------- */
+const GZP={};
+function gzSVG(k,p,o){p=Math.max(0,Math.min(1,p||0));const R=52,C=2*Math.PI*R,pv=GZP[k]!=null?GZP[k]:0,lv=x=>15+90*(1-x),id='gz'+k;
+ const liq=o.liq?`<defs><clipPath id="${id}c"><circle cx="60" cy="60" r="45"/></clipPath><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${o.c1}"/><stop offset="1" stop-color="${o.c2}"/></linearGradient></defs>
+  <circle cx="60" cy="60" r="45" fill="rgba(255,255,255,.045)"/><g clip-path="url(#${id}c)"><g class="gzl" data-to="${lv(p)}" style="transform:translateY(${lv(MRM()?p:pv)}px)">
+  <path class="gzw2" d="M-120 2 Q-90 -4 -60 2 T0 2 T60 2 T120 2 T180 2 T240 2 V140 H-120Z" fill="${o.c1}" opacity=".45"/>
+  <path class="gzw1" d="M-120 0 Q-90 6 -60 0 T0 0 T60 0 T120 0 T180 0 T240 0 V140 H-120Z" fill="url(#${id}g)"/>${o.crema?`<path class="gzw1" d="M-120 0 Q-90 6 -60 0 T0 0 T60 0 T120 0 T180 0 T240 0 V4 Q210 9 180 4 T120 4 T60 4 T0 4 T-60 4 T-120 4Z" fill="${o.crema}"/>`:''}</g></g>`:'';
+ const txt=o.mid!=null?`<text x="60" y="${o.liq?66:58}" text-anchor="middle" font-size="${o.liq?17:22}" font-weight="800" fill="#fff" font-family="system-ui" style="paint-order:stroke;stroke:rgba(0,0,0,.25);stroke-width:${o.liq?3:0}">${o.mid}</text>${o.midS?`<text x="60" y="76" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.7)" font-family="system-ui" letter-spacing=".08em">${o.midS}</text>`:''}`:'';
+ return`<svg class="gz" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${R}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="7"/>${liq}
+ <circle class="gza" cx="60" cy="60" r="${R}" fill="none" stroke="${o.arc||o.c1}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" data-to="${(C*(1-Math.min(1,p))).toFixed(2)}" style="stroke-dashoffset:${(C*(1-(MRM()?p:Math.min(1,pv)))).toFixed(2)}" transform="rotate(-90 60 60)"/>${txt}</svg>`}
+function gzGo(k,p){requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll('#fs .gz [data-to]').forEach(e=>{if(e.classList.contains('gzl'))e.style.transform=`translateY(${e.dataset.to}px)`;else e.style.strokeDashoffset=e.dataset.to})}));GZP[k]=p}
+const fhero=(k,p,o,big,l1,l2)=>`<div class="card fhero"><div class="fh1">${gzSVG(k,p,o)}<div class="fht"><b class="big">${big}</b>${l1?`<p class="l1">${l1}</p>`:''}${l2?`<p class="l2">${l2}</p>`:''}</div></div><div class="fha"></div></div>`;
+
+/* ---------- 3. the week ---------- */
+function fweek(title,right,vals,goal,col,tiles,fmtv,G){const t=realToday(),days=[...Array(7)].map((_,i)=>addDays(t,i-6)),mx=Math.max(goal||0,...vals,1)*1.08;
+ return`<div class="card fwk" style="--fc:${col}"><h2>${title}<span>${right||''}</span></h2><div class="fwb">${goal?`<i class="gl" style="bottom:calc(${(goal/mx*100).toFixed(1)}% * (96 - 17) / 96 + 17px)"></i>`:''}${vals.map((v,i)=>`<div class="c ${(G?v>=G[i]&&v>0:goal&&v>=goal)?'hit':''} ${i===6?'now':''}" title="${fmtv?fmtv(v):v}"><i style="height:${Math.max(4,(v/mx)*79).toFixed(1)}px"></i><span>${'SMTWTFS'[new Date(days[i]+'T12:00').getDay()]}</span></div>`).join('')}</div>
+ <div class="ftl">${tiles.map(([b,s])=>`<div><b>${b}</b><small>${s}</small></div>`).join('')}</div></div>`}
+const wk7=f=>{const t=realToday();return[...Array(7)].map((_,i)=>f(addDays(t,i-6)))};
+
+/* ---------- 4. dressing each page ---------- */
+let FSLAST=null;
+function fsDress(){const k=FS,o=$('#fs'),w=o&&o.querySelector('.fsw');if(!w||!/^(water|caf|sleep|supp)$/.test(k)||w.dataset.v112)return;w.dataset.v112=1;w.classList.add('fsp');
+ const mv=(from,to,sel)=>{from.querySelectorAll(sel).forEach(e=>{if(e.parentElement===from||from.contains(e))to.appendChild(e)})};
+ let hero=null,p=0;
+ try{
+ if(k==='water'){const old=w.querySelector('.wtop'),g=watGoal(),ml=watOn();p=g?ml/g:0;
+  old.insertAdjacentHTML('beforebegin',fhero(k,p,{liq:1,c1:'#7cc4ff',c2:'#2f63d6',arc:'#7cc4ff',mid:Math.round(Math.min(p,9.99)*100)+'%'},`${L1(ml)}<small>of ${L1(g)} L</small>`,esc(watLeft()),ml>g?`${L1(ml-g)} L over your goal`:''));
+  hero=old.previousElementSibling;const A=hero.querySelector('.fha');mv(old,A,':scope>.rowm,:scope>.chips');old.remove();
+  const vals=wk7(d=>+((S.water||{})[d]||0)+(d===today()?Math.max(0,ml-+((S.water||{})[d]||0)):0)),gs=wk7(d=>watGoal(d)),hit=vals.filter((v,i)=>v>=gs[i]).length,av=vals.reduce((a,b)=>a+b,0)/7;
+  hero.insertAdjacentHTML('afterend',fweek('This week',`${hit} of 7 on goal`,vals,g,'#7cc4ff',[[`${L1(av)} L`,'Average a day'],[`${L1(Math.max(...vals))} L`,'Best day'],[`${hit}/7`,'Days on goal']],v=>L1(v)+' L',gs))}
+ if(k==='caf'){const old=[...w.querySelectorAll(':scope>.card')].find(c=>c.querySelector('.cafw'));const L=cafLog(today()),tot=L.reduce((a,x)=>a+x.mg,0),lim=cafLim()||400;p=tot/lim;
+  const sp=[...old.querySelectorAll('.ct>span')].map(s=>s.textContent);
+  old.insertAdjacentHTML('beforebegin',fhero(k,p,{liq:1,c1:'#b07a50',c2:'#4a2814',crema:'#d9b48a',arc:'#d9a874',mid:Math.round(Math.min(p,9.99)*100)+'%'},`${Math.round(tot)}<small>of ${lim} mg</small>`,esc(sp[0]||''),esc(sp[1]||'')));
+  hero=old.previousElementSibling;const A=hero.querySelector('.fha');mv(old,A,':scope>.rowm,:scope>.glink');old.remove();
+  const vals=wk7(d=>cafLog(d).reduce((a,x)=>a+x.mg,0)),over=vals.filter(v=>v>lim).length,dn=vals.filter(v=>v>0).length,av=dn?vals.reduce((a,b)=>a+b,0)/dn:0;
+  const plan=[...w.querySelectorAll(':scope>.card')].find(c=>/Your plan for today/.test(c.textContent));(plan||hero).insertAdjacentHTML('afterend',fweek('This week',`Guide ${lim} mg`,vals,lim,'#d9a874',[[`${Math.round(av)} mg`,'Average on days you had some'],[`${over}`,'Days over your guide'],[`${dn}/7`,'Days with caffeine']],v=>v+' mg'))}
+ if(k==='sleep'){const old=[...w.querySelectorAll(':scope>.card')].find(c=>c.querySelector('.slt'));const sl=SLP(),goal=+sl.goal||480,Lt=slpLast(),mins=Lt&&Lt.n.b>Lt.n.a?Lt.n.b-Lt.n.a:0;p=goal?mins/goal:0;
+  const dur=old.querySelector('.dur')?.textContent||'',tm=old.querySelector('.tm')?.textContent||'',gd=old.querySelector('.gd')?.textContent||'';
+  old.insertAdjacentHTML('beforebegin',fhero(k,p,{liq:0,c1:'#9b9cff',arc:'#9b9cff',mid:Math.round(Math.min(p,9.99)*100)+'%',midS:'OF GOAL'},mins?esc(dur).replace(/(\d+)h\s*(\d+)m/,'$1<small>h</small> $2<small>m</small>'):'—',mins?esc(tm):'Nothing logged for last night',esc(gd)));
+  hero=old.previousElementSibling;const A=hero.querySelector('.fha');mv(old,A,':scope>.sbar2,:scope>.sticks,:scope>.slh');old.remove();
+  const wkc=[...w.querySelectorAll(':scope>.card')].find(c=>/This week/.test(c.querySelector('h2')?.textContent||''));
+  const vals=wk7(d=>{const x=(S.sleep||{})[d];return x&&x.b>x.a?x.b-x.a:0}),dn=vals.filter(v=>v>0),av=dn.length?dn.reduce((a,b)=>a+b,0)/dn.length:0,hm=v=>`${Math.floor(v/60)}h ${String(Math.round(v%60)).padStart(2,'0')}m`;
+  const nw=document.createElement('div');nw.innerHTML=fweek('This week',av?`Average ${hm(av)}`:'',vals,goal,'#9b9cff',[[av?hm(av):'—','Average a night'],[`${vals.filter(v=>v>=goal).length}/7`,'Nights on goal'],[dn.length?hm(Math.max(...dn)):'—','Longest']],hm);
+  if(wkc)wkc.replaceWith(nw.firstElementChild);else hero.after(nw.firstElementChild)}
+ if(k==='supp'){const d=today(),due=supDue(d),tk=supTaken(d),n=due.filter(x=>tk.includes(x.id)).length;p=due.length?n/due.length:0;const nxt=due.find(x=>!tk.includes(x.id));
+  const list=[...w.querySelectorAll(':scope>.card')].find(c=>c.querySelector('.sprow'));
+  (list||w.querySelector('h1')).insertAdjacentHTML(list?'beforebegin':'afterend',fhero(k,p,{liq:0,c1:'var(--ac)',arc:'var(--ac)',mid:due.length?`${n}/${due.length}`:'0'},due.length?`${n}<small>of ${due.length} taken</small>`:'Nothing due',due.length?(n===due.length?'All done for today.':nxt?`Next: ${esc(nxt.n)}${supTime(nxt)?' at '+esc(hm12(toMin(supTime(nxt)))):''}`:''):'Add what you take and Swell keeps track.',''));
+  hero=(list||w.querySelector('h1')).nextElementSibling===null?null:(list?list.previousElementSibling:w.querySelector('h1').nextElementSibling);
+  const ab=w.querySelector(':scope>[data-a=spadd]');if(ab&&list){ab.classList.remove('big');ab.style.margin='12px 0 0';ab.classList.add('spadd2');list.appendChild(ab)}
+  const vals=wk7(dd=>{const du=supDue(dd).length;return du?((S.supl||{})[dd]||[]).filter(id=>supDue(dd).some(x=>x.id===id)).length/du*100:0}),full=vals.filter(v=>v>=100).length;let sk=0;for(let i=6;i>=0;i--){if(vals[i]>=100)sk++;else if(i<6)break}
+  const sub=w.querySelector(':scope>.sub2');sub&&sub.remove();
+  const anchor=list||hero;anchor&&anchor.insertAdjacentHTML('afterend',fweek('This week',`${full} of 7 complete`,vals,100,'var(--ac)',[[`${Math.round(vals.reduce((a,b)=>a+b,0)/7)}%`,'Taken this week'],[`${full}/7`,'Full days'],[`${sk}`,sk===1?'Day in a row':'Days in a row']],v=>Math.round(v)+'%'))}
+ }catch(err){console.warn('fsDress',err)}
+ // settings: gathered into one card
+ const keepCard=c=>/How did you sleep|What’s caffeine for today/.test(c.querySelector('h2')?.textContent||'');
+ const S2=[...w.querySelectorAll(':scope>.card.fset')].filter(c=>!keepCard(c));
+ if(S2.length){const box=document.createElement('div');box.className='card fset fset2';S2.forEach(c=>{const g=document.createElement('div');g.className='fg';const h=c.querySelector(':scope>h2');if(h){const h3=document.createElement('h3');h3.textContent=h.textContent;g.appendChild(h3);h.remove()}while(c.firstChild)g.appendChild(c.firstChild);box.appendChild(g)});
+  const lab=document.createElement('p');lab.className='fsec';lab.textContent='Settings';S2[0].before(lab);lab.after(box);S2.forEach(c=>c.remove());
+  const bg=w.querySelector(':scope>[data-a=bedgo]');if(bg&&hero){bg.classList.remove('big');bg.style.margin='14px 0 0';bg.style.width='100%';hero.querySelector('.fha').appendChild(bg)}}
+ // long helper text: two lines, tap for the rest
+ w.querySelectorAll('.card p.sm, .npr small').forEach(e=>{if(e.closest('.fhero,.fwk'))return;if((e.textContent||'').length>80)e.classList.add('clp')});
+ if(FSLAST!==k&&!MRM())w.classList.add('fsin');FSLAST=k;gzGo(k,p)}
+{const _f=fsr;fsr=function(){const r=_f.apply(this,arguments);try{fsDress()}catch(e){console.warn(e)}return r}}
+{const _c=fsClose;fsClose=function(){FSLAST=null;return _c.apply(this,arguments)}}
+document.addEventListener('click',e=>{const c=e.target.closest('#fs .clp');if(c&&!e.target.closest('button,a,input')){c.classList.toggle('open')}});
+
+/* ===== v113: the Timer tab, restyled (works the same) ===== */
+// Research notes for this block:
+// - Glanceable timing: big, fixed-width digits read at arm's length mid-set; a ring that empties shows how much rest is
+//   left without reading numbers at all (NN/g on glanceability; tabular figures stop digits jumping as they change).
+//   Three decimal places of milliseconds add noise, so the rest timer shows tenths and the stopwatch hundredths.
+// - Rest presets: most programmes use 1 to 3 minutes for strength and hypertrophy, and 3 to 5 for heavy compound
+//   lifts (Schoenfeld et al. 2016, J Strength Cond Res, 3 vs 1 minute rest; ACSM progression models 2009). One-tap
+//   presets cover the common choices; exact minutes and seconds stay under "Custom".
+// - Same layout language as the expanded widgets (hero, then sections), for consistency (Nielsen's heuristic 4).
+(function(){const st=document.createElement('style');st.textContent=`
+#app.tmv>.hdr{display:none}
+#app.tmv>h1{font-family:'Archivo',system-ui,sans-serif;font-size:44px;font-weight:900;font-stretch:72%;letter-spacing:-.01em;margin:6px 2px 12px}
+.tmset{display:flex;align-items:center;gap:16px}.tmset .n{font-family:'Archivo',system-ui,sans-serif;font-size:76px;font-weight:900;font-stretch:72%;line-height:.9;min-width:1.2ch;font-variant-numeric:tabular-nums}
+.tmset .r{flex:1;display:flex;flex-direction:column;gap:8px}.tmset .r .btn{margin:0;width:100%}.tmset small{display:block;color:var(--dim);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.tmrw{position:relative;width:220px;height:220px;margin:6px auto 4px}.tmrw svg{width:100%;height:100%;display:block}
+.tmrw .tmarc{transition:stroke .3s}.tmrw.low .tmarc{stroke:#ff6f61}
+.tdig{font-family:'Archivo',system-ui,sans-serif;font-weight:900;font-stretch:78%;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1}
+.tdig .ms{font-size:.45em;opacity:.6;margin-left:2px}
+.tmrw .tdig{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:46px}
+.tmrw .tlab{position:absolute;left:0;right:0;top:66%;text-align:center;font-size:12px;color:var(--dim);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.tmpre{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0 2px}.tmpre .chip{margin:0;padding:9px 0;font-size:14px;text-align:center;justify-content:center}
+.tmact{display:flex;gap:8px;margin-top:12px}.tmact .btn{flex:1;margin:0}
+.tmcus{margin-top:10px}.tmcus summary{cursor:pointer;color:var(--dim);font-size:13px;font-weight:600;text-align:center;list-style:none}.tmcus summary::-webkit-details-marker{display:none}
+.tmcus .row{margin-top:8px}
+.tmsw .tdig{font-size:62px;text-align:center;margin:10px 0 4px}
+#app.tmv #rst,#app.tmv #swt{display:none}
+.tmv .card>h2{display:flex;justify-content:space-between;align-items:center}`;document.head.appendChild(st)})();
+const TMPRE=[[45,'0:45'],[60,'1:00'],[90,'1:30'],[120,'2:00'],[180,'3:00']];
+const tdig=(ms,dp)=>{ms=Math.max(0,ms);const m=Math.floor(ms/6e4),s=Math.floor(ms%6e4/1e3),f=dp===1?Math.floor(ms%1e3/100):Math.floor(ms%1e3/10);return`<span>${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</span><span class="ms">.${dp===1?f:String(f).padStart(2,'0')}</span>`};
+function tmDress(){const A=$('#app');if(!A)return;A.classList.toggle('tmv',tab==='timer');if(tab!=='timer'||A.querySelector('.tmset,.tmrw'))return;
+ const cards=[...A.querySelectorAll(':scope>.card')],by=t=>cards.find(c=>(c.querySelector('h2')?.textContent||'').trim()===t);
+ const c1=by('Sets today'),c2=by('Rest timer'),c3=by('Stopwatch');
+ if(c1){const n=c1.querySelector('.num')?.textContent||'0',add=c1.querySelector('[data-a=tal]'),minus=c1.querySelector('[data-a=talm]'),au=c1.querySelector('[data-a=auto]'),on=au&&au.classList.contains('on');
+  const box=document.createElement('div');box.className='tmset';box.innerHTML=`<div><small>Sets today</small><div class="n">${esc(n)}</div></div><div class="r"></div>`;const r=box.querySelector('.r');if(add){add.classList.remove('big');add.textContent='+1 set';r.appendChild(add)}if(minus){minus.textContent='Minus one';r.appendChild(minus)}
+  c1.innerHTML='';c1.appendChild(box);if(au)c1.insertAdjacentHTML('beforeend',`<div class="npr" style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)"><div><b>Start rest after each set</b><small>Rest begins when you tap +1 set.</small></div><button class="tg ${on?'on':''}" data-a="auto" role="switch" aria-checked="${on}" aria-label="Start rest after each set"></button></div>`)}
+ if(c2){const go=c2.querySelector('[data-a=rgo]'),rs=c2.querySelector('[data-a=rrs]'),rowIn=c2.querySelector('.row'),rst=c2.querySelector('#rst'),R=96,C=2*Math.PI*R,cur=Math.round(T.r.ms/1e3);
+  const ring=document.createElement('div');ring.className='tmrw';ring.innerHTML=`<svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="${R}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="10"/><circle class="tmarc" cx="110" cy="110" r="${R}" fill="none" stroke="var(--ac)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="0" transform="rotate(-90 110 110)"/></svg><div class="tdig" data-tdr>${tdig(rLeft(),1)}</div><div class="tlab">${T.r.run?'Resting':'Rest'}</div>`;
+  const pre=document.createElement('div');pre.className='tmpre';pre.innerHTML=TMPRE.map(([s,l])=>`<button class="chip ${cur===s?'on':''}" data-a="tmpre" data-i="${s}">${l}</button>`).join('');
+  const act=document.createElement('div');act.className='tmact';if(go)act.appendChild(go);if(rs)act.appendChild(rs);
+  const cus=document.createElement('details');cus.className='tmcus';cus.innerHTML='<summary>Custom time</summary>';if(rowIn)cus.appendChild(rowIn);
+  const h2=c2.querySelector('h2');c2.innerHTML='';c2.appendChild(h2);if(rst)c2.appendChild(rst);c2.append(ring,pre,act,cus);c2.dataset.c=C}
+ if(c3){const go=c3.querySelector('[data-a=sgo]'),rs=c3.querySelector('[data-a=srs]'),sw=c3.querySelector('#swt'),h2=c3.querySelector('h2');c3.classList.add('tmsw');c3.innerHTML='';c3.appendChild(h2);if(sw)c3.appendChild(sw);c3.insertAdjacentHTML('beforeend',`<div class="tdig" data-tds>${tdig(swNow(),2)}</div>`);const act=document.createElement('div');act.className='tmact';if(go)act.appendChild(go);if(rs)act.appendChild(rs);c3.appendChild(act)}
+ const sv=[...A.querySelectorAll(':scope>h2')].find(h=>/Saved timers/.test(h.textContent));if(sv){sv.className='fsec';sv.removeAttribute('style')}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{tmDress()}catch(e){console.warn(e)}return r}}
+(function tmTick(){try{if(tab==='timer'){const d=document.querySelector('[data-tdr]');if(d){const L=rLeft(),tot=T.r.ms||1,w=d.parentElement,arc=w.querySelector('.tmarc'),C=+w.closest('.card').dataset.c;d.innerHTML=tdig(L,1);if(arc&&C)arc.setAttribute('stroke-dashoffset',(C*(1-Math.min(1,L/tot))).toFixed(1));w.classList.toggle('low',T.r.run&&L<=5000)}
+ const s=document.querySelector('[data-tds]');if(s)s.innerHTML=tdig(swNow(),2)}}catch(_){}requestAnimationFrame(tmTick)})();
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=tmpre]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const s=+el.dataset.i,set=(k,v)=>{const i=document.querySelector(`[data-rt=${k}]`);if(i)i.value=v};
+ set('m',Math.floor(s/60));set('s',s%60);set('ms',0);const i=document.querySelector('[data-rt=s]');if(i)i.dispatchEvent(new Event('change',{bubbles:true}));else{T.r.ms=s*1e3;T.r.run=false;T.r.left=undefined;render()}},true);
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
