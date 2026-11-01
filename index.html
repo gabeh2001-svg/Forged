@@ -6485,7 +6485,7 @@ const LQV={};const lqV=k=>{const n=performance.now(),o=LQV[k];if(o&&n-o.t<400)re
 let LQRAF=0,LQLAST=0;
 function lqKick(){if(!LQRAF)LQRAF=requestAnimationFrame(lqFrame)}
 function lqFrame(now){LQRAF=0;const dt=Math.min(40,now-(LQLAST||now))/16.7;LQLAST=now;let busy=false;
- for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected||c._vis===false)continue;const V=lqV(k),target=Math.max(.04,V.v>=V.g?.985:Math.min(.95,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
+ for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected||c._vis===false)continue;const V=lqV(k),target=Math.max(V.v>0?.04:0,V.v>=V.g?.985:Math.min(.95,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
   s.tilt+=(s.tt-s.tilt)*.08*dt;s.t+=dt;let e=Math.abs(target-s.lvl)*40+Math.abs(s.tt-s.tilt)*10;
   if(!LRM()){const n=s.n,st=Math.min(dt,1.5);for(let i=0;i<n;i++){s.v[i]+=(-.02*s.h[i]-.035*s.v[i])*st;s.h[i]+=s.v[i]*st;if(s.h[i]>10)s.h[i]=10;if(s.h[i]<-10)s.h[i]=-10}
    const L=s.L||(s.L=new Float32Array(n)),R=s.R||(s.R=new Float32Array(n));for(let p=0;p<3;p++){for(let i=0;i<n;i++){L[i]=i>0?.12*(s.h[i]-s.h[i-1]):0;R[i]=i<n-1?.12*(s.h[i]-s.h[i+1]):0}for(let i=0;i<n;i++){if(i>0){s.v[i-1]+=L[i]*st;s.h[i-1]+=L[i]*.5}if(i<n-1){s.v[i+1]+=R[i]*st;s.h[i+1]+=R[i]*.5}}}
@@ -7196,6 +7196,141 @@ window.addEventListener('click',e=>{const el=e.target.closest('.eddock [data-a=e
 // a tap on the corner grip steps the size; dragging it still resizes
 {let G=null;window.addEventListener('pointerdown',e=>{const h=e.target.closest('.edit .wd .hd');G=h?{id:h.closest('.wd').dataset.id,x:e.clientX,y:e.clientY,t:Date.now()}:null},true);
  window.addEventListener('pointerup',e=>{const g=G;G=null;if(!g||!ED||Math.hypot(e.clientX-g.x,e.clientY-g.y)>6||Date.now()-g.t>500)return;const L=S.lay.find(l=>l.id===g.id);if(!L)return;const i=WSZ.findIndex(z=>z.t===wszOf(L)),z=WSZ[(i+1)%3];L.w=z.w;L.h=z.h;save();render();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true)}
+/* ===== v92: overflow stays inside the tank; an empty tank is empty; light text on toasts ===== */
+// Research notes for this block:
+// - The spill outside the widget was drawn on its own layer over the page, which can't move in step with iOS scrolling
+//   (scrolling runs on the compositor, separate from the page's own code), so it drifted and cost frames. Keeping the
+//   effect inside the widget's own canvas means it scrolls with the widget for free (WebKit and Chrome both scroll on a
+//   separate thread; see "Rendering performance", web.dev).
+// - Going over your goal now reads as a full glass that sloshes: a big wave from the side you tapped, spray that jumps
+//   and falls back, and a short "over by" label. Feedback that's tied to the thing you touched is easier to read than an
+//   effect somewhere else on screen (Norman, The Design of Everyday Things: feedback must be immediate and local).
+(function(){const st=document.createElement('style');st.textContent=`
+.toast{color:#F3F1EC}
+html[data-look] .toast{background:rgba(16,16,16,.88)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-color:rgba(255,255,255,.12)!important}
+.lqover{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) scale(.9);z-index:3;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.92);color:#0b2a44;font-size:13px;font-weight:800;letter-spacing:.02em;white-space:nowrap;pointer-events:none;animation:lqov 1.6s cubic-bezier(.3,1.3,.5,1) forwards}
+@keyframes lqov{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}18%{opacity:1;transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(.96)}}`;document.head.appendChild(st)})();
+try{spillStop()}catch(_){}
+// the new overflow: a slosh and spray inside the tank
+spill=function(el,k,amt){const s=LQS[k];if(!s||!s.c)return;const left=(()=>{const r=el.getBoundingClientRect();return r.left+r.width/2>innerWidth/2})();
+ if(s.lvl!=null)s.lvl=Math.max(.5,s.lvl-.16);lqSplash(k,left?0:1,9+amt*3);lqSplash(k,left?.15:.85,5);s.tt+=left?-.12:.12;setTimeout(()=>{s.tt-=left?-.12:.12;s.live=performance.now();lqKick()},380);
+ s.drops=s.drops||[];const n=Math.round(10+amt*8);for(let i=0;i<n;i++){const u=Math.random();s.drops.push({x:left?u*.45:1-u*.45,y:0,vx:(left?1:-1)*(.002+Math.random()*.006)*(Math.random()<.3?-1:1),vy:-(.012+Math.random()*.02),r:.8+Math.random()*1.8})}
+ try{const V=lqVal(k),over=V.v-V.g,w=el.closest('.wd');if(over>0&&w){const o=document.createElement('span');o.className='lqover';o.textContent=k==='water'?`${L1(over)} L over`:`${Math.round(over)} mg over`;w.appendChild(o);setTimeout(()=>o.remove(),1700)}}catch(_){}
+ try{navigator.vibrate&&navigator.vibrate([8,40,8])}catch(_){}
+ (el.closest('.wd')||el).animate([{transform:'none'},{transform:`translateX(${left?-2:2}px) rotate(${left?-.5:.5}deg)`},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.4,.5,1)'});
+ s.live=performance.now();lqKick()};
+spillShake=function(){};
+// draw the spray, and an empty tank as empty
+{const _d=lqDraw;lqDraw=function(k,s,V){if(V.v<=0&&s.lvl<.01){const c=s.c,x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.drawImage(lqText(k,V,c.width,c.height,s.dpr),0,0);return}
+ _d.apply(this,arguments);const D=s.drops;if(!D||!D.length)return;const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s.dpr,base=H*(1-s.lvl),K=LQK[k];
+ for(const p of D){p.vy+=.0016;p.x+=p.vx;p.y+=p.vy}s.drops=D.filter(p=>p.y<.02&&p.x>-.05&&p.x<1.05);
+ x.save();for(const p of s.drops){const px=p.x*W,py=base+p.y*H;if(py>base+2*d)continue;x.beginPath();x.arc(px,py,p.r*d,0,7);x.fillStyle=`rgba(${K.top},.95)`;x.fill();x.beginPath();x.arc(px-p.r*d*.35,py-p.r*d*.35,p.r*d*.35,0,7);x.fillStyle='rgba(255,255,255,.85)';x.fill()}x.restore();
+ if(s.drops.length){s.live=performance.now()}}}
+/* ===== v93: Diet, redesigned to match Home ===== */
+// Research notes for this block:
+// - One number first: what's left today, big, with protein, fat and carbs as bars beside it (same pattern as the Home
+//   widget, so it reads the same everywhere; consistency, Nielsen's heuristic 4). Bars on a shared scale are read more
+//   accurately than rings (Cleveland and McGill 1984).
+// - Logging is the main job, so the four ways in (label, barcode, check, eaten out) are equal tiles at the top, and the
+//   type-it-yourself form is tucked away until it's needed (progressive disclosure, Nielsen Norman Group 2006). Fewer
+//   visible fields means faster logging, which is what keeps people tracking (Burke, Wang and Sevick 2011, J Am Diet
+//   Assoc: self-monitoring adherence drops as effort rises).
+// - The page is grouped under short headings (Today, Nutrition, Plan ahead, Body and habits) so it can be scanned rather
+//   than read, and settings people rarely change (body metrics, meal times) are collapsed (Nielsen Norman Group, "How
+//   users read on the web": people scan headings and the first words).
+// Only applies with a look picked; Classic Swell keeps its layout.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] .dsec{margin:22px 4px 10px;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+html[data-ground=l] .dsec{color:#5E5B53}
+html[data-look] .deye{display:block;font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--ac);margin-bottom:4px}
+html[data-ground=l] .deye{color:var(--p)}
+html[data-look] #app.dv>h1{display:none}
+html[data-look] #app.dv .hdr .wk{margin-top:14px}
+html[data-look] .dhero{display:flex;align-items:center;gap:18px}
+html[data-look] .dhero .l{flex:none;display:flex;flex-direction:column;min-width:0}
+html[data-look] .dhero .lab{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62)}
+html[data-look] .dhero .big{font-family:'Archivo',system-ui,sans-serif;font-size:46px;font-weight:900;font-stretch:70%;line-height:1;margin-top:8px}
+html[data-look] .dhero .l small{font-size:12.5px;color:rgba(243,241,236,.66);margin-top:3px}
+html[data-look] .dhero .r{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+html[data-look] .dhero .pb{margin:0}
+html[data-look] .dhero .pbl{font-size:12.5px;margin-bottom:5px}
+html[data-look] .dhero .pbt{height:5px}
+html[data-look] .dp .dpa{display:flex;gap:16px;justify-content:flex-start;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+html[data-look] .dp .dpa .btn{all:unset;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ac)}
+html[data-look] .dadd>h2{display:none}
+html[data-look] .dadd .dlab{display:block;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62);margin:0 2px 10px}
+html[data-look] .dtiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 14px}
+html[data-look] .dtiles button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:84px;padding:10px 4px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);text-align:center;font-size:12px;font-weight:700;line-height:1.2;color:#F3F1EC}
+html[data-look] .dtiles button svg{width:24px;height:24px}
+html[data-look] .dtiles button.pri{background:#F3F1EC;color:#141412;border-color:transparent}
+html[data-look] .dadd .sctiles,html[data-look] .dadd .rtentry,html[data-look] .dadd .eobtn{display:none!important}
+html[data-look] .dadd .dscr{font-size:12px;margin:6px 2px 4px!important}
+html[data-look] .dman{margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:4px}
+html[data-look] .dman>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 2px;font-size:14px;font-weight:700;color:rgba(243,241,236,.85)}
+html[data-look] .dman>summary::-webkit-details-marker{display:none}
+html[data-look] .dman>summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-right:4px;transition:transform .2s}
+html[data-look] .dman[open]>summary::after{transform:rotate(-135deg)}
+html[data-look] .logc>h2{font-size:10.5px!important;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62);margin-bottom:8px}
+html[data-look] .logc .sr{margin:0 0 6px;border-radius:14px;overflow:hidden}
+html[data-look] .logc .sr .del{inset:2px!important;border-radius:13px}
+html[data-look] .logc .sr .in{background:linear-gradient(var(--cg),var(--cg)),#161514!important;border:0!important;box-shadow:none!important;padding:11px 12px!important;border-radius:14px!important;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+html[data-look] .logc .sr .in b{font-size:15px;font-weight:600}
+html[data-look] .logc .sr .in .sm{grid-column:1/-1;font-size:12.5px}
+html[data-look] .logc .sr .in em{font-style:normal;font-family:'Archivo',system-ui,sans-serif;font-weight:800;font-stretch:80%;font-size:16px;grid-row:1;grid-column:2}
+html[data-look] .logc>p.sm{font-size:12px;margin-top:8px}
+html[data-look] .mnc .mnh h2{font-size:10.5px!important;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62)}
+html[data-look] .mnc:not(.all) .mnl .mnb:nth-child(n+7){display:none}
+html[data-look] .mnmore{all:unset;cursor:pointer;display:block;margin:10px 2px 0;font-size:13.5px;font-weight:700;color:var(--ac)}
+html[data-look] .dacc>h2{cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin:0}
+html[data-look] .dacc>h2::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);opacity:.7;transition:transform .2s}
+html[data-look] .dacc.open>h2::after{transform:rotate(-135deg)}
+html[data-look] .dacc:not(.open)>*:not(h2):not(.dsum){display:none!important}
+html[data-look] .dacc .dsum{margin:4px 0 0!important;padding:0!important;background:none!important;border:0!important;font-size:13px;color:rgba(243,241,236,.62)}
+html[data-look] .dacc.open .dsum{display:none}
+html[data-look] #app.dv>.card{margin-bottom:12px}
+html[data-look] #app.dv>.card:not(.dacc)>h2{font-size:10.5px!important;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62);margin-bottom:10px}`;document.head.appendChild(st)})();
+const DGO={acc:new Set(),man:false,mn:false};
+const DTI={scan:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',bc:'<path d="M4 6v12M7 6v12M10.5 6v12M14 6v12M16.5 6v12M20 6v12"/>',chk:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/>',out:'<path d="M6 3v8a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3M8 13v8M16 3c-1.7 1-2.5 3-2.5 6s1 4 2.5 4v8"/>'};
+const dIco=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${DTI[k]}</svg>`;
+function dietDress(){if(!S.nat||!NAT[S.nat]||tab!=='diet')return;const A=$('#app');if(!A||A.querySelector(':scope>.dsec'))return;A.classList.add('dv');
+ const cards=[...A.querySelectorAll(':scope>.card')],by=f=>cards.find(f),h2=t=>c=>{const h=c.querySelector(':scope>h2,:scope>.mnh h2');return h&&h.textContent.trim()===t};
+ const hero=by(c=>c.classList.contains('dp')),add=by(h2('Log a meal')),logc=by(c=>c.classList.contains('logc')),mn=by(c=>c.classList.contains('mnc')),fp=by(c=>c.classList.contains('fpc')),rc=by(c=>c.classList.contains('rcl')),
+  sv=by(h2('Saved meals')),bm=by(h2('Body metrics')),eat=by(c=>c.classList.contains('eat')),rp=by(h2('Diet reports'));
+ const t=today(),m=S.macros[t]||{},g=S.setup||{},kc=Math.round(+m.k||0),gk=+g.k||0,left=Math.max(0,gk-kc),meals=((S.meals||{})[t]||[]).length;
+ // header: an eyebrow and today's line
+ const H=A.querySelector(':scope>.hdr');if(H){const tl=H.querySelector('.tl');if(tl&&tl.firstChild&&tl.firstChild.nodeType===3)tl.firstChild.nodeValue=WK7[new Date(t+'T12:00').getDay()];
+  const row=H.querySelector('.row');if(row&&!H.querySelector('.hsub')){const L=row.firstElementChild,w=document.createElement('div');row.insertBefore(w,L);w.insertAdjacentHTML('afterbegin','<span class="deye">DIET</span>');w.appendChild(L);
+   let wl='';try{wl=L1(watOn())+' L water'}catch(_){}w.insertAdjacentHTML('beforeend',`<span class="hsub">${[kc.toLocaleString('en-GB')+' kcal',meals+' meal'+(meals===1?'':'s'),wl].filter(Boolean).join(' · ')}</span>`)}
+  const sb=H.querySelector('.stkb');if(sb&&!sb.querySelector('small')){const n=(sb.textContent||'').trim();sb.innerHTML=`<b>${esc(n)}</b><small>DAY STREAK</small>`}}
+ // the summary: what's left, with the macro bars
+ if(hero&&!hero.querySelector('.dhero')){const pb2=hero.querySelector('.pb2'),dph=hero.querySelector('.dph'),big=hero.querySelector(':scope>.pb');
+  const box=document.createElement('div');box.className='dhero';box.innerHTML=`<div class="l"><span class="lab">${gk?'Left today':'Eaten today'}</span><span class="big">${(gk?left:kc).toLocaleString('en-GB')}</span><small>${gk?`${kc.toLocaleString('en-GB')} of ${gk.toLocaleString('en-GB')} kcal`:'kcal'}</small></div><div class="r"></div>`;
+  if(pb2){[...pb2.children].forEach(x=>box.querySelector('.r').appendChild(x));pb2.remove()}if(dph)dph.remove();if(big)big.remove();hero.prepend(box)}
+ // adding food: four equal ways in, then describe it, then type it yourself
+ if(add&&!add.querySelector('.dtiles')){add.classList.add('dadd');const last=(S.rth||[])[0];
+  add.insertAdjacentHTML('afterbegin',`<span class="dlab">Add food</span><div class="dtiles"><button class="pri" data-a="scan">${dIco('scan')}Scan label</button><button data-a="bcgo">${dIco('bc')}Barcode</button><button data-a="rtgo">${dIco('chk')}Check it</button><button data-a="eostart">${dIco('out')}Eaten out</button></div>`);
+  const dsc=add.querySelector('.dscw');const fields=[...add.children].filter(x=>!x.classList.contains('dtiles')&&!x.classList.contains('dlab')&&x!==dsc&&!x.matches('h2,.sctiles,.rtentry,.eobtn,input[type=file]')&&!x.classList.contains('scbox')&&!x.querySelector('.scbox'));
+  const hasM=typeof M==='object'&&M&&['n','k','p','f','c'].some(k=>M[k]!==undefined&&M[k]!=='');
+  const det=document.createElement('details');det.className='dman';if(DGO.man||hasM||SCAN)det.open=true;det.innerHTML='<summary>Type it in yourself</summary>';fields.forEach(x=>det.appendChild(x));add.appendChild(det);
+  det.addEventListener('toggle',()=>{DGO.man=det.open})}
+ // the meal list: kcal on the right
+ if(logc)logc.querySelectorAll('.sr .in').forEach(x=>{if(x.querySelector('em'))return;const s=x.querySelector('.sm');const mm=s&&s.textContent.match(/^(\d[\d,]*)\s*kcal,?\s*/);if(mm){x.insertAdjacentHTML('beforeend',`<em>${mm[1]}<small style="font-size:11px;font-weight:600;opacity:.6"> kcal</small></em>`);s.textContent=s.textContent.replace(mm[0],'').replace(/^./,c=>c.toUpperCase())}});
+ if(logc){const h=logc.querySelector(':scope>h2');if(h)h.textContent=meals?`Today’s food · ${meals}`:'Today’s food'}
+ // nutrients: the lowest six, with the rest a tap away
+ if(mn&&!mn.querySelector('.mnmore')){if(DGO.mn)mn.classList.add('all');const n=mn.querySelectorAll('.mnl .mnb').length;if(n>6)mn.querySelector('.mnl').insertAdjacentHTML('afterend',`<button class="mnmore" data-a="mnmore">${DGO.mn?'Show fewer':`Show all ${n}`}</button>`)}
+ // rarely changed: collapsed, with a one-line summary
+ const acc=(c,id,sum)=>{if(!c)return;c.classList.add('dacc');c.dataset.acc=id;if(DGO.acc.has(id))c.classList.add('open');const h=c.querySelector(':scope>h2');if(h&&!c.querySelector('.dsum'))h.insertAdjacentHTML('afterend',`<p class="dsum">${esc(sum)}</p>`)};
+ const bmd=(()=>{try{const ks=Object.keys(S.bm||{}).filter(k=>S.bm[k]&&S.bm[k].w).sort();if(ks.length){const k=ks[ks.length-1];return`Last weight ${S.bm[k].w} kg, ${new Date(k+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`}}catch(_){}return'Weight, body fat and more'})();
+ acc(bm,'bm',bmd);acc(eat,'eat',(S.eat||[]).length?`${(S.eat||[]).length} meal time${(S.eat||[]).length===1?'':'s'} set`:'Optional meal-time nudges');
+ // put it in order, under headings
+ const sec=t=>{const h=document.createElement('h3');h.className='dsec';h.textContent=t;return h};
+ const nav=A.querySelector(':scope>nav');const known=new Set([hero,add,logc,mn,fp,rc,sv,bm,eat,rp]);const other=cards.filter(c=>!known.has(c));
+ const order=[hero,sec('Today'),add,...other,logc,mn&&sec('Nutrition'),mn,sec('Plan ahead'),fp,rc,sv,sec('Body and habits'),rp,bm,eat].filter(Boolean);
+ order.forEach(el=>A.insertBefore(el,nav||null))}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab!=='diet')$('#app').classList.remove('dv');dietDress()}catch(e){}return r}}
+window.addEventListener('click',e=>{const h=e.target.closest('#app.dv .dacc>h2');if(h){const c=h.parentElement,id=c.dataset.acc;c.classList.toggle('open');c.classList.contains('open')?DGO.acc.add(id):DGO.acc.delete(id);return}
+ const m=e.target.closest('[data-a=mnmore]');if(m){e.stopImmediatePropagation();e.preventDefault();DGO.mn=!DGO.mn;const c=m.closest('.mnc');c.classList.toggle('all',DGO.mn);m.textContent=DGO.mn?'Show fewer':`Show all ${c.querySelectorAll('.mnl .mnb').length}`}},true);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="13" r="7"/><path d="M12 3v3"/>',h:'A cleaner Diet page',p:'What’s left today up top, four quick ways to add food, and the page grouped so you can find things at a glance.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
