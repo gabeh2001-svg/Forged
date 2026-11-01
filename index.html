@@ -6259,7 +6259,7 @@ if(typeof awr==='function'){const _a=awr;awr=function(){const r=_a.apply(this,ar
 /* ===== v81: eating out: pick the place, then its menu; your places and last orders come back in one tap ===== */
 // Research notes for this block:
 // - Since April 2022, chains in England with 250+ staff must print calories (Calorie Labelling (Out of Home Sector)
-//   (England) Regulations 2021), so Swell carries their published figures in a small menu file (food/menus-1.json) that
+//   (England) Regulations 2021), so Swell carries their published figures in a small menu file (food/menus-2.json) that
 //   downloads the first time someone eats out, then works offline. Where a chain only prints calories, the protein, fat
 //   and carb split comes from a lab-analysed food of the same kind, scaled to the printed calories.
 // - Recall is the weak point of eating-out logs: drinks, sides, sauces and desserts are the items most often forgotten in
@@ -6285,7 +6285,7 @@ if(typeof awr==='function'){const _a=awr;awr=function(){const r=_a.apply(this,ar
 .eoask{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}.eoask .chip{margin:0}`;document.head.appendChild(st)})();
 const REST=()=>{S.rest=S.rest||{};S.rest.pl=S.rest.pl||{};S.rest.own=S.rest.own||{};return S.rest};
 let MENUS=null,MNLOAD=null;
-const menusReady=()=>MENUS?Promise.resolve(MENUS):(MNLOAD=MNLOAD||fetch('food/menus-1.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>MENUS=j).catch(e=>{MNLOAD=null;throw e}));
+const menusReady=()=>MENUS?Promise.resolve(MENUS):(MNLOAD=MNLOAD||fetch('food/menus-2.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>MENUS=j).catch(e=>{MNLOAD=null;throw e}));
 // built-in chains from the describe-a-meal list, grouped into menu sections
 function chSecs(b){const sec=n=>/fries|chips|hash|slaw|gravy|corn|onion|nugget|popcorn|wings/i.test(n)?'Sides and sharing':/flurry|sundae|cookie|cake/i.test(n)?'Desserts':/muffin|breakfast/i.test(n)?'Breakfast':/roll|bake/i.test(n)?'Bakes':/original recipe/i.test(n)?'Chicken':'Burgers and mains';
  const o={};CHN.forEach((x,i)=>{if(x.b!==b)return;const {off,ug}=chOff(x),f=ug/100;(o[sec(x.n)]=o[sec(x.n)]||[]).push([x.n,Math.round(off.k*f),Math.round(off.p*f*10)/10,Math.round(off.f*f*10)/10,Math.round(off.c*f*10)/10,off.sug!=null?Math.round(off.sug*f*10)/10:-1])});
@@ -8021,6 +8021,27 @@ S.fimg=S.fimg||{};
 // show the pictures
 (async()=>{try{for(const id of Object.values(S.fimg||{}))if(!IMGS[id]){const v=await idbGet(id);if(v)IMGS[id]=v}render()}catch(_){}})();
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{document.querySelectorAll('#app .mfc .mfr').forEach(row=>{const v=(row.dataset.i||'').split('|');let k=v[0]==='m'?nmk(v.slice(1).join('|')):v[0]==='r'?nmk('r:'+((S.recipes||[])[+v[1]]||{}).n):nmk('p:'+v[1]);const id=S.fimg&&S.fimg[k],src=id&&IMGS[id];const ph=row.querySelector('.ph');if(ph){ph.removeAttribute('data-mfpic');ph.classList.remove('add');if(src&&!ph.querySelector('img'))ph.innerHTML=`<img src="${src}" alt="">`}})}catch(_){}return r}}
+/* ===== v103: one dumbbell or two, more one-liners, and 50 UK chains to pick from when you eat out ===== */
+// Research notes for this block:
+// - Single-arm and two-arm dumbbell work load very differently, so the form asks which, and the weight is always "each
+//   dumbbell", the way gyms label them (NSCA exercise technique guidance).
+// - The chain list covers the UK's best-known sit-down, takeaway and coffee chains. Calories follow the figures chains
+//   must publish under the 2022 calorie labelling rules; protein, fat and carbs are split by dish type, so they're
+//   estimates and say so.
+// one dumbbell or a pair
+{const _w=xWeightBox;xWeightBox=function(u){if(X.eq!=='Free Weights')return _w.apply(this,arguments);const dn=X.dn===1?1:2;
+ return`<div class="xl"><span>One dumbbell or two?</span><div class="seg"><button class="${dn===1?'on':''}" data-a="xdn" data-i="1">One</button><button class="${dn===2?'on':''}" data-a="xdn" data-i="2">A pair</button></div></div>
+ <label class="xl"><span>${dn===1?'How heavy is the dumbbell?':'How heavy is each dumbbell?'}</span><input type="number" inputmode="decimal" step="0.5" data-b="X.w" value="${esc(X.w)}" placeholder="${u}"></label>`}}
+window.addEventListener('click',e=>{const el=e.target.closest('.xf [data-a=xdn]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();X.dn=+el.dataset.i;const y=scrollY;render();scrollTo(0,y)},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=xedit]');if(!el||!D)return;setTimeout(()=>{const x=D&&D.days[D.sel].ex[X.ei];if(x&&x.dn)X.dn=x.dn},0)},true);
+{let Q=null;window.addEventListener('click',e=>{const el=e.target.closest('.xf [data-a=addx2]');if(!el||!D)return;const L=D.days[D.sel].ex;Q={n0:L.length,ei:X.ei,dn:X.eq==='Free Weights'?(X.dn===1?1:2):null,day:D.sel}},true);
+ document.addEventListener('click',()=>{if(!Q)return;const q=Q;Q=null;setTimeout(()=>{if(!D)return;const L=D.days[q.day].ex;const x=q.ei==null?(L.length>q.n0?L[L.length-1]:null):L[q.ei];if(x){if(q.dn)x.dn=q.dn;else delete x.dn;save()}},0)},true)}
+// show it in the plan: "× 2 dumbbells"
+{const _b=exBlock;exBlock=function(e){let h=_b.apply(this,arguments);try{if(e&&e.eq==='Free Weights'&&e.dn)h=h.replace(/(\d+(?:\.\d+)?\s?(?:kg|lb))/,`$1 ${e.dn===1?'(one dumbbell)':'each, a pair'}`)}catch(_){}return h}}
+// more one-liners
+QUOTES.push('Ain’t nothin’ but a peanut!','Everybody wants to be big, but nobody wants to lift heavy.','Strength does not come from winning.','Life is a journey, not a destination. Leg day is both.','Nobody puts baby in a corner. Unless it’s the squat rack.','I’m the king of the world! (of the bench)','Keep your friends close and your protein closer.','You can’t handle the truth! Or that weight.','Go ahead, make my gains.','After all, tomorrow is another chest day.','We’re gonna need a bigger bench.','Life moves pretty fast. So does a superset.','Elementary, my dear quads.','Here’s Johnny! (to the squat rack)','I’m gonna make him an offer he can’t refuse: one more rep.','E.T. phone gym.','Hasta la vista, body fat.','Run, Forrest, run! It’s cardio day.','The first rule of the gym: you do not skip leg day.','Wax on, wax off. Rack your weights.','Bond. James Bond. Shaken, not stirred, with whey.','Inconceivable! Another PR.','I am Groot. I am also on my third set.','With great power comes great responsibility. And great quads.','Life finds a way. So do gains.');
+Object.assign(QWHO,{'Ain’t nothin’ but a peanut!':'Ronnie Coleman','Everybody wants to be big, but nobody wants to lift heavy.':'Ronnie Coleman, cleaned up','Strength does not come from winning.':'Arnold Schwarzenegger','Life is a journey, not a destination. Leg day is both.':'An old saying, sort of','Nobody puts baby in a corner. Unless it’s the squat rack.':'Dirty Dancing, sort of','I’m the king of the world! (of the bench)':'Titanic, sort of','Keep your friends close and your protein closer.':'The Godfather Part II, sort of','You can’t handle the truth! Or that weight.':'A Few Good Men, sort of','Go ahead, make my gains.':'Dirty Harry, sort of','After all, tomorrow is another chest day.':'Gone with the Wind, sort of','We’re gonna need a bigger bench.':'Jaws, sort of','Life moves pretty fast. So does a superset.':'Ferris Bueller, sort of','Elementary, my dear quads.':'Sherlock Holmes, sort of','Here’s Johnny! (to the squat rack)':'The Shining, sort of','I’m gonna make him an offer he can’t refuse: one more rep.':'The Godfather, sort of','E.T. phone gym.':'E.T., sort of','Hasta la vista, body fat.':'Terminator 2, sort of','Run, Forrest, run! It’s cardio day.':'Forrest Gump, sort of','The first rule of the gym: you do not skip leg day.':'Fight Club, sort of','Wax on, wax off. Rack your weights.':'The Karate Kid, sort of','Bond. James Bond. Shaken, not stirred, with whey.':'James Bond, sort of','Inconceivable! Another PR.':'The Princess Bride, sort of','I am Groot. I am also on my third set.':'Guardians of the Galaxy, sort of','With great power comes great responsibility. And great quads.':'Spider-Man, sort of','Life finds a way. So do gains.':'Jurassic Park, sort of'});
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M6 3v8a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3M8 13v8M16 3c-1.7 1-2.5 3-2.5 6s1 4 2.5 4v8"/>',h:'50 places to eat out',p:'Wetherspoon, Wagamama, Toby Carvery, Domino’s, Pret, Costa and dozens more are now in Eaten out, with their popular dishes.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
