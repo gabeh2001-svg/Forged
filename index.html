@@ -6565,7 +6565,7 @@ function spDraw(S2,Y,fade){const {c,q,K}=S2,x=c.getContext('2d'),cw=c.width,ch=c
   const o=i*4;for(let ch2=0;ch2<3;ch2++){let v=T[ch2]+(B[ch2]-T[ch2])*dp;v=v+(255-v)*hi*.85;D[o+ch2]=v*(1-sh)}D[o+3]=(a*.86+hi*.14)*255*fade}
  x.putImageData(im,x0,y0)}
 // stop the spill whenever you leave Home or open a page or sheet
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(SP&&(tab!=='home'||$('#fs')||!SP.src.isConnected))spillStop()}catch(_){}return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(SP){if(tab!=='home'||$('#fs'))spillStop();else if(!SP.src.isConnected){const n=$(`#app [data-liquid="${SP.k}"]`);n?SP.src=n.closest('.wd'):spillStop()}}}catch(_){}return r}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)spillStop()});
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'){lqBind();lqCheck()}}catch(_){}return r}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)lqKick()});
@@ -6688,7 +6688,7 @@ function wHero(){const t=today();let p=null,d=null;try{p=activePlan();d=dayWork(
  const ex=d.ex||[],sets=ex.reduce((a,e)=>a+(+e.s||3),0),min=Math.max(10,Math.round(sets*2.6/5)*5),img=typeof cvImg==='function'?cvImg(d):null;
  const ln=e=>`<div><span>${esc(e.n)}</span><span>${e.s?e.s+' × ':''}${esc(String(e.v||''))}${e.t&&/Time/i.test(e.t)?' s':''}</span></div>`;
  return`<div class="whero ${img?'':'nocv'}">${img?`<img src="${img}" alt="">`:'<div class="wbg"></div>'}<span class="wlb">Workout</span><div class="whp"><div class="top"><div style="min-width:0"><span class="k">${ex.length} exercise${ex.length===1?'':'s'} · ${min} min</span><span class="n">${esc(d.name)}</span></div><button class="go" data-a="wsel">START</button></div><div class="ex">${ex.slice(0,2).map(ln).join('')}</div></div></div>`}
-{const _h=home;home=function(){let h=_h.apply(this,arguments);if(!S.nat||!NAT[S.nat]||typeof ED!=='undefined'&&ED)return h;try{h=h.replace(/<button class="btn big on" data-a="wsel">[^<]*<\/button>/,wHero())}catch(_){}return h}}
+{const _h=home;home=function(){let h=_h.apply(this,arguments);if(!S.nat||!NAT[S.nat])return h;if(typeof ED!=='undefined'&&ED){if(S.lay.some(l=>l.id==='work'))h=h.replace(/<button class="btn big on" data-a="wsel">[^<]*<\/button>/,'');return h}try{h=h.replace(/<button class="btn big on" data-a="wsel">[^<]*<\/button>/,S.lay.some(l=>l.id==='work')?'':wHero())}catch(_){}return h}}
 // calories with macro bars
 {const _wd=wd;wd=function(l){if(!l||l.id!=='macros'||!S.nat||!NAT[S.nat]||l.h===2)return _wd.apply(this,arguments);
  const m=S.macros[today()]||{},g=S.setup||{},kc=Math.round(+m.k||0),gk=+g.k||0,left=Math.max(0,gk-kc),pc=(v,G)=>G>0?Math.min(100,v/G*100):0;
@@ -6699,6 +6699,420 @@ function wHero(){const t=today();let p=null,d=null;try{p=activePlan();d=dayWork(
 {const _wd=wd;wd=function(l){let h=_wd.apply(this,arguments);if(!l||l.id!=='shop'||!S.nat||!NAT[S.nat]||typeof h!=='string')return h;try{const vis=(h.match(/class="wi"/g)||[]).length,mm=h.match(/>and (\d+) more<\/span>/),n=vis+(mm?+mm[1]:0);
  h=h.replace(/<span class="sm" style="margin:auto 0 0">and \d+ more<\/span>/,'');if(n)h=h.replace(/(<div class="fpw"><div class="wl">[\s\S]*?<\/span>)/,`$1<em>${n} to get</em>`)}catch(_){}return h}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{hdrDress()}catch(_){}return r}}
+/* ===== v88: one workout widget, a real Food plan widget, and a new Edit Home ===== */
+// Research notes for this block:
+// - Duplicated widgets split attention and make the screen harder to scan (Nielsen Norman Group, "Minimize cognitive load":
+//   remove redundant elements). Today's workout and Coming up showed the same session, so they're one widget now: today's
+//   workout, or what's next on a rest day.
+// - Edit Home follows the iOS widget gallery: pick from a visible list with a description and the sizes on offer, rather
+//   than remembering what exists (Nielsen's heuristic 6, recognition rather than recall; Apple HIG, Widgets).
+// - Size is changed with one labelled button (S, M, L) on each widget instead of a hidden drag handle: a visible, large
+//   target is faster and less error-prone to hit (Fitts 1954; Apple HIG minimum 44 pt targets), and the drag still works.
+// - The look picker sits in Edit Home too, since look and layout are one decision for most people (card sorting in
+//   v73's Settings work put them together under "Look and feel").
+(function(){const st=document.createElement('style');st.textContent=`
+.edbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:30;display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 8px 8px 14px;border-radius:20px;background:rgba(14,14,14,.72);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);border:1px solid rgba(255,255,255,.12);box-shadow:0 14px 30px -14px rgba(0,0,0,.7);color:#F3F1EC}
+.edbar b{flex:1;font-size:15px;white-space:nowrap}.edbar .btn{flex:none;margin:0;width:auto;padding:9px 14px;font-size:14px;min-height:0}
+.edlk{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding:2px;scrollbar-width:none}.edlk::-webkit-scrollbar{display:none}
+.edlk button{flex:none;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;color:inherit;font:inherit;font-size:11px;padding:0}
+.edlk i{display:block;width:44px;height:44px;border-radius:14px;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.edlk button.on i{border-color:#fff}
+html[data-ground=l] .edlk button{color:#22231E}html[data-ground=l] .edlk button.on i{border-color:#22231E}
+.edit .wd .wsz{position:absolute;right:8px;bottom:8px;z-index:6;min-width:44px;height:30px;padding:0 10px;border-radius:15px;border:1px solid rgba(255,255,255,.22);background:rgba(10,10,10,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font:inherit;font-size:12px;font-weight:700;letter-spacing:.04em}
+.edit .wd .hd{opacity:0}
+#app:has(.grid.edit)>.chips{display:none}
+.wgal{display:flex;flex-direction:column;gap:10px}
+.wgal h3{margin:12px 2px 0;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.wgi{display:grid;grid-template-columns:44px 1fr;gap:4px 12px;align-items:start;padding:12px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.wgi .ic{grid-row:span 2;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.08)}.wgi .ic svg{width:22px;height:22px}
+.wgi b{font-size:15px}.wgi p{margin:0;font-size:13px;line-height:1.4;color:var(--dim)}
+.wgi .sz{grid-column:2;display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.wgi .sz button{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:inherit;font:inherit;font-size:13px;border-radius:12px;padding:7px 12px}
+.wgi .sz button:last-child{margin-left:auto}
+.wgi .sz button.add{background:var(--ac,#fff);color:var(--on-ac,#111);border-color:transparent;font-weight:700}
+.wgi .sz button.on{background:#fff;color:#111;border-color:#fff}
+.wgi.in{opacity:.55}
+.fpwg{all:unset;box-sizing:border-box;display:flex;flex-direction:column;width:100%;height:100%;cursor:pointer}
+.fpwg .wl{display:flex;justify-content:space-between;width:100%}
+.fpwg .wl em{font-style:normal;font-size:12px;color:rgba(243,241,236,.66);letter-spacing:0;text-transform:none;font-weight:500}
+.fpwg .bigx{margin-top:auto;font-family:'Archivo',system-ui,sans-serif;font-size:34px;font-weight:900;font-stretch:70%;line-height:1}
+.fpwg .bigx small{font-size:16px;font-weight:700;color:rgba(243,241,236,.66)}
+.fpwg .sub{font-size:12.5px;color:rgba(243,241,236,.66);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpwk7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:auto}
+.fpwk7 span{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(243,241,236,.6);padding:6px 0;border-radius:10px}
+.fpwk7 span i{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(243,241,236,.35)}
+.fpwk7 span.on i{background:var(--ac,#fff);border-color:transparent}
+.fpwk7 span.now{background:rgba(255,255,255,.08);color:#F3F1EC}
+.fpwl{display:flex;flex-direction:column;margin-top:6px;font-size:13.5px}
+.fpwl div{display:flex;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,.08)}.fpwl div b{width:30px;flex:none;font-size:12px;color:rgba(243,241,236,.6)}
+.fpwl div span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fpwl div.no span{color:rgba(243,241,236,.45)}
+.whero.inw{height:100%!important;margin:0!important;border-radius:inherit}
+.wd[data-id=work].hw{padding:0!important}
+.whero.sm .whp{padding:12px}.whero.sm .whp .n{font-size:24px}.whero.sm .whp .go{height:40px;padding:0 16px;font-size:14px}
+.whero.xs .whp{left:8px;right:8px;bottom:8px;padding:10px}.whero.xs .whp .top{flex-direction:column;align-items:stretch;gap:8px}.whero.xs .whp .n{font-size:22px}.whero.xs .whp .go{height:36px;padding:0 10px;font-size:13px;width:100%}.whero.xs .whp .k{font-size:10px}`;document.head.appendChild(st)})();
+// 1. one workout widget
+try{delete NM.next}catch(_){}
+NM.work='Workout';
+function layFix(){try{let ch=false;if(S.lay.some(l=>l.id==='next')){const hasW=S.lay.some(l=>l.id==='work');S.lay=S.lay.map(l=>l.id==='next'?(hasW?null:(ch=true,{...l,id:'work'})):l).filter(Boolean);ch=true}if(ch)save()}catch(_){}}
+layFix();
+{const _wd=wd;wd=function(l){if(!l||l.id!=='work'||!S.nat||!NAT[S.nat])return _wd.apply(this,arguments);let h='';try{h=wHero()}catch(_){return _wd.apply(this,arguments)}
+ const sz=l.w===1?'xs':l.h===1?'sm':'';h=h.replace('<div class="whero ',`<div class="whero inw ${sz} `);
+ if(l.w===1)h=h.replace(/<div class="ex">[\s\S]*?<\/div><\/div><\/div>$/,'</div></div>').replace(/<p>[^<]*<\/p>/,'');
+ else if(l.h===1)h=h.replace(/<div class="ex">[\s\S]*?<\/div><\/div><\/div>$/,'</div></div>');
+ return h}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home')document.querySelectorAll('#app .wd[data-id=work]').forEach(w=>w.classList.toggle('hw',!!w.querySelector('.whero')))}catch(_){}return r}}
+// 2. the Food plan widget: your week of meals
+NM.food='Food plan';
+WIS.cal7=WIS.cal7||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
+function fpWeekInfo(){let ws=realToday();try{fpRoll();ws=fpWs(0)}catch(_){}const days=fpDays(ws),r=realToday();
+ const names=d=>fpOf(d).map(e=>{const x=rcById(e.r);return x?x.n:null}).filter(Boolean);
+ const pl=days.filter(d=>fpOf(d).length).length;let sc=null;try{sc=pl?fpScore(ws):null}catch(_){}
+ const td=days.includes(r)?r:days[0];return{ws,days,names,pl,sc,td}}
+{const _wd=wd;wd=function(l){if(!l||l.id!=='food')return _wd.apply(this,arguments);const I=fpWeekInfo(),r=realToday(),tn=I.names(r);
+ const head=`<div class="wl">${WIS.cal7}<span>Food plan</span>${I.sc&&l.w===2?`<em>Balance ${I.sc.score}</em>`:''}</div>`;
+ if(!I.pl){const has=(S.recipes||[]).length;return`<button class="fpwg" data-a="fpopen" data-i="plan">${head}<span class="bigx">${l.w===1?'Plan':'Plan your week'}</span><span class="sub">${has?'Drop recipes into days':'Add a recipe to start'}</span></button>`}
+ if(l.w===1)return`<button class="fpwg" data-a="fpopen" data-i="plan">${head}<span class="bigx">${I.pl}<small> / 7</small></span><span class="sub">${tn.length?esc(tn[0]):'days planned'}</span></button>`;
+ if(l.h===1)return`<button class="fpwg" data-a="fpopen" data-i="plan">${head}<span class="sub" style="font-size:14px;color:#F3F1EC;margin-top:8px">${tn.length?'Today: '+esc(tn.join(', ')):'Nothing planned today'}</span><div class="fpwk7">${I.days.map(d=>{const w=new Date(d+'T12:00').getDay();return`<span class="${fpOf(d).length?'on':''} ${d===r?'now':''}">${'SMTWTFS'[w]}<i></i></span>`}).join('')}</div></button>`;
+ return`<button class="fpwg" data-a="fpopen" data-i="plan">${head}<div class="fpwl">${I.days.map(d=>{const n=I.names(d),w=new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short'});return`<div class="${n.length?'':'no'}"><b>${w}</b><span>${n.length?esc(n.join(', ')):'Nothing yet'}</span></div>`}).join('')}</div></button>`}}
+// 3. Edit Home: a bar with Add widget and Done, looks to pick from, and a size button on each widget
+const WDESC={water:['Water','Fills up as you drink. Tap + to add a glass.','drop','Today'],caf:['Caffeine','What you’ve had and when to stop for good sleep.','drop2','Today'],macros:['Calories','Calories left, with protein, fat and carbs.','plate','Food'],
+ food:['Food plan','Your week of meals at a glance.','cal7','Food'],shop:['Shopping list','Tick things off as you shop, in aisle order.','cart','Food'],micro:['Nutrients','How many vitamins and minerals you’re getting enough of.','leaf','Food'],
+ work:['Workout','Today’s session with a Start button, or what’s next on a rest day.','lift','Training'],bring:['Gym bag','What to pack for today’s session.','bag','Training'],goal:['Goal','A goal with a deadline, and how far along you are.','flag','Training'],
+ sleep:['Sleep','Last night’s sleep and your bedtime.','moon','Body'],supp:['Supplements','Tick off today’s supplements.','plate','Body'],cyc:['Cycle','Where you are in your cycle and what’s next.','moon','Body']};
+const WSZ=[{w:1,h:1,t:'S'},{w:2,h:1,t:'M'},{w:2,h:2,t:'L'}];
+const wszOf=l=>l.w===1?'S':l.h===1?'M':'L';
+function wAvail(){return Object.keys(NM).filter(k=>WDESC[k]||NM[k]).filter(k=>k!=='cyc'||(typeof cycOn==='function'&&cycOn()))}
+let WGS={};
+function wGallery(){const on=new Set(S.lay.map(l=>l.id)),groups={};wAvail().filter(k=>!on.has(k)).forEach(k=>{const d=WDESC[k]||[NM[k],'','',' Other'];(groups[d[3]]=groups[d[3]]||[]).push(k)});const onl=wAvail().filter(k=>on.has(k)).map(k=>(WDESC[k]||[NM[k]])[0]);
+ const ord=['Today','Food','Training','Body',' Other'];
+ sheet(`<h2>Add a widget</h2><p class="sm" style="margin:-2px 0 4px">Pick a size, then add it. You can move and resize it after.</p><div class="wgal">${ord.filter(g=>groups[g]).map(g=>`<h3>${g.trim()}</h3>${groups[g].map(k=>{const d=WDESC[k]||[NM[k],''],s=WGS[k]||'M',inn=on.has(k);
+  return`<div class="wgi ${inn?'in':''}"><span class="ic">${WIS[d[2]]||''}</span><b>${esc(d[0])}</b><p>${esc(d[1])}${inn?' Already on Home.':''}</p>${inn?'':`<div class="sz">${WSZ.map(z=>`<button class="${s===z.t?'on':''}" data-a="wgsz" data-i="${k}|${z.t}" aria-label="${{S:'Small',M:'Wide',L:'Large'}[z.t]}">${z.t}</button>`).join('')}<button class="add" data-a="wgadd" data-i="${k}">Add</button></div>`}</div>`}).join('')}`).join('')}${ord.some(g=>groups[g])?'':'<p class="sm">Everything’s already on Home.</p>'}${onl.length?`<h3>On Home</h3><p class="sm" style="margin:0 2px">${esc(andL(onl))}. Tap − on a widget to take it off.</p>`:''}</div><button class="btn big" data-a="shx" style="margin-top:12px">Done</button>`)}
+function edBar(){const lk=`<div class="edlk">${[['','Classic','#2a1560','#7c3aed']].concat(Object.entries(NAT).map(([k,L])=>[k,L.n,L.tone,L.p])).map(([k,n,a,b])=>`<button class="${(S.nat||'')===k?'on':''}" data-a="edlook" data-i="${k}"><i style="background:linear-gradient(135deg,${a} 55%,${b} 55%)"></i>${esc(n)}</button>`).join('')}</div>`;
+ return`<div class="edbar"><b>Edit Home</b><button class="btn on" data-a="wgal">+ Add widget</button></div>${lk}`}
+{const _r=render;render=function(){layFix();const r=_r.apply(this,arguments);try{if(ED&&tab==='home'&&!$('#app .edbar'))$('#app').insertAdjacentHTML('afterbegin',edBar())}catch(_){}try{if(ED&&tab==='home')document.querySelectorAll('#app .wd').forEach(w=>{if(w.querySelector('.wsz'))return;const L=S.lay.find(l=>l.id===w.dataset.id);if(!L)return;w.insertAdjacentHTML('beforeend',`<button class="wsz" data-a="wszc" data-i="${L.id}" aria-label="Change size">${wszOf(L)}</button>`)})}catch(_){}return r}}
+function edAct(el){const a=el.dataset.a;
+ if(a==='wgal')return wGallery();
+ if(a==='wgsz'){const [k,t]=el.dataset.i.split('|');WGS[k]=t;return wGallery()}
+ if(a==='wgadd'){const k=el.dataset.i,z=WSZ.find(x=>x.t===(WGS[k]||'M'));if(!S.lay.some(l=>l.id===k))S.lay.push({id:k,w:z.w,h:z.h});save();render();toast(`${(WDESC[k]||[NM[k]])[0]} added.`);return wGallery()}
+ if(a==='wszc'){const L=S.lay.find(l=>l.id===el.dataset.i);if(!L)return;const i=WSZ.findIndex(z=>z.t===wszOf(L)),z=WSZ[(i+1)%3];L.w=z.w;L.h=z.h;save();render();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}return}
+ if(a==='edlook'){natSet(el.dataset.i||null);return}}
+// Edit Home's own buttons act on pointer up, because edit mode treats taps on Home as drags
+{let P=null;const Q='[data-a=wgal],[data-a=wgsz],[data-a=wgadd],[data-a=wszc],[data-a=edlook]';
+ window.addEventListener('pointerdown',e=>{const el=e.target.closest(Q);if(!el)return;P={el,x:e.clientX,y:e.clientY};e.stopImmediatePropagation()},true);
+ window.addEventListener('pointerup',e=>{const p=P;P=null;if(!p)return;const el=e.target.closest(Q);if(el!==p.el||Math.hypot(e.clientX-p.x,e.clientY-p.y)>10)return;e.stopImmediatePropagation();edAct(el);EDQ=Date.now()},true);
+ window.addEventListener('click',e=>{const el=e.target.closest(Q);if(!el)return;e.stopImmediatePropagation();e.preventDefault();if(Date.now()-EDQ>600)edAct(el)},true)}
+let EDQ=0;
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',h:'A new Edit Home',p:'Hold Home to edit it. Add widgets from a gallery, change sizes with the S, M and L button, and pick your look in the same place. There’s a Food plan widget for your week of meals, and Workout now covers today and what’s next.'})}
+/* ===== v89: overflow like a cup that's too full ===== */
+// Research notes for this block:
+// - Water can stand a little above a full rim before it goes over, because surface tension holds it in a dome
+//   (de Gennes, Brochard-Wyart and Quéré 2004, "Capillarity and Wetting Phenomena"). So the tank brims first, then
+//   runs over the top edge on the side nearest the middle of the screen.
+// - Liquid that pours slowly clings to a surface and follows it round corners, the "teapot effect" (Duez et al. 2010,
+//   Nature Physics). Here every widget is a rounded box the water can't enter: it sticks lightly to the outside, runs
+//   down the sides, collects on the tops below, flows along them like a gutter and drips off the ends.
+// - Movement is a small particle fluid using double density relaxation (Clavet, Beaudoin and Poulin 2005, Symposium on
+//   Computer Animation), the method most 2D game water is built on: drops pull together into streams and beads without
+//   a full simulation. It's believable rather than exact, which is what reads as "real" in a stylised UI (Fleming 2014
+//   on how people judge liquids by motion and highlights rather than physical accuracy).
+// - Drawn once per frame at half resolution with a bright upper edge and a darker rim, so a phone keeps 60 fps. The page
+//   background stops drifting while it runs, so the glass widgets don't have to re-blur every frame.
+(function(){const st=document.createElement('style');st.textContent='html.lqrun #bgl.drift i{animation-play-state:paused}';document.head.appendChild(st)})();
+const FL={h:14,r0:3.6,rho0:5,k:.06,kn:.35,g:.36,sig:.18,max:220,q:.75};
+function flRects(src){const Y=scrollY,out=[];document.querySelectorAll('#app .wd,#app .whero:not(.inw),#app>.card,#app .pills2>*').forEach(e=>{if(!e.offsetParent)return;const r=e.getBoundingClientRect();if(r.bottom<-50||r.top>innerHeight+50)return;
+ let R=parseFloat(getComputedStyle(e).borderTopLeftRadius)||14;R=Math.min(R,r.width/2,r.height/2);out.push({x0:r.left,x1:r.right,y0:r.top+Y,y1:r.bottom+Y,cx:(r.left+r.right)/2,cy:(r.top+r.bottom)/2+Y,hw:r.width/2,hh:r.height/2,R,src:e===src})});return out}
+// distance from a point to a rounded box, and the outward direction
+function flSDF(B,x,y){const dx=x-B.cx,dy=y-B.cy,ax=Math.abs(dx)-B.hw+B.R,ay=Math.abs(dy)-B.hh+B.R,sx=dx<0?-1:1,sy=dy<0?-1:1;
+ if(ax>0&&ay>0){const l=Math.hypot(ax,ay)||1e-4;return[l-B.R,sx*ax/l,sy*ay/l]}if(ax>ay)return[ax-B.R,sx,0];return[ay-B.R,0,sy]}
+spill=function(el,k,amt){spillStop();const wd=el.closest('.wd')||el,r=wd.getBoundingClientRect(),left=r.left+r.width/2>innerWidth/2,Y=scrollY;
+ const c=document.createElement('canvas');c.id='lqspill';document.body.appendChild(c);const q=FL.q;c.width=Math.ceil(innerWidth*q);c.height=Math.ceil(innerHeight*q);
+ SP={c,q,k,K:LQK[k],src:wd,dir:left?-1:1,top:r.top+Y,x0:r.left,x1:r.right,left:Math.round(Math.min(FL.max,90+amt*60)),P:[],t:0,t0:performance.now(),R:[],img:null};
+ document.documentElement.classList.add('lqrun');lqSplash(k,left?0:1,5);
+ wd.animate([{transform:'none'},{transform:`translateY(-1px) rotate(${left?-.5:.5}deg)`},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.4,.5,1)'});
+ SPRAF=requestAnimationFrame(spFrame)};
+const _spStop=spillStop;spillStop=function(){_spStop();document.documentElement.classList.remove('lqrun')};
+spillShake=function(){if(!SP)return;SP.P.forEach(p=>{p.vx+=(Math.random()-.5)*10;p.vy-=2+Math.random()*4});SP.left=0;SP.shook=performance.now()};
+spFrame=function(now){SPRAF=0;const S2=SP;if(!S2||document.hidden)return spillStop();const age=now-S2.t0;S2.t++;
+ if(S2.t%12===1)S2.R=flRects(S2.src);
+ // the water rises out of the top edge, more of it towards the side it's going to pour from
+ for(let i=0;i<(age<300?1:3)&&S2.left>0;i++){S2.left--;const w=S2.x1-S2.x0,u=Math.pow(Math.random(),.6),x=S2.dir<0?S2.x0+14+u*(w*.55):S2.x1-14-u*(w*.55);S2.P.push({x,y:S2.top-FL.r0-1,vx:S2.dir*(.2+Math.random()*.5),vy:-.4-Math.random()*.6,px:0,py:0})}
+ const P=S2.P,n=P.length,H=FL.h,tilt=(()=>{let t=0;for(const k in LQS)t=LQS[k].tilt||0;return t})(),gx=Math.sin(tilt)*FL.g,gy=Math.cos(tilt)*FL.g;
+ // gravity, then move, remembering where each drop was
+ for(const p of P){p.vx+=gx;p.vy+=gy;p.px=p.x;p.py=p.y;p.x+=p.vx;p.y+=p.vy}
+ // neighbours on a grid
+ const G=new Map(),key=(i,j)=>i*4096+j;for(let i=0;i<n;i++){const p=P[i],k=key(p.x/H|0,p.y/H|0);let a=G.get(k);if(!a)G.set(k,a=[]);a.push(i)}
+ for(let i=0;i<n;i++){const p=P[i],ci=p.x/H|0,cj=p.y/H|0;let rho=0,rn=0;const nb=[];
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=G.get(key(ci+a,cj+b));if(!L)continue;for(const j of L){if(j<=i)continue;const o=P[j],dx=o.x-p.x,dy=o.y-p.y,d2=dx*dx+dy*dy;if(d2<H*H&&d2>1e-6){const d=Math.sqrt(d2),qq=1-d/H;rho+=qq*qq;rn+=qq*qq*qq;nb.push([o,dx/d,dy/d,qq])}}}
+  const Pr=FL.k*(rho-FL.rho0),Pn=FL.kn*rn;
+  for(const [o,ux,uy,qq] of nb){const D=Pr*qq+Pn*qq*qq,hx=ux*D*.5,hy=uy*D*.5;o.x+=hx;o.y+=hy;p.x-=hx;p.y-=hy;
+   // a touch of viscosity, so the stream holds together
+   const u=(p.vx-o.vx)*ux+(p.vy-o.vy)*uy;if(u>0){const I=qq*FL.sig*u*.5;p.vx-=I*ux;p.vy-=I*uy;o.vx+=I*ux;o.vy+=I*uy}}}
+ // the widgets: water never goes in, clings a little to the outside, and runs off the tops like a gutter
+ const rp=FL.r0,R=S2.R;
+ for(const p of P){for(const B of R){if(p.x<B.x0-12||p.x>B.x1+12||p.y<B.y0-12||p.y>B.y1+12)continue;const [d,nx,ny]=flSDF(B,p.x,p.y);
+   if(d<rp){p.x+=nx*(rp-d);p.y+=ny*(rp-d)}
+   if(d<rp+3){p.cl=1;if(ny<-.7){const end=B.src?S2.dir:(p.x<B.cx?-1:1);p.x+=end*.16+gx*2}else if(ny>-.2){p.x-=nx*.25;if(ny>.6)p.y-=ny*.12}}}}
+ // velocity from how far each drop actually moved
+ for(const p of P){p.vx=(p.x-p.px)*.995;p.vy=(p.y-p.py)*.995;if(p.cl){p.vx*=.96;p.cl=0}}
+ const Y=scrollY;S2.P=P.filter(p=>p.y-Y<innerHeight+40&&p.x>-40&&p.x<innerWidth+40&&p.y-Y>-300);
+ if(age>5200)S2.P.forEach(p=>{p.vy+=.3});
+ const fade=Math.max(0,Math.min(1,(8000-age)/1400));spDraw2(S2,Y,fade);
+ if((S2.P.length||S2.left>0)&&age<8000)SPRAF=requestAnimationFrame(spFrame);else spillStop()};
+function spDraw2(S2,Y,fade){const {c,q,K}=S2,x=c.getContext('2d'),cw=c.width,ch=c.height;x.clearRect(0,0,cw,ch);if(!S2.P.length)return;
+ let x0=cw,y0=ch,x1=0,y1=0;const ps=[],RR=FL.r0*2.4*q;for(const p of S2.P){const px=p.x*q,py=(p.y-Y)*q;if(py<-RR||py>ch+RR)continue;ps.push(px,py);if(px-RR<x0)x0=px-RR;if(py-RR<y0)y0=py-RR;if(px+RR>x1)x1=px+RR;if(py+RR>y1)y1=py+RR}
+ x0=Math.max(0,x0|0);y0=Math.max(0,y0|0);x1=Math.min(cw,Math.ceil(x1));y1=Math.min(ch,Math.ceil(y1));const w=x1-x0,h=y1-y0;if(w<3||h<3)return;
+ const F=new Float32Array(w*h),R2=RR*RR;for(let k=0;k<ps.length;k+=2){const px=ps[k],py=ps[k+1],ax=Math.max(x0,px-RR|0),bx=Math.min(x1-1,px+RR|0),ay=Math.max(y0,py-RR|0),by=Math.min(y1-1,py+RR|0);
+  for(let yy=ay;yy<=by;yy++){const dy=yy-py,row=(yy-y0)*w-x0;for(let xx=ax;xx<=bx;xx++){const dx=xx-px,d2=dx*dx+dy*dy;if(d2<R2){const u=1-d2/R2;F[row+xx]+=u*u*u}}}}
+ const im=x.createImageData(w,h),D=im.data,T=K.top,B=K.bot,th=.32;
+ for(let yy=1;yy<h-1;yy++)for(let xx=1;xx<w-1;xx++){const i=yy*w+xx,f=F[i];if(f<th*.7)continue;
+  const a=Math.min(1,Math.max(0,(f-th*.7)/(th*.9))),gx=F[i+1]-F[i-1],gy=F[i+w]-F[i-w],gl=Math.hypot(gx,gy)+1e-5,nx=gx/gl,ny=gy/gl,edge=Math.max(0,1-(f-th)/.8);
+  // light from the top left: a bright line on upper edges, a darker rim lower down, a clearer middle
+  const lit=nx*.5+ny*.86,hi=Math.pow(Math.max(0,lit),6)*edge,dk=Math.max(0,-lit)*edge*.45,dp=Math.min(1,(f-th)*.9);
+  const o=i*4;for(let c2=0;c2<3;c2++){let v=T[c2]+(B[c2]-T[c2])*dp*.45;v=v*(1-dk*.8);v=v+(255-v)*Math.min(1,hi*1.3+edge*.12);D[o+c2]=v}
+  D[o+3]=(a*(.74+.22*edge)+hi*.2)*255*fade}
+ x.putImageData(im,x0,y0)}
+// lighter tanks: cap the canvas resolution, and pause the background while anything's moving
+{const _k=lqKick;lqKick=function(){document.documentElement.classList.add('lqrun');clearTimeout(lqKick.t);lqKick.t=setTimeout(()=>{if(!SP&&!LQRAF)document.documentElement.classList.remove('lqrun')},1500);return _k.apply(this,arguments)}}
+/* ===== v90: Check a product: a score out of 100 for food, drinks, protein powders and supplements ===== */
+// Research notes for this block:
+// - Food and drink are scored the way Yuka does it: nutrition 60%, additives 30%, organic 10%, and any high-risk
+//   additive caps the score at 49 (Yuka, "How are food products rated?", help.yuka.io). Bands: 75+ excellent,
+//   50 to 74 good, 25 to 49 poor, under 25 bad.
+// - Nutrition is the 2023 Nutri-Score (Santé publique France, "Nutri-Score 2023 update"), using Open Food Facts' own
+//   calculation when it has one. Each nutrient row uses the UK front-of-pack traffic-light limits per 100 g or 100 ml
+//   (Department of Health and FSA 2016 guidance), so the words match what's on UK packs.
+// - Additive risk levels are Swell's reading of EFSA re-evaluations, IARC classifications, the EU ban on titanium
+//   dioxide (E171, 2022), the Southampton colours study (McCann et al. 2007, Lancet) and NutriNet-Santé cohort results
+//   on nitrites (Chazelas 2022), sweeteners (Debras 2022) and emulsifiers (Sellem 2023).
+// - Protein powders and supplements aren't food, so they get their own checks: protein per 100 g and per calorie,
+//   sugar, signs of amino spiking (free glycine, taurine and the like added to lift the protein figure on a nitrogen
+//   test), batch testing marks (Informed Sport, NSF), doses against UK reference intakes and EFSA upper limits, and
+//   forms with weaker evidence (magnesium oxide, vitamin D2). Supplements aren't checked before sale in the UK, so the
+//   score is about what's in the pot, not whether it works.
+// - The ring fills and the rows appear in order, quickly (under a second), so the eye goes to the score first
+//   (Apple HIG, Motion: brief and purposeful; reduced motion turns it off). Alternatives are shown with the reason they
+//   score better, because a suggestion with a reason is more likely to be taken up (Yuka field study, Unknowns 2019).
+(function(){const st=document.createElement('style');st.textContent=`
+#rt{position:fixed;inset:0;z-index:80;background:rgba(8,8,8,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;animation:rtin .28s ease-out}
+@keyframes rtin{from{opacity:0}to{opacity:1}}
+#rt .rtw{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 110px);color:#F3F1EC}
+#rt .rtx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(20,20,20,.7);color:#fff;font-size:22px;z-index:2}
+.rth{display:flex;gap:14px;align-items:center;margin:6px 48px 6px 0}.rth img{width:64px;height:64px;border-radius:14px;object-fit:cover;background:#fff;flex:none}
+.rth b{display:block;font-size:19px;line-height:1.2}.rth small{color:rgba(243,241,236,.65);font-size:13px}
+.rtr{display:flex;flex-direction:column;align-items:center;margin:14px 0 6px}
+.rtr svg{width:172px;height:172px}.rtr .num{font-family:'Archivo',system-ui,sans-serif;font-weight:900;font-stretch:72%;font-size:54px}
+.rtr .band{margin-top:-4px;font-size:14px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.rtv{text-align:center;margin:8px 10px 14px;font-size:15px;line-height:1.45;color:rgba(243,241,236,.85)}
+.rts{margin:16px 0 0;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);overflow:hidden}
+.rts h3{margin:0;padding:13px 15px 8px;font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.6)}
+.rtrow{all:unset;box-sizing:border-box;display:grid;grid-template-columns:12px 1fr auto;gap:2px 12px;align-items:center;width:100%;padding:11px 15px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer;opacity:0;transform:translateY(6px);animation:rtup .35s ease-out forwards}
+@keyframes rtup{to{opacity:1;transform:none}}
+.rtrow i{width:12px;height:12px;border-radius:50%}.rtrow b{font-size:15px;font-weight:600}.rtrow small{grid-column:2;font-size:13px;color:rgba(243,241,236,.62)}.rtrow em{font-style:normal;font-size:13.5px;color:rgba(243,241,236,.8);text-align:right}
+.rtrow .det{grid-column:1/-1;display:none;margin-top:8px;font-size:13.5px;line-height:1.45;color:rgba(243,241,236,.78)}.rtrow.open .det{display:block}
+.rtbar{position:relative;height:6px;border-radius:3px;margin:8px 0 6px;background:linear-gradient(90deg,#3FB37F 0 33%,#F2B84B 33% 66%,#E5674F 66%)}.rtbar u{position:absolute;top:-4px;width:4px;height:14px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+.rtbar.rev{background:linear-gradient(90deg,#E5674F 0 33%,#F2B84B 33% 66%,#3FB37F 66%)}
+.rtmiss{padding:4px 15px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.rtmiss label{font-size:12.5px;color:rgba(243,241,236,.7)}.rtmiss input{margin-top:4px}
+.rtalt{all:unset;box-sizing:border-box;display:grid;grid-template-columns:46px 1fr auto;gap:2px 12px;align-items:center;width:100%;padding:10px 15px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}
+.rtalt img,.rtalt .ph{width:46px;height:46px;border-radius:12px;object-fit:cover;background:rgba(255,255,255,.08);grid-row:span 2}
+.rtalt b{font-size:14.5px}.rtalt small{grid-column:2;font-size:12.5px;color:rgba(243,241,236,.62)}.rtalt span.sc{grid-row:span 2;font-weight:800;font-size:15px;padding:6px 10px;border-radius:12px;color:#111}
+.rtlook{margin:0;padding:4px 15px 14px 33px;font-size:14px;line-height:1.5;color:rgba(243,241,236,.82)}.rtlook li{margin:6px 0}
+.rtnote{margin:14px 4px 0;font-size:12px;line-height:1.45;color:rgba(243,241,236,.5)}
+.rtft{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;gap:10px;background:linear-gradient(180deg,rgba(10,10,10,0),rgba(10,10,10,.92) 40%)}
+.rtft .btn{flex:1;margin:0}
+.rtmini{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;margin:0 0 12px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);cursor:pointer}
+.rtmini svg{width:44px;height:44px;flex:none}.rtmini b{font-size:15px}.rtmini small{display:block;font-size:12.5px;color:var(--dim)}.rtmini span:last-child{margin-left:auto;font-size:13px;font-weight:700}
+.rtentry{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;margin:-4px 0 14px;padding:13px 14px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid var(--edge);cursor:pointer}
+.rtentry svg{width:26px;height:26px;flex:none}.rtentry b{display:block;font-size:16px;margin-bottom:2px}.rtentry small{display:block;font-size:12.5px;line-height:1.35;opacity:.72}
+@media (prefers-reduced-motion:reduce){.rtrow{animation:none;opacity:1;transform:none}#rt{animation:none}}`;document.head.appendChild(st)})();
+// additives: code -> [name, risk 0 none, 1 limited, 2 moderate, 3 high, why]
+const ADD={e102:['Tartrazine',2,'An azo colour. In the Southampton study a mix of colours like this was linked to hyperactivity in some children, so UK packs must carry a warning.'],e104:['Quinoline yellow',2,'One of the six “Southampton” colours that need a warning on UK packs.'],e110:['Sunset yellow',2,'One of the six “Southampton” colours that need a warning on UK packs.'],e122:['Carmoisine',2,'One of the six “Southampton” colours that need a warning on UK packs.'],e124:['Ponceau 4R',2,'One of the six “Southampton” colours that need a warning on UK packs.'],e129:['Allura red',2,'One of the six “Southampton” colours that need a warning on UK packs.'],
+ e127:['Erythrosine',2,'A red colour with limited approved uses; it affects the thyroid at high doses in animal studies.'],e133:['Brilliant blue',1,'A synthetic colour; considered safe at current intakes, with an acceptable daily intake set by EFSA.'],e150c:['Ammonia caramel',2,'Can contain 4-MEI, which IARC lists as possibly carcinogenic.'],e150d:['Sulphite ammonia caramel',2,'Can contain 4-MEI, which IARC lists as possibly carcinogenic. Common in cola.'],e171:['Titanium dioxide',3,'Banned in food in the EU since 2022 because EFSA could not rule out damage to DNA. Still allowed in Great Britain.'],
+ e200:['Sorbic acid',0,''],e202:['Potassium sorbate',0,''],e210:['Benzoic acid',2,'Can form small amounts of benzene with vitamin C in drinks; some people are sensitive to it.'],e211:['Sodium benzoate',2,'Can form small amounts of benzene with vitamin C in drinks; linked with hyperactivity in the Southampton study.'],e212:['Potassium benzoate',2,'Same concerns as sodium benzoate.'],
+ e220:['Sulphur dioxide',2,'Can trigger asthma in sensitive people; it’s an allergen that must be labelled.'],e223:['Sodium metabisulphite',2,'A sulphite: can trigger asthma in sensitive people.'],e224:['Potassium metabisulphite',2,'A sulphite: can trigger asthma in sensitive people.'],e228:['Potassium bisulphite',2,'A sulphite: can trigger asthma in sensitive people.'],
+ e249:['Potassium nitrite',3,'Nitrites in processed meat form nitrosamines. IARC classes processed meat as carcinogenic, and NutriNet-Santé linked nitrites to higher cancer and diabetes risk.'],e250:['Sodium nitrite',3,'Nitrites in processed meat form nitrosamines. IARC classes processed meat as carcinogenic, and NutriNet-Santé linked nitrites to higher cancer and diabetes risk.'],e251:['Sodium nitrate',3,'Turns into nitrite in cured meat; same concerns as nitrites.'],e252:['Potassium nitrate',3,'Turns into nitrite in cured meat; same concerns as nitrites.'],
+ e300:['Vitamin C',0,''],e301:['Sodium ascorbate',0,''],e306:['Vitamin E',0,''],e307:['Alpha-tocopherol',0,''],e320:['BHA',3,'IARC lists it as possibly carcinogenic, and it may disrupt hormones.'],e321:['BHT',2,'Under review; some animal studies show effects on the liver and thyroid.'],e322:['Lecithins',0,''],e330:['Citric acid',0,''],e331:['Sodium citrates',0,''],e332:['Potassium citrates',0,''],e334:['Tartaric acid',0,''],
+ e338:['Phosphoric acid',2,'High phosphate intake from additives is linked with heart and kidney strain; common in cola.'],e339:['Sodium phosphates',2,'Added phosphates are absorbed far more than natural ones; high intakes are linked with heart and kidney problems.'],e340:['Potassium phosphates',2,'Added phosphates are absorbed far more than natural ones.'],e341:['Calcium phosphates',1,'Added phosphate; fine in normal amounts.'],e450:['Diphosphates',2,'Added phosphates are absorbed far more than natural ones.'],e451:['Triphosphates',2,'Added phosphates are absorbed far more than natural ones.'],e452:['Polyphosphates',2,'Added phosphates are absorbed far more than natural ones.'],
+ e407:['Carrageenan',2,'A seaweed thickener; studies in animals and cells suggest it can inflame the gut.'],e407a:['Processed seaweed',2,'Similar concerns to carrageenan.'],e410:['Locust bean gum',0,''],e412:['Guar gum',0,''],e414:['Gum arabic',0,''],e415:['Xanthan gum',0,''],e440:['Pectin',0,''],e460:['Cellulose',0,''],
+ e433:['Polysorbate 80',2,'An emulsifier that changed gut bacteria and caused inflammation in mice; NutriNet-Santé linked emulsifiers with heart disease.'],e466:['Carboxymethylcellulose',2,'An emulsifier that changed gut bacteria in mice and in a small human trial (Chassaing 2022).'],e471:['Mono- and diglycerides',1,'The most common emulsifier; NutriNet-Santé linked higher intakes with heart disease. Fine now and then.'],e472e:['DATEM',1,'An emulsifier in bread; linked with heart disease in NutriNet-Santé at high intakes.'],e476:['PGPR',1,'An emulsifier in chocolate; safe in normal amounts.'],e481:['Sodium stearoyl lactylate',1,'An emulsifier; safe in normal amounts.'],
+ e621:['Monosodium glutamate',1,'Safe for most people; adds sodium.'],e627:['Disodium guanylate',1,'A flavour enhancer; usually used with MSG.'],e631:['Disodium inosinate',1,'A flavour enhancer; usually used with MSG.'],e635:['Disodium ribonucleotides',1,'A flavour enhancer.'],
+ e950:['Acesulfame K',2,'A sweetener; NutriNet-Santé linked higher intakes with cancer and heart disease (Debras 2022).'],e951:['Aspartame',2,'IARC listed it as possibly carcinogenic in 2023; not suitable for people with PKU.'],e952:['Cyclamate',2,'A sweetener banned in the USA; allowed in the UK within limits.'],e954:['Saccharin',1,'An older sweetener; considered safe within limits.'],e955:['Sucralose',2,'A sweetener that may change gut bacteria; one breakdown product damaged DNA in lab tests (2023).'],e960:['Steviol glycosides',0,''],e967:['Xylitol',1,'A sugar alcohol; large amounts upset the stomach.'],e965:['Maltitol',1,'A sugar alcohol; large amounts upset the stomach.'],e968:['Erythritol',1,'A sugar alcohol; a 2023 study linked high blood levels with clotting risk.'],e420:['Sorbitol',1,'A sugar alcohol; large amounts upset the stomach.'],e1442:['Hydroxypropyl distarch phosphate',1,'A modified starch; fine in normal amounts.'],e1422:['Acetylated distarch adipate',1,'A modified starch; fine in normal amounts.'],
+ e160a:['Beta-carotene',0,''],e160c:['Paprika extract',0,''],e162:['Beetroot red',0,''],e100:['Curcumin',0,''],e120:['Carmine',1,'A natural red from insects; not vegetarian, and a rare allergen.'],e500:['Sodium carbonates',0,''],e503:['Ammonium carbonates',0,''],e290:['Carbon dioxide',0,''],e270:['Lactic acid',0,''],e296:['Malic acid',0,''],e551:['Silicon dioxide',1,'An anti-caking agent; EFSA asked for more data on nanoparticles.'],e570:['Stearic acid',0,''],e470b:['Magnesium stearate',0,'']};
+const ADDN={0:'Risk-free',1:'Limited risk',2:'Moderate risk',3:'High risk'},ADDC={0:'#3FB37F',1:'#A6CF5A',2:'#F2B84B',3:'#E5674F'};
+const RTBAND=s=>s>=75?['Excellent','#2FA36B']:s>=50?['Good','#8CC152']:s>=25?['Poor','#F0A23B']:['Bad','#E5674F'];
+// 2023 Nutri-Score
+const NSP=(v,th)=>{let p=0;for(const t of th)if(v>t)p++;return p};
+function nsCalc(R){if(R.kind==='drink'){if(R.water)return{s:-1,g:'a'};const N=NSP(R.kj,[30,90,150,210,240,270,300,330,360])+NSP(R.sug,[.5,2,3.5,5,6,7,8,9,10,11])+NSP(R.sf,[1,2,3,4,5,6,7,8,9,10])+NSP(R.salt,[.2,.4,.6,.8,1,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3,3.2,3.4,3.6,3.8,4])+(R.sw?4:0);
+  const Pp=NSP(R.prot,[1.2,1.5,1.8,2.1,2.4,2.7,3]),F=NSP(R.fib,[3,4.1,5.2,6.3,7.4]),V=R.fv>80?6:R.fv>60?4:R.fv>40?2:0,s=N-Pp-F-V;return{s,g:s<=2?'b':s<=6?'c':s<=9?'d':'e'}}
+ const N=NSP(R.kj,[335,670,1005,1340,1675,2010,2345,2680,3015,3350])+NSP(R.sug,[3.4,6.8,10,14,17,20,24,27,31,34,37,41,44,48,51])+NSP(R.sf,[1,2,3,4,5,6,7,8,9,10])+NSP(R.salt,[.2,.4,.6,.8,1,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8,3,3.2,3.4,3.6,3.8,4]);
+ const Pp=NSP(R.prot,[2.4,4.8,7.2,9.6,12,14,17]),F=NSP(R.fib,[3,4.1,5.2,6.3,7.4]),V=R.fv>80?5:R.fv>60?2:R.fv>40?1:0,s=N-(N>=11&&!R.cheese?0:Pp)-F-V;return{s,g:s<=0?'a':s<=2?'b':s<=10?'c':s<=18?'d':'e'}}
+// a grade and score to 0-100 inside the grade's band
+function nsTo100(s,g,drink){const B=drink?{a:[-99,-1,100,100],b:[-15,2,99,75],c:[3,6,64,45],d:[7,9,44,25],e:[10,30,22,0]}:{a:[-15,0,100,80],b:[1,2,76,68],c:[3,10,64,45],d:[11,18,40,22],e:[19,40,20,0]};const b=B[g]||B.c,t=Math.max(0,Math.min(1,(s-b[0])/Math.max(1,b[1]-b[0])));return Math.round(b[2]+(b[3]-b[2])*t)}
+// read a product from Open Food Facts into what the score needs
+const PROTRE=/\b(whey|casein|protein powder|isolate|pea protein|soy protein|vegan protein|mass gainer|clear whey|egg white protein|collagen powder)\b/i;
+const SUPRE=/\b(vitamin|multivit|capsule|tablet|softgel|gummies|magnesium|zinc|iron|omega|fish oil|creatine|ashwagandha|probiotic|supplement|b12|d3|collagen|electrolyte|pre[- ]?workout)\b/i;
+function rtFrom(P){const n=P.nutriments||{},v=x=>x==null||x===''||isNaN(+x)?null:+x,cat=P.categories_tags||[],nm=[P.product_name_en,P.product_name,P.generic_name].filter(Boolean).join(' '),ing=(P.ingredients_text_en||P.ingredients_text||'').slice(0,4000);
+ const add=(P.additives_tags||[]).map(x=>x.replace(/^en:/,'').toLowerCase());
+ const kcal=v(n['energy-kcal_100g'])??(v(n.energy_100g)!=null?v(n.energy_100g)/4.184:null);
+ const drink=cat.some(c=>/en:beverages|en:drinks|en:waters|en:sodas|en:juices/.test(c))&&!cat.some(c=>/milks|yogurts|plant-milks|en:dairies/.test(c)),water=cat.some(c=>/en:(mineral|spring)-waters|en:waters$/.test(c))&&!(kcal>0);
+ let kind=drink?'drink':'food';const sup=cat.some(c=>/dietary-supplements|food-supplements|vitamins|en:supplements/.test(c))||SUPRE.test(nm)&&!/drink|bar\b|yogh?urt|cereal/i.test(nm);
+ if(PROTRE.test(nm)&&(v(n.proteins_100g)||0)>40||cat.some(c=>/protein-powders|whey/.test(c)))kind='protein';else if(sup)kind='supp';
+ return{n:(P.product_name_en||P.product_name||'').trim()||'Unnamed product',b:(P.brands||'').split(',')[0].trim(),img:P.image_front_small_url||'',cat,kind,drink:kind==='drink',water,
+  kcal,kj:kcal!=null?kcal*4.184:null,sug:v(n.sugars_100g),sf:v(n['saturated-fat_100g']),salt:v(n.salt_100g)??(v(n.sodium_100g)!=null?v(n.sodium_100g)*2.5:null),fib:v(n.fiber_100g),prot:v(n.proteins_100g),fat:v(n.fat_100g),carb:v(n.carbohydrates_100g),
+  fv:v(n['fruits-vegetables-legumes-estimate-from-ingredients_100g'])??v(n['fruits-vegetables-nuts-estimate-from-ingredients_100g'])??0,ns:v(P.nutriscore_score),srv:v(P.serving_quantity),ng:(P.nutriscore_grade||'').toLowerCase(),nova:v(P.nova_group),
+  add,lab:(P.labels_tags||[]).join(' '),ing,nm,sw:add.some(a=>/^e9(5\d|6\d)$/.test(a)),cheese:cat.some(c=>/cheeses/.test(c)),cv:cat.some(c=>/cheeses/.test(c))}}
+// the score
+function rtScore(R){const neg=[],pos=[],miss=[],out={R,neg,pos,miss,adds:[],note:''};
+ const adds=[...new Set(R.add)].map(c=>{const a=ADD[c];return a?{c,n:a[0],r:a[1],w:a[2]}:{c,n:c.toUpperCase(),r:-1,w:''}}).sort((a,b)=>b.r-a.r);out.adds=adds;
+ const hi=adds.some(a=>a.r===3),pen=adds.reduce((t,a)=>t+(a.r===3?100:a.r===2?25:a.r===1?8:0),0),A=Math.max(0,100-pen);
+ const org=/organic|bio\b|soil-association/.test(R.lab)?100:0,tested=/informed-sport|informed-choice|nsf|bscg|batch-tested/i.test(R.lab+' '+R.nm+' '+R.ing);
+ if(R.kind==='protein')return rtProtein(R,out,A,hi,tested);
+ if(R.kind==='supp')return rtSupp(R,out,A,hi,tested);
+ ['sug','sf','salt','kcal'].forEach(k=>{if(R[k]==null&&!(R.water&&k!=='kcal'))miss.push(k)});
+ const R2={...R,sug:R.sug??0,sf:R.sf??(R.fat!=null?R.fat*.35:0),salt:R.salt??0,fib:R.fib??0,prot:R.prot??0,kj:R.kj??0};
+ let ns=R.ns!=null&&R.ng&&!miss.length&&!R.edited?{s:R.ns,g:R.ng}:nsCalc(R2);const Nu=nsTo100(ns.s,ns.g,R.drink);
+ let sc=Math.round(Nu*.6+A*.3+org*.1);if(hi)sc=Math.min(sc,49);if(miss.includes('sug')||miss.includes('salt'))sc=Math.min(sc,60);if(R.water)sc=Math.max(sc,95);
+ // rows, with the UK traffic-light limits
+ const L=R.drink?{fat:[1.5,8.75],sf:[.75,2.5],sug:[2.5,11.25],salt:[.3,.75],kcal:[20,60]}:{fat:[3,17.5],sf:[1.5,5],sug:[5,22.5],salt:[.3,1.5],kcal:[160,360]};
+ const u=R.drink?'100 ml':'100 g';
+ // a portion can still be red when 100 g isn't: more than 30% of the day's reference intake in one serving (FSA 2016)
+ const PRI={sug:[90,'sugar'],sf:[20,'saturated fat'],salt:[6,'salt']};
+ const row=(k,name,val,unit,lim,words,why)=>{if(val==null)return;let lv=val<=lim[0]?0:val<=lim[1]?1:2,sub=words[lv],vs=`${rtN(val)} ${unit}`;
+  if(lv<2&&PRI[k]&&R.srv>0){const per=val*R.srv/100;if(per>PRI[k][0]*.3){lv=2;sub=`High in ${PRI[k][1]} per serving`;vs=`${rtN(per)} ${unit} a serving`;why=why+` One serving has ${rtN(per)} g, more than 30% of a day’s reference intake.`}}
+  const item={k,name,v:vs,lv,sub,why,pos:lim[1]*1.6,val,lim};(lv===0?pos:neg).push(item)};
+ row('kcal','Calories',R.kcal,'kcal',L.kcal,['Low in calories','Moderate calories','High in calories'],`Per ${u}. Energy dense foods make it easy to eat more than you mean to.`);
+ row('sug','Sugar',R.sug,'g',L.sug,['Low in sugar','Some sugar','High in sugar'],`Per ${u}. UK packs go amber above ${L.sug[0]} g and red above ${L.sug[1]} g. Adults should have no more than 30 g of free sugars a day.`);
+ row('sf','Saturated fat',R.sf,'g',L.sf,['Low in saturated fat','Some saturated fat','High in saturated fat'],`Per ${u}. Red above ${L.sf[1]} g. Too much raises LDL cholesterol; the UK limit is 30 g a day for men and 20 g for women.`);
+ row('salt','Salt',R.salt,'g',L.salt,['Low in salt','Some salt','High in salt'],`Per ${u}. Red above ${L.salt[1]} g. Adults should have less than 6 g of salt a day.`);
+ if(R.prot!=null&&R.kcal>0){const sh=R.prot*4/R.kcal;if(sh>=.2)pos.push({k:'prot',name:'Protein',v:`${rtN(R.prot)} g`,lv:0,sub:'High in protein',why:'At least 20% of its calories come from protein, which is the UK and EU bar for “high protein”.'});else if(sh>=.12)pos.push({k:'prot',name:'Protein',v:`${rtN(R.prot)} g`,lv:0,sub:'A source of protein',why:'At least 12% of its calories come from protein.'})}
+ if(R.fib!=null&&R.fib>=3)pos.push({k:'fib',name:'Fibre',v:`${rtN(R.fib)} g`,lv:0,sub:R.fib>=6?'High in fibre':'A source of fibre',why:'Most UK adults get about 20 g of the 30 g a day advised. Fibre keeps you full and your gut healthy.'});
+ if(R.fv>=40)pos.push({k:'fv',name:'Fruit, veg and pulses',v:`${Math.round(R.fv)}%`,lv:0,sub:'Lots of plants in it',why:'More fruit, vegetables and pulses improves the Nutri-Score.'});
+ if(R.fat!=null&&R.kcal>0&&!R.drink&&R.fat*9/R.kcal>.35&&!neg.some(x=>x.k==='sf'&&x.lv===2))neg.push({k:'fsh',name:'Fat',v:`${Math.round(R.fat*9/R.kcal*100)}% of calories`,lv:1,sub:'Mostly fat',why:'UK guidance is for fat to be no more than about 35% of your calories over the day.'});
+ if(R.sw)neg.push({k:'sw',name:'Sweeteners',v:'',lv:1,sub:'Contains sweeteners',why:'Sweeteners keep the taste for sweetness going; WHO advises against using them for weight control (2023).'});
+ if(R.nova===4)neg.push({k:'nova',name:'Ultra-processed',v:'',lv:1,sub:'Made with industrial ingredients',why:'NOVA group 4. Diets high in ultra-processed food are linked with eating more and with poorer health, though not every product is the same.'});
+ if(org)pos.push({k:'org',name:'Organic',v:'',lv:0,sub:'Certified organic',why:'Worth 10% of the score, as in Yuka.'});
+ if(R.lbl)pos.push({k:'add',name:'Additives',v:'',lv:1,sub:'Not checked from a label',why:'Scan the barcode to check additives too.'});else adds.filter(a=>a.r>=2).length?neg.push({k:'add',name:'Additives',v:`${adds.filter(a=>a.r>=1).length}`,lv:hi?2:1,sub:hi?'Contains a high-risk additive':'Additives to limit',why:'See the list below.'}):adds.length?pos.push({k:'add',name:'Additives',v:'',lv:0,sub:'No risky additives',why:'Any additives here are low risk.'}):pos.push({k:'add',name:'Additives',v:'',lv:0,sub:'No additives',why:''});
+ out.score=sc;out.parts={Nu,A,org,ns};if(miss.length)out.note='Some values are missing from the pack data, so this is a partial score. Add them below.';return out}
+function rtProtein(R,out,A,hi,tested){const {neg,pos}=out;let s=10;const p=R.prot,ing=(R.ing||'').toLowerCase();
+ if(p!=null){const pts=p>=80?30:p>=70?24:p>=60?15:5;s+=pts;(p>=70?pos:neg).push({k:'prot',name:'Protein',v:`${rtN(p)} g per 100 g`,lv:p>=70?0:1,sub:p>=80?'Very high in protein, like an isolate':p>=70?'High in protein':'Less protein than most powders',why:'Good whey concentrates are around 75 to 80 g per 100 g and isolates 85 to 90 g. Lower usually means more filler or sugar.'})}else out.miss.push('prot');
+ if(p!=null&&R.kcal>0){const sh=p*4/R.kcal;s+=sh>=.8?15:sh>=.7?10:3;if(sh<.7)neg.push({k:'psh',name:'Protein share',v:`${Math.round(sh*100)}% of calories`,lv:1,sub:'A lot of calories from carbs and fat',why:'In a good powder, at least 70% of the calories come from protein.'})}
+ const sug=R.sug;if(sug!=null){s+=sug<=5?15:sug<=10?10:sug<=20?4:0;(sug<=5?pos:neg).push({k:'sug',name:'Sugar',v:`${rtN(sug)} g per 100 g`,lv:sug<=5?0:sug<=20?1:2,sub:sug<=5?'Low in sugar':'Sugar added',why:'Most powders need very little sugar; a lot of it is a sign of a gainer or a dessert-style mix.'})}else out.miss.push('sug');
+ const spike=['glycine','taurine','l-glutamine','glutamine','l-arginine','arginine','creatine','l-leucine'].filter(x=>new RegExp('\\b'+x+'\\b').test(ing)&&!/bcaa|leucine/.test(R.nm.toLowerCase()));
+ if(spike.length){s-=Math.min(25,spike.length*12);neg.push({k:'spk',name:'Added amino acids',v:spike.slice(0,3).join(', '),lv:2,sub:'Possible amino spiking',why:'Protein is measured by nitrogen, so cheap free amino acids like glycine and taurine can make the protein figure look higher than the real protein. Check the amino acid profile, or pick a batch-tested brand.'})}
+ if(/proprietary|matrix\b|complex\b/.test(ing)){s-=8;neg.push({k:'prop',name:'Proprietary blend',v:'',lv:1,sub:'Amounts not shown',why:'You can’t see how much of each protein is in it.'})}
+ if(tested){s+=15;pos.push({k:'tst',name:'Batch tested',v:'',lv:0,sub:'Informed Sport or similar',why:'Each batch is tested for banned substances, which also means someone has checked what’s in it.'})}else neg.push({k:'tst',name:'Testing',v:'',lv:1,sub:'No batch-testing mark found',why:'Look for Informed Sport or NSF Certified for Sport on the pot, especially if you compete.'});
+ if(/isolate/.test(R.nm.toLowerCase()+ing))pos.push({k:'iso',name:'Whey isolate',v:'',lv:0,sub:'Very little lactose',why:'Isolates are filtered further, so they’re easier on people who struggle with lactose.'});
+ if(R.sw)neg.push({k:'sw',name:'Sweeteners',v:'',lv:1,sub:'Sweetened',why:'Normal for flavoured powders. Unflavoured ones have none.'});
+ s=Math.round(s*.75+A*.25);if(hi)s=Math.min(s,49);s=Math.max(0,Math.min(100,s));
+ rtAddRow(out,hi);out.score=s;out.note='Protein powders are scored on protein quality and purity, not Nutri-Score.';return out}
+function rtAddRow(out,hi){const adds=out.adds;if(adds.some(a=>a.r>=2))out.neg.push({k:'add',name:'Additives',v:`${adds.filter(a=>a.r>=1).length}`,lv:hi?2:1,sub:hi?'Contains a high-risk additive':'Additives to limit',why:'See the list below.'})}
+// supplement doses from the name and ingredients, compared with UK reference intakes and EFSA upper limits
+const SDOSE=[['vd',/vitamin\s*d3?\b|cholecalciferol|ergocalciferol/],['vc',/vitamin\s*c\b|ascorbic/],['b12',/b12|cobalamin/],['b6',/\bb6\b|pyridoxine/],['b9',/folic|folate|methylfolate/],['mg',/magnesium/],['zn',/\bzinc\b/],['fe',/\biron\b|ferrous|ferric/],['ca',/calcium/],['se',/selenium/],['io',/iodine|iodide/],['va',/vitamin\s*a\b|retinol/],['ve',/vitamin\s*e\b|tocopherol/],['vk',/vitamin\s*k/]];
+function supDoses(txt){const t=(txt||'').toLowerCase().replace(/mcg|ug/g,'µg'),out={};SDOSE.forEach(([k,re])=>{const m=t.match(new RegExp('(?:'+re.source+')[^0-9]{0,40}?(\\d+(?:[.,]\\d+)?)\\s*(mg|µg|iu)','i'));if(!m)return;let v=+m[1].replace(',','.'),u=m[2].toLowerCase();
+  if(u==='iu'){if(k==='vd')v=v/40;else if(k==='ve')v=v*.67;else if(k==='va')v=v*.3;u='µg';if(k==='ve')u='mg'}const want=MN[k]&&MN[k][1];if(want==='mg'&&u==='µg')v=v/1000;if(want==='µg'&&u==='mg')v=v*1000;out[k]=v});return out}
+// EFSA sets lower limits for some nutrients when they come from supplements (magnesium 250 mg a day)
+const SUPUL={mg:250};
+function rtSupp(R,out,A,hi,tested){const {neg,pos}=out;let s=70;const t=(R.nm+' '+R.ing).toLowerCase(),D=supDoses(R.nm+' . '+R.ing);
+ Object.entries(D).forEach(([k,v])=>{const M=MN[k];if(!M)return;const ri=Array.isArray(M[2])?M[2][0]:M[2],ul=SUPUL[k]||M[3],pc=Math.round(v/ri*100);
+  if(ul&&v>ul){s-=20;neg.push({k:'d'+k,name:M[0],v:`${rtN(v)} ${M[1]} · ${pc}% RI`,lv:2,sub:`${M[0]} above the safe limit`,why:SUPUL[k]?`EFSA’s safe limit for ${M[0].toLowerCase()} from supplements is ${ul} ${M[1]} a day. More than that often causes diarrhoea.`:`EFSA’s safe upper limit is ${ul} ${M[1]} a day from everything you eat and take. Long term, more than that can do harm.`})}
+  else if(pc>1000){s-=8;neg.push({k:'d'+k,name:M[0],v:`${rtN(v)} ${M[1]} · ${pc}% RI`,lv:1,sub:'A very high dose',why:'Far more than you need. Unless a doctor suggested it, a lower dose does the same job.'})}
+  else pos.push({k:'d'+k,name:M[0],v:`${rtN(v)} ${M[1]} · ${pc}% RI`,lv:0,sub:pc>=100?'Covers what you need':'A useful top-up',why:M[4]||''})});
+ if(/magnesium oxide/.test(t)){s-=6;neg.push({k:'mgo',name:'Magnesium oxide',v:'',lv:1,sub:'A form your body absorbs less well',why:'Citrate and glycinate are absorbed better in studies (Walker 2003). Oxide is cheap and more likely to upset your stomach.'})}
+ if(/ergocalciferol|vitamin d2\b/.test(t)){s-=5;neg.push({k:'d2',name:'Vitamin D2',v:'',lv:1,sub:'D3 works better',why:'D3 raises vitamin D levels more than D2 (Tripkovic 2012 meta-analysis).'})}
+ if(/creatine/.test(t)){if(/monohydrate|creapure/.test(t))pos.push({k:'cr',name:'Creatine monohydrate',v:'',lv:0,sub:'The form with the evidence',why:'Monohydrate is the most studied and works; 3 to 5 g a day is enough (ISSN position stand, Kreider 2017).'});else if(/hcl|ethyl ester|buffered|kre-alkalyn/.test(t)){s-=8;neg.push({k:'cr',name:'Creatine form',v:'',lv:1,sub:'No better than monohydrate',why:'There’s no good evidence that HCl, ethyl ester or buffered creatine beat plain monohydrate, which is cheaper.'})}}
+ const caf=(t.match(/caffeine[^0-9]{0,20}(\d{2,4})\s*mg/)||[])[1];if(caf&&+caf>200){s-=10;neg.push({k:'caf',name:'Caffeine',v:`${caf} mg`,lv:+caf>300?2:1,sub:'A big single dose',why:'EFSA says up to 200 mg at once is safe for most adults, and 400 mg over a day.'})}
+ if(/proprietary blend|proprietary complex/.test(t)){s-=10;neg.push({k:'prop',name:'Proprietary blend',v:'',lv:1,sub:'Doses hidden',why:'You can’t tell if each ingredient is at a dose that works.'})}
+ if(tested){s+=15;pos.push({k:'tst',name:'Batch tested',v:'',lv:0,sub:'Informed Sport, NSF or similar',why:'An independent lab has checked each batch.'})}else neg.push({k:'tst',name:'Testing',v:'',lv:1,sub:'No independent testing mark found',why:'UK supplements aren’t checked before sale. Informed Sport or NSF marks mean a lab has tested them.'});
+ if(!Object.keys(D).length&&!/creatine|omega|fish oil|probiotic|protein/.test(t))out.note='Swell couldn’t read the doses. Check the label: you want doses near 100% of the reference intake, and none above the upper limit.';
+ rtAddRow(out,hi);s=Math.round(s*.8+A*.2);if(hi)s=Math.min(s,49);out.score=Math.max(0,Math.min(100,s));if(!out.note)out.note='Supplements are scored on doses, forms, testing and additives. It says nothing about whether you need it.';return out}
+const rtN=v=>v>=100?Math.round(v):v>=10?Math.round(v*10)/10:Math.round(v*100)/100;
+// what to look for, by kind and category
+function rtLook(R){if(R.kind==='protein')return['At least 70 g of protein per 100 g, and at least 70% of the calories from protein','Under 5 g of sugar per 100 g','An Informed Sport or NSF mark','No free glycine, taurine or glutamine high in the ingredients','A full amino acid table on the pack'];
+ if(R.kind==='supp')return['Doses near 100% of the reference intake (RI), and none above the upper limit','Vitamin D3 rather than D2; magnesium citrate or glycinate rather than oxide','An Informed Sport or NSF mark','No titanium dioxide (E171) or artificial colours','No “proprietary blend” hiding the doses'];
+ const c=R.cat.join(' ');if(/cereals|breakfast/.test(c))return['Under 5 g of sugar per 100 g (green on the pack)','At least 6 g of fibre per 100 g','Wholegrain oats, wheat or bran first in the ingredients'];
+ if(/yogurts|yoghurts/.test(c))return['Plain or Greek style, and add your own fruit','Under 5 g of sugar per 100 g beyond the milk sugar (about 4 g)','No sweeteners or thickeners like carrageenan'];
+ if(/sodas|soft-drinks|beverages/.test(c))return['Water, sparkling water or plain tea','Under 2.5 g of sugar per 100 ml','No sweeteners, or at least no aspartame or acesulfame K'];
+ if(/meats|sausages|hams|bacon/.test(c))return['No nitrites or nitrates (E249 to E252)','Fresh rather than cured meat when you can','Under 1.5 g of salt per 100 g'];
+ if(/breads/.test(c))return['Wholemeal, with at least 6 g of fibre per 100 g','Under 1 g of salt per 100 g','A short ingredient list'];
+ if(/snacks|crisps|chips|biscuits|chocolate|confection/.test(c))return['Nuts, popcorn or rice cakes with no added sugar','Green or amber for sugar and saturated fat on the pack','No palm oil or emulsifiers high in the list'];
+ if(/ready-meals|meals/.test(c))return['Under 1.5 g of salt per 100 g','At least 20% of the calories from protein','Vegetables near the top of the ingredients'];
+ return['Mostly green and amber on the front-of-pack label','A short ingredient list with foods you recognise','No high-risk additives (red dots)']}
+// the screen
+let RTC=null,RTQ=[];
+function rtRing(s,col,big){const r=big?74:19,C=2*Math.PI*r,w=big?14:5,sz=big?172:44;return`<svg viewBox="0 0 ${sz} ${sz}" aria-hidden="true"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="${w}"/><circle class="rtarc" cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${big?C:C*(1-s/100)}" data-c="${C}" data-s="${s}" transform="rotate(-90 ${sz/2} ${sz/2})"/>${big?'':`<text x="22" y="27" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">${s}</text>`}</svg>`}
+function rtRowH(x,i){const dot=x.lv===0?'#3FB37F':x.lv===1?'#F2B84B':'#E5674F';const bar=x.lim?`<div class="rtbar"><u style="left:calc(${Math.min(100,x.val/x.pos*100)}% - 2px)"></u></div>`:'';
+ return`<button class="rtrow" data-a="rtrow" style="animation-delay:${180+i*45}ms"><i style="background:${dot}"></i><b>${esc(x.name)}</b><em>${esc(x.v)}</em><small>${esc(x.sub)}</small>${x.why||bar?`<div class="det">${bar}${esc(x.why||'')}</div>`:''}</button>`}
+function rtOpen(o){RTC=o;const O=rtScore(o.R),[bn,bc]=RTBAND(O.score),R=o.R;let i=0;
+ const adds=O.adds.filter(a=>a.r>=0);
+ const verdict=(()=>{const lc=x=>x.sub.charAt(0).toLowerCase()+x.sub.slice(1);let bad=O.neg.filter(x=>x.lv===2);if(!bad.length)bad=O.neg.filter(x=>x.lv===1&&x.k!=='tst'&&x.k!=='nova');const good=O.pos.filter(x=>x.k!=='add'&&!(R.drink&&/sf|salt|fat/.test(x.k))).sort((a,b)=>(b.k==='prot'||b.k==='fib'?1:0)-(a.k==='prot'||a.k==='fib'?1:0));
+  const B=andL(bad.slice(0,2).map(lc)),G=andL(good.slice(0,2).map(lc));let t='';if(O.score>=50)t=G?(G+(B?', but '+B:'')):B;else t=B?(B+(G?', though '+good.slice(0,1).map(lc)[0]:'')):G;return t?t.charAt(0).toUpperCase()+t.slice(1)+'.':''})();
+ const missH=O.miss.length?`<div class="rts"><h3>Add what’s missing</h3><div class="rtmiss">${O.miss.map(k=>`<label>${{sug:'Sugars',sf:'Saturates',salt:'Salt',kcal:'Calories',prot:'Protein'}[k]} per 100 ${R.drink?'ml':'g'}<input type="number" inputmode="decimal" data-rtm="${k}" placeholder="${k==='kcal'?'kcal':'g'}"></label>`).join('')}</div></div>`:'';
+ let o2=$('#rt');if(!o2){o2=document.createElement('div');o2.id='rt';o2.setAttribute('role','dialog');o2.setAttribute('aria-label','Product rating');document.body.appendChild(o2);try{lockOn()}catch(_){}}
+ o2.innerHTML=`<button class="rtx" data-a="rtx" aria-label="Close">×</button><div class="rtw">
+ <div class="rth">${R.img&&!PREVIEW?`<img src="${esc(R.img)}" alt="">`:''}<div><b>${esc(R.n)}</b><small>${esc(R.b||'')}${R.kind==='protein'?' · Protein powder':R.kind==='supp'?' · Supplement':R.drink?' · Drink':''}</small></div></div>
+ <div class="rtr">${rtRing(O.score,bc,1)}<div style="margin-top:-118px;height:64px;display:flex;align-items:center;justify-content:center"><span class="num" data-rtn>${LRM()?O.score:0}</span></div><span class="band" style="color:${bc};margin-top:62px">${bn}${O.miss.length?' · partial':''}</span></div>
+ ${verdict?`<p class="rtv">${esc(verdict)}</p>`:''}
+ ${O.neg.length?`<div class="rts"><h3>Not so good</h3>${O.neg.sort((a,b)=>b.lv-a.lv).map(x=>rtRowH(x,i++)).join('')}</div>`:''}
+ ${O.pos.length?`<div class="rts"><h3>Good</h3>${O.pos.map(x=>rtRowH(x,i++)).join('')}</div>`:''}
+ ${adds.length?`<div class="rts"><h3>Additives</h3>${adds.map(a=>`<button class="rtrow" data-a="rtrow" style="animation-delay:${180+(i++)*45}ms"><i style="background:${ADDC[a.r]}"></i><b>${esc(a.c.toUpperCase())} ${esc(a.n)}</b><em>${ADDN[a.r]}</em>${a.w?`<div class="det">${esc(a.w)}</div>`:''}</button>`).join('')}</div>`:''}
+ ${missH}
+ <div class="rts" data-rtalt><h3>${O.score<75&&R.kind!=='supp'&&R.kind!=='protein'?'Better choices':'What to look for'}</h3>${O.score<75&&R.kind!=='supp'&&R.kind!=='protein'?'<p class="rtlook" style="padding-left:15px">Looking for better-rated products like this…</p>':''}<ul class="rtlook">${rtLook(R).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+ <p class="rtnote">${O.note?esc(O.note)+' ':''}Swell’s rating: ${R.kind==='food'||R.kind==='drink'?'nutrition (Nutri-Score 2023) 60%, additives 30%, organic 10%, the same split as Yuka, with a high-risk additive capping it at 49. ':''}Tap any row to see why. It’s a guide, not medical advice.</p>
+ </div><div class="rtft">${o.log?'<button class="btn on" data-a="rtlog">Log it</button>':''}<button class="btn" data-a="rtx">Done</button></div>`;
+ // count up and fill the ring
+ if(!LRM()){const arc=o2.querySelector('.rtarc'),n=o2.querySelector('[data-rtn]'),C=+arc.dataset.c,t0=performance.now(),D=850;const f=t=>{const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);arc.setAttribute('stroke-dashoffset',C*(1-O.score/100*e));n.textContent=Math.round(O.score*e);if(k<1&&o2.isConnected)requestAnimationFrame(f)};requestAnimationFrame(f)}else{const arc=o2.querySelector('.rtarc');arc.setAttribute('stroke-dashoffset',+arc.dataset.c*(1-O.score/100))}
+ rtHist(o,O.score);if(O.score<75&&R.kind!=='supp'&&R.kind!=='protein')rtAlts(o,O.score)}
+function rtHist(o,s){if(!o.code)return;S.rth=(S.rth||[]).filter(x=>x.c!==o.code);S.rth.unshift({c:o.code,n:o.R.n,s,at:Date.now()});S.rth=S.rth.slice(0,20);save()}
+function rtClose(){const o=$('#rt');if(o){o.remove();try{lockOff()}catch(_){}}RTC=null}
+// better-rated products in the same category, from Open Food Facts (counted against its search limit)
+async function rtAlts(o,mine){const box=()=>$('#rt [data-rtalt]');const cats=(o.R.cat||[]).filter(c=>/^en:/.test(c));if(!cats.length||navigator.onLine===false)return rtAltDone(null);
+ RTQ=RTQ.filter(t=>Date.now()-t<60e3);if(RTQ.length>=8)return rtAltDone(null);
+ let best=[];for(const c of cats.slice(-2).reverse()){RTQ.push(Date.now());try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),8000);
+   const r=await fetch(`https://world.openfoodfacts.org/api/v2/search?categories_tags=${encodeURIComponent(c)}&countries_tags=en:united-kingdom&nutrition_grades_tags=a,b,c&fields=code,product_name,product_name_en,brands,nutriscore_grade,nutriscore_score,additives_tags,labels_tags,nutriments,categories_tags,image_front_small_url,nova_group&sort_by=popularity_key&page_size=30`,{signal:ac.signal});clearTimeout(to);
+   const j=await r.json();best=(j.products||[]).filter(p=>p.code!==o.code&&(p.product_name||p.product_name_en)).map(p=>{const R=rtFrom(p);R.kind=o.R.kind;R.drink=o.R.drink;return{code:p.code,R,s:rtScore(R).score}}).filter(x=>x.s>=Math.max(50,mine+10)).sort((a,b)=>b.s-a.s).slice(0,4)}catch(_){}
+  if(best.length)break}
+ if(RTC!==o)return;rtAltDone(best)}
+function rtAltDone(best){const b=$('#rt [data-rtalt]');if(!b)return;const p=b.querySelector('p.rtlook');if(p)p.remove();if(!best||!best.length)return;b.querySelector('h3').insertAdjacentHTML('afterend',best.map((x,i)=>{const [bn,bc]=RTBAND(x.s);return`<button class="rtalt" data-a="rtalt" data-i="${i}">${x.R.img&&!PREVIEW?`<img src="${esc(x.R.img)}" alt="">`:'<span class="ph"></span>'}<b>${esc(x.R.n)}</b><span class="sc" style="background:${bc}">${x.s}</span><small>${esc(x.R.b||'')} · ${esc(rtWhy(x.R))}</small></button>`}).join('')+'<h3 style="padding-top:12px">What to look for</h3>');RTA=best}
+let RTA=[];
+function rtWhy(R){const a=[];if(R.sug!=null&&R.sug<=5)a.push('low sugar');if(R.sf!=null&&R.sf<=1.5)a.push('low sat fat');if(R.salt!=null&&R.salt<=.3)a.push('low salt');if(R.fib>=3)a.push('more fibre');if(!R.add.some(c=>ADD[c]&&ADD[c][1]>=2))a.push('no risky additives');return a.slice(0,2).join(', ')||'better rated'}
+// taps
+window.addEventListener('click',e=>{const el=e.target.closest('#rt [data-a],[data-a=rtgo],[data-a=rtmini]');if(!el)return;const a=el.dataset.a;if(!/^rt/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ if(a==='rtx')return rtClose();
+ if(a==='rtrow'){el.classList.toggle('open');return}
+ if(a==='rtalt'){const x=RTA[+el.dataset.i];if(x)rtOpen({R:x.R,code:x.code,log:false,alt:1});return}
+ if(a==='rtgo'){bcOpen('rate');return}
+ if(a==='rtmini'){const p=BPD&&BPD.p;if(p&&p.rt)rtOpen({R:p.rt,code:BPD.code,log:false});return}
+ if(a==='rtlog'){const o=RTC;rtClose();if(o&&o.p){BPD=null;BC={mode:'food',code:o.code};bcDone(o.p)}return}},true);
+document.addEventListener('input',e=>{const t=e.target;if(!t.matches||!t.matches('[data-rtm]')||!RTC)return;const v=numIn(t.value);RTC.R[t.dataset.rtm]=t.value===''||isNaN(v)?null:v;if(t.dataset.rtm==='kcal')RTC.R.kj=RTC.R.kcal!=null?RTC.R.kcal*4.184:null;RTC.R.edited=1;
+ clearTimeout(rtOpen.t);rtOpen.t=setTimeout(()=>{const k=t.dataset.rtm,val=t.value;rtOpen(RTC);const n=$(`#rt [data-rtm="${k}"]`);if(n){n.value=val;n.focus()}},700)});
+// barcode: keep what the score needs, and a "check" mode for the scanner
+{const _bp=bcProd;bcProd=function(j){const p=_bp.apply(this,arguments);try{p.rt=rtFrom(j.product||{})}catch(_){}return p}}
+{const s0='?fields=product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,categories_tags,quantity,product_quantity,product_quantity_unit,additives_tags';
+ // the extra fields go on the same lookup, so checking a product costs no more than scanning it
+ const _f=window.fetch;window.fetch=function(u,o){if(typeof u==='string'&&u.includes('openfoodfacts.org/api/v2/product/')&&u.includes(s0))u=u.replace(s0,s0+',nutriscore_score,nutriscore_grade,nova_group,labels_tags,ingredients_text,ingredients_text_en,image_front_small_url,generic_name');return _f.call(this,u,o)}}
+{const _bd=bcDone;bcDone=function(p){if(!BC||BC.mode!=='rate')return _bd.apply(this,arguments);const code=BC.code;bcClose();if(!p.rt){toast('Found it, but Swell needs to look it up again to rate it. Try scanning once more.');if(S.bc)delete S.bc[code];return}rtOpen({R:{...p.rt},code,log:p.k100!=null||p.ks!=null,p})}}
+{const _bl=bcLook;bcLook=function(code){const c=String(code||'').replace(/\D/g,'');if(BC&&BC.mode==='rate'){const h=(S.bc||{})[c];if(h&&h.n&&!h.rt)delete S.bc[c]}
+ if(PREVIEW&&RTDEMO[c]){BC.code=c;const P=RTDEMO[c];const p=bcProd({product:P});S.bc=S.bc||{};S.bc[c]={...p,at:Date.now()};return bcDone(S.bc[c])}return _bl.apply(this,arguments)}}
+// the logging sheet shows the score too
+{const _s=bpSheet;bpSheet=function(){const r=_s.apply(this,arguments);try{const p=BPD&&BPD.p;if(p&&p.rt){const O=rtScore({...p.rt}),[bn,bc]=RTBAND(O.score),h=$('#sheet h2');h&&h.nextElementSibling&&h.nextElementSibling.insertAdjacentHTML('afterend',`<button class="rtmini" data-a="rtmini">${rtRing(O.score,bc,0)}<span><b>${bn}</b><small>${esc((O.neg[0]||O.pos[0]||{}).sub||'')}</small></span><span>See why</span></button>`)}}catch(_){}return r}}
+// Diet: a "Check a product" button under the scan tiles
+const RTIC='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/></svg>';
+{const _d=diet;diet=function(){let h=_d.apply(this,arguments);try{const last=(S.rth||[])[0];h=h.replace(/(<div class="sctiles">[\s\S]*?<\/button><\/div>)/,`$1<button class="rtentry" data-a="rtgo">${RTIC}<span><b>Check a product</b><small>${last?`Last: ${esc(last.n.slice(0,28))}, ${last.s}/100`:'Scan food, drinks, protein powder or supplements for a score out of 100.'}</small></span></button>`)}catch(_){}return h}}
+// supplements: check one from the supplement sheet
+{const _ss=seSheet;seSheet=function(){const r=_ss.apply(this,arguments);try{const b=$('#sheet [data-a=bcgo][data-i=sup]');if(b&&!$('#sheet [data-a=rtgo]'))b.insertAdjacentHTML('afterend',`<button class="btn" data-a="rtgo" style="width:100%;margin:0 0 10px">${RTIC} Check how good it is</button>`)}catch(_){}return r}}
+// the scanner's words for this mode
+{const _br=bcRender;bcRender=function(){const r=_br.apply(this,arguments);try{if(BC&&BC.mode==='rate'){const t=$('#bcs .bct b');if(t)t.textContent='Scan to check it';const s=$('#bcs .bct span');if(s)s.textContent='Food, drinks, protein powder or supplements.';const p=$('#bcs .bcp p.sm');if(p&&PREVIEW)p.innerHTML='Preview samples: 2000000000015 (cereal bar), 2000000000022 (whey), 2000000000039 (magnesium), 2000000000046 (cola).'}}catch(_){}return r}}
+// preview-only sample products, so every part of the rating can be tried without a signal
+const RTDEMO={
+ '2000000000015':{product_name:'Chocolate chip cereal bar',brands:'Sample (preview)',categories_tags:['en:snacks','en:sweet-snacks','en:bars','en:cereal-bars'],nutriments:{'energy-kcal_100g':432,proteins_100g:6.1,fat_100g:16,'saturated-fat_100g':7.2,carbohydrates_100g:64,sugars_100g:29,fiber_100g:3.4,salt_100g:.6},additives_tags:['en:e471','en:e322','en:e422','en:e330'],nova_group:4,serving_quantity:25,serving_size:'1 bar (25 g)',ingredients_text:'Oats, glucose syrup, sugar, chocolate chips, palm fat, humectant (glycerol), emulsifiers (E471, soya lecithin), acid (citric acid)'},
+ '2000000000022':{product_name:'Vanilla whey protein',brands:'Sample (preview)',categories_tags:['en:dietary-supplements','en:protein-powders'],nutriments:{'energy-kcal_100g':382,proteins_100g:72,fat_100g:6,'saturated-fat_100g':3.6,carbohydrates_100g:9,sugars_100g:6.5,salt_100g:.4},additives_tags:['en:e955','en:e415'],serving_quantity:30,serving_size:'1 scoop (30 g)',ingredients_text:'Whey protein concentrate (milk), flavouring, glycine, taurine, thickener (xanthan gum), sweetener (sucralose), L-glutamine'},
+ '2000000000039':{product_name:'Magnesium 375mg tablets',brands:'Sample (preview)',categories_tags:['en:dietary-supplements','en:food-supplements'],nutriments:{},additives_tags:['en:e171','en:e470b','en:e460'],ingredients_text:'Magnesium oxide (375mg magnesium), bulking agent (cellulose), anti-caking agent (magnesium stearate), colour (titanium dioxide), Vitamin D2 25µg'},
+ '2000000000046':{product_name:'Cola',brands:'Sample (preview)',categories_tags:['en:beverages','en:carbonated-drinks','en:sodas','en:colas'],nutriments:{'energy-kcal_100g':42,proteins_100g:0,fat_100g:0,'saturated-fat_100g':0,carbohydrates_100g:10.6,sugars_100g:10.6,salt_100g:0},additives_tags:['en:e150d','en:e338','en:e211'],nova_group:4,serving_quantity:330,serving_size:'1 can (330 ml)',ingredients_text:'Carbonated water, sugar, colour (caramel E150d), acid (phosphoric acid), natural flavourings, caffeine'}};
+// label scans: a quick score from the table you just read (calories, fat, carbs and protein, then add the rest)
+function rtLabel(){if(!SCAN||!SCAN.cols)return;const c=SCAN.cols.find(x=>x.kind==='100')||SCAN.cols[SCAN.sel]||SCAN.cols[0];if(!c)return;const f=c.kind==='100'?1:c.g>0?100/c.g:null;if(!f){toast('Swell needs the per 100 g column or the serving size to rate it.');return}
+ const g=k=>c.v&&c.v[k]!=null?+c.v[k]*f:null,kcal=g('k');rtOpen({R:{n:'Scanned label',b:'From your label scan',img:'',cat:[],kind:'food',drink:false,kcal,kj:kcal!=null?kcal*4.184:null,prot:g('p'),fat:g('f'),carb:g('c'),sug:c.v&&c.v.sug!=null?+c.v.sug*f:null,sf:c.v&&c.v.sf!=null?+c.v.sf*f:null,salt:c.v&&c.v.salt!=null?+c.v.salt*f:null,fib:null,fv:0,add:[],lab:'',ing:'',nm:'',sw:false,lbl:1},code:null,log:false})}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&SCAN){const bx=$('.scbox');if(bx&&!bx.parentElement.querySelector('[data-a=rtlbl]'))bx.insertAdjacentHTML('afterend',`<button class="rtentry" data-a="rtlbl" style="margin:10px 0 0">${RTIC}<span><b>Check how good it is</b><small>A score out of 100 from this label.</small></span></button>`)}}catch(_){}return r}}
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=rtlbl]'))return;e.stopImmediatePropagation();e.preventDefault();rtLabel()},true);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/>',h:'Check a product',p:'Scan food, drinks, protein powder or supplements and get a score out of 100, with what’s good, what isn’t, the additives, and better choices.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
