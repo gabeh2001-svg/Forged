@@ -9049,9 +9049,9 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=nuv]');if
  w.style.visibility='hidden';setTimeout(()=>{w.style.visibility='';w.animate([{opacity:0,transform:'scale(.97)'},{opacity:1,transform:'scale(1.012)',offset:.6},{opacity:1,transform:'none'}],{duration:380,easing:'cubic-bezier(.3,1.2,.5,1)'})},D-120)}}
 
 /* ---------- 3. changing week: one motion, not two ---------- */
-{const _fa=fxApply;fxApply=function(root,pre,same){if(root&&root.id==='app'&&VDFROM!=null&&Date.now()-VDT<800&&!same){VDFROM=null;const r=_fa.apply(this,arguments);
+{const _fa=fxApply;fxApply=function(root,pre,same){if(root&&root.id==='app'&&VDFROM!=null&&Date.now()-VDT<800&&!same){VDFROM=null;const r=undefined;
   if(!MRM())[...root.children].forEach(c=>{if(c.classList.contains('nav')||c.classList.contains('hdr')||c.classList.contains('cal')||c.querySelector&&c.querySelector(':scope>.cal')||getComputedStyle(c).position==='fixed')return;
-   c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:.45},{opacity:1}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})});return r}
+   c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:.72},{opacity:1}],{duration:200,easing:'cubic-bezier(.2,.8,.2,1)'})});return r}
  return _fa.apply(this,arguments)}}
 
 /* ---------- 4. shops: balanced rows ---------- */
@@ -9103,6 +9103,31 @@ window.addEventListener('click',e=>{const b=e.target.closest('[data-a=wkpn]');if
   else bs.forEach(b=>{const f=b.style.transform;b.style.transform='';b.animate([{transform:f},{transform:'none'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})})};
  document.addEventListener('touchend',end,{capture:true});document.addEventListener('touchcancel',end,{capture:true});
  window.addEventListener('click',e=>{if(Date.now()-swiped<350&&e.target.closest('#app>.hdr .wk')){e.stopImmediatePropagation();e.preventDefault()}},true)}
+
+
+/* ===== v117: one calendar language: Diet and Workout get a compact version of Home's week ===== */
+// Research notes for this block:
+// - Same component, different density: Home's week is the full version (dates, workout labels); the other pages use
+//   a condensed one with the same date numbers and the same selected-day pill, so it reads as the same control
+//   (Nielsen's heuristic 4; Material, "density" for secondary placements). Thin, low-contrast borders keep it light.
+// - Day status moves from a big ring to a small dot under the date (filled when the day's goals were met), the
+//   pattern used by Apple Fitness and Calendar month views; colour is never the only signal, as the dot is hollow,
+//   dashed or filled (WCAG 1.4.1).
+// - Changing week no longer replays the whole page's entrance (that was the flash): the header stays still and the
+//   content below only lightens briefly.
+(function(){const st=document.createElement('style');st.textContent=`
+.hdr .wk.wkp{border:1px solid rgba(255,255,255,.07)!important;background:rgba(255,255,255,.04)!important;padding:5px 3px!important;border-radius:18px!important}
+.hdr .wk.wkp .wd2{gap:3px;padding:6px 0 7px!important;border-radius:13px;transition:background .2s}
+.hdr .wk.wkp .wd2 small{font-size:10.5px;font-weight:700;letter-spacing:.06em;color:rgba(243,241,236,.55)}
+.hdr .wk.wkp .wd2 .dn{font-size:16px;font-weight:800;color:#F3F1EC;font-variant-numeric:tabular-nums;line-height:1}
+.hdr .wk.wkp .wd2 span{width:6px!important;height:6px!important;border:0!important;border-radius:50%;background:rgba(255,255,255,.2)!important;font-size:0}
+.hdr .wk.wkp .wd2 span::after{display:none}
+.hdr .wk.wkp .wd2 span.ok{background:var(--ac)!important}
+.hdr .wk.wkp .wd2 span.rs{background:none!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.hdr .wk.wkp .wd2.on{background:#F3F1EC}.hdr .wk.wkp .wd2.on small,.hdr .wk.wkp .wd2.on .dn{color:#141412}
+.hdr .wk.wkp .wd2.on span{background:rgba(20,20,18,.3)!important}.hdr .wk.wkp .wd2.on span.ok{background:var(--ac)!important}
+.hdr .wk.wkp .wd2.fut .dn{opacity:.55}`;document.head.appendChild(st)})();
+{const _d=wkpDress;wkpDress=function(){_d.apply(this,arguments);const t=realToday();document.querySelectorAll('#app>.hdr .wk.wkp .wd2:not([data-dn])').forEach(b=>{const d=b.dataset.i;if(!d)return;b.dataset.dn=1;const sm=b.querySelector('small');sm&&sm.insertAdjacentHTML('afterend',`<b class="dn">${+d.slice(8)}</b>`);if(d>t)b.classList.add('fut')})}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
