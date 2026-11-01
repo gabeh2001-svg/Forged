@@ -716,7 +716,7 @@ TOUR.length=0;TOUR.push(
  {t:'home',q:'.cal .chipw',h:'Your turn',p:'Hold a workout and drag it onto another day. The dashed outline shows where it will land.',base:()=>JSON.stringify(S.sch),ok:b=>JSON.stringify(S.sch)!==b},
  {t:'home',q:'[data-a=wsel]',h:'Start workout',p:'Choose Guided to be walked through every set and rest, or Solo to run it yourself with the checklist and timers.'},
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. That’s edit mode: drag to move, use the corner handle to resize, tap the minus to remove.',ok:()=>ED,after:()=>{ED=false}},
- {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
+ {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap the gear at the top. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.card',h:'Today’s macros',p:'Totals build as you log meals, and you can type into a total to correct it. The lights follow your green, amber and red rules.'},
  {t:'diet',q:'.scanb',h:'Scan label',p:'Take a photo of a nutrition label. Swell reads it on your phone and highlights anything it isn’t sure of, so you can check it.'},
  {t:'diet',q:'[data-a=msv]',h:'Your turn',p:'Tap Save for later. Meals added with it switched on become one-tap buttons next time.',ok:()=>!!M.sv,after:()=>{M.sv=false}},
@@ -1057,7 +1057,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
  {t:'home',q:'.wd[data-id=goal]',h:'Your goal',p:'Tap to set a goal: lose, maintain or gain weight, gain muscle, or develop a body part. It charts your progress and suggests updates as you log your weight, body metrics and workouts. For a Develop goal, tap Record a session after each one.'},
  {t:'home',q:'.wd[data-id=macros]',h:'Macros',p:'Each ring fills as you eat and turns green, amber or red against your goal.'},
  {t:'home',q:'.grid',h:'Your turn',p:'Hold any widget until everything wiggles. Drag to move, use the corner handle to resize, tap the minus to remove. Widgets show more as they get bigger.',ok:()=>ED,after:()=>{ED=false}},
- {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
+ {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap the gear at the top. It\u2019s where you customise your look, change units, work out your food goals and replay this tour.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
  {t:'diet',q:'.hdr',h:'Your day bar',p:'Tap a day to look back at what you hit, or ahead at what’s planned. Ticks mark winning days, when every goal was hit. The bolt counts the days in a row you’ve logged anything.'},
  {t:'diet',q:'.hdr .wd2:not(.on)',pick:a=>a.find(x=>x.dataset.i>realToday())||a[0],h:'Your turn',p:'Tap another day. We’ll bring you back to today straight after.',ok:()=>VD!=null,after:()=>{VD=null}},
  {t:'diet',q:'.dp',h:'Today so far',p:'Shows how much of your calories and macros you’ve had. On a past day it becomes a summary of whether you hit your goals.'},
@@ -1185,7 +1185,7 @@ const RELEASES=[{v:'2026.10.24',date:'24 Oct',items:[
  {i:'<path d="M12 3l2.2 5.6L20 9.5l-4.5 3.8L17 19l-5-3-5 3 1.5-5.7L4 9.5l5.8-.9z"/>',h:'Smoother everywhere',p:'Logging a meal, finishing a set or saving anything now gets a quick tick, totals count up and lists glide into place.'},
  {i:'<rect x="4" y="5" width="16" height="14" rx="4"/><path d="M8 10h8M8 14h5"/>',h:'Logged today, tidied up',p:'Meals you log now sit in their own card on the Diet page, just like Saved meals.'}],
  tour:[{t:'home',q:'[data-a=settings]',h:'New: Settings',p:'Settings now lives here. It holds Customise look, your food goals, units and the tour.'},
-  {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap Settings to have a look inside.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
+  {t:'home',q:'[data-a=settings]',h:'Your turn',p:'Tap the gear at the top to have a look inside.',ok:()=>!!$('#sheet .setl'),after:()=>{sheet(null)}},
   {t:'home',q:'.wd[data-id=goal]',h:'New: Record a session',p:'For a Develop goal, tap your goal and use Record a session after each workout that counts.'},
   {t:'diet',q:'[data-a=estopen]',h:'New: Work out my goals',p:'Tap here any time to work out your daily calories and macros from your details and goal.'}]}];
 let MINI=null,NEWU=!(S.user&&S.setup.done)||TU===0;
@@ -9129,6 +9129,30 @@ window.addEventListener('click',e=>{const b=e.target.closest('[data-a=wkpn]');if
 .hdr .wk.wkp .wd2.fut .dn{opacity:.55}`;document.head.appendChild(st)})();
 {const _d=wkpDress;wkpDress=function(){_d.apply(this,arguments);const t=realToday();document.querySelectorAll('#app>.hdr .wk.wkp .wd2:not([data-dn])').forEach(b=>{const d=b.dataset.i;if(!d)return;b.dataset.dn=1;const sm=b.querySelector('small');sm&&sm.insertAdjacentHTML('afterend',`<b class="dn">${+d.slice(8)}</b>`);if(d>t)b.classList.add('fut')})}}
 
+
+/* ===== v118: Settings becomes an icon in the header; Reports moves into Settings ===== */
+// Research notes for this block:
+// - Settings is used rarely, so a full-width button at the bottom of Home spends space on it every visit. A gear in
+//   the top corner is the convention people look for first (NN/g, "Icon usability": the gear is one of the few
+//   icons recognised without a label; Apple HIG puts account and settings in the top trailing corner). It has a text
+//   label for screen readers and a 44 pt target.
+// - Reports are reviewed occasionally (weekly or monthly), so they sit with the other "your data" items in Settings,
+//   one tap from the gear; the weekly wrap-up still arrives on its own.
+(function(){const st=document.createElement('style');st.textContent=`
+#app .pills2{display:none!important}
+.hdr .gearb{all:unset;box-sizing:border-box;cursor:pointer;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#F3F1EC;flex:none}
+.hdr .gearb svg{width:21px;height:21px}
+.hdr .hrt{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.hdr .hrt .stkb{padding:0!important}`;document.head.appendChild(st)})();
+const GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'&&S.user&&S.setup.done){const R=$('#app>.hdr>.row');if(R&&!R.querySelector('.gearb')){const s=R.querySelector('.stkb'),td=R.querySelector('.today2');const box=document.createElement('div');box.className='hrt';box.innerHTML=`<button class="gearb" data-a="settings" aria-label="Settings">${GEAR}</button>`;
+  if(td){R.insertBefore(box,td);box.appendChild(td)}else if(s){R.insertBefore(box,s)}else R.appendChild(box);if(s)box.appendChild(s)}}}catch(_){}return r}}
+// Reports, inside Settings
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector(':scope>[data-a=reports]')){
+  L.insertAdjacentHTML('beforeend',`<button data-a="reports">${ico('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>')}<span>Reports<small>Your weeks and months in numbers</small></span></button>`);setGroup();try{setDress()}catch(_){}}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Your data');if(g&&!g[1].includes('reports'))g[1].unshift('reports')}catch(_){}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings is the gear',p:'Settings now sits behind the gear at the top of Home, and Reports live inside it under Your data.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
