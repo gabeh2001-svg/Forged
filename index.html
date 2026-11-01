@@ -7758,6 +7758,88 @@ natSheet=function(){const E=Object.entries(NAT).filter(([k])=>k!=='custom');
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lxopen]');if(!el||!S.nat)return;e.stopImmediatePropagation();e.preventDefault();natSheet()},true);
 // a look picked here refreshes the screen in place
 window.addEventListener('click',e=>{if(e.target.closest('#sheet .lkg [data-a=natpick]'))setTimeout(()=>{if($('#sheet .lkg'))natSheet()},0)});
+/* ===== v100: the Workout page, redesigned to match Home and Diet ===== */
+// Research notes for this block:
+// - The page leads with today's session and one Start button, the action people open it for (Fogg 2009: make the
+//   target behaviour the easiest thing on the screen). The choice of a different session sits right under it, small.
+// - Settings you set once (rest between sets) fold into a single row showing the current value, opened when needed
+//   (progressive disclosure, NN/g 2006).
+// - Plans read as cards with each day's name and exercise count, and the three ways to add a plan are equal tiles, so
+//   none is hidden below the fold (Hick's law: a few equal options are picked faster than a long stack of buttons).
+// Only applies with a look picked.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] #app.wv>h1,html[data-look] #app.wv>.card.dp{display:none!important}
+html[data-look] #app.wv .whero{margin-bottom:10px}
+html[data-look] #app.wv .whero .wprog{position:absolute;left:24px;right:24px;top:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
+html[data-look] #app.wv .whero .wprog i{display:block;height:100%;background:var(--ac)}
+html[data-look] .wkst>h2:first-child{display:none}
+html[data-look] .wkst{padding:12px 14px!important}
+html[data-look] .wkst>label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0!important;font-size:13.5px;color:rgba(243,241,236,.7);white-space:nowrap}
+html[data-look] .wkst>label select{width:auto;max-width:62%;margin:0;padding:8px 30px 8px 12px;font-size:14px;border-radius:12px}
+html[data-look] .wkst>[data-a=wsel]{display:none!important}
+html[data-look] .wkst .wrest{margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:2px}
+html[data-look] .wkst .wrest>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;font-size:13.5px;color:rgba(243,241,236,.7)}
+html[data-look] .wkst .wrest>summary::-webkit-details-marker{display:none}
+html[data-look] .wkst .wrest>summary b{color:#F3F1EC;font-weight:700;display:flex;align-items:center;gap:8px}
+html[data-look] .wkst .wrest>summary b::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);opacity:.6;transition:transform .2s}
+html[data-look] .wkst .wrest[open]>summary b::after{transform:rotate(-135deg)}
+html[data-look] .wkst .wrest h2{display:none}html[data-look] .wkst .wrest p.sm{font-size:12.5px;margin:2px 0 8px}
+html[data-look] .wlog{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;margin:0 0 12px;padding:13px 14px;border-radius:20px;background:var(--cg);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.12);color:#F3F1EC}
+html[data-look] .wlog svg{width:22px;height:22px;flex:none;padding:7px;border-radius:11px;background:color-mix(in srgb,var(--ac) 22%,transparent);color:color-mix(in srgb,var(--ac) 80%,#fff);box-sizing:content-box}
+html[data-look] .wlog b{display:block;font-size:15px}html[data-look] .wlog small{font-size:12.5px;color:rgba(243,241,236,.6)}
+html[data-look] .wlog::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid rgba(243,241,236,.4);border-top:2px solid rgba(243,241,236,.4);transform:rotate(45deg)}
+html[data-look] #app.wv>h2{display:none}
+html[data-look] #app.wv>p.sm.wpi{font-size:12.5px;margin:-4px 4px 10px;color:var(--dim)}
+html[data-ground=l] #app.wv>p.sm.wpi{color:#5E5B53}
+html[data-look] #app.wv .sr{border-radius:22px;margin-bottom:10px}
+html[data-look] #app.wv .sr .in{background:linear-gradient(var(--cg),var(--cg)),#141414!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:22px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)!important;color:#F3F1EC}
+html[data-look] #app.wv .sr .in.act-on{box-shadow:inset 0 0 0 1.5px var(--ac),inset 0 1px 0 rgba(255,255,255,.12)!important}
+html[data-look] #app.wv .sr .in h2{font-family:'Archivo',system-ui,sans-serif;font-size:24px!important;font-weight:900;font-stretch:74%}
+html[data-look] #app.wv .sr .pill{font-size:11px;padding:3px 9px;background:rgba(255,255,255,.08);border-radius:999px}
+html[data-look] #app.wv .sr .pdr{background:rgba(255,255,255,.05)!important;border:0!important;border-radius:14px!important}
+html[data-look] #app.wv .sr .pdn{background:color-mix(in srgb,var(--ac) 85%,#000)!important;color:var(--on-ac)!important;font-weight:800;text-transform:uppercase;font-size:11.5px;letter-spacing:.04em}
+html[data-look] .wnew{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 14px}
+html[data-look] .wnew button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:84px;padding:10px 4px;border-radius:18px;background:var(--cg);border:1px solid rgba(255,255,255,.1);text-align:center;font-size:12.5px;font-weight:700;color:#F3F1EC}
+html[data-look] .wnew button.pri{background:#F3F1EC;color:#141412}
+html[data-look] .wnew svg{width:22px;height:22px}
+html[data-look] #app.wv>.btn.big[data-a=newp],html[data-look] #app.wv>.btn.big[data-a=imp],html[data-look] #app.wv>.btn.big[data-a=impimg]{display:none!important}
+html[data-look] #app.wv>.card:not(.wkst)>h2{font-size:10.5px!important;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62);margin-bottom:10px}`;document.head.appendChild(st)})();
+function wkHeroFor(k){const [pi,di]=String(k||'').split('|'),p=(S.plans||[]).find(x=>x.id===pi),d=p&&p.days[+di];if(!d)return null;const t=today(),isT=(()=>{try{return dayWork(t)===d}catch(_){return false}})();
+ const ex=d.ex||[],sets=ex.reduce((a,e)=>a+(+e.s||3),0),min=Math.max(10,Math.round(sets*2.6/5)*5),img=typeof cvImg==='function'?cvImg(d):null;
+ const done=isT?(S.checks&&S.checks[t]||[]).filter(Boolean).length:0;
+ const ln=e=>`<div><span>${esc(e.n)}</span><span>${e.s?e.s+' × ':''}${esc(String(e.v||''))}${e.t&&/Time/i.test(e.t)?' s':''}</span></div>`;
+ return`<div class="whero ${img?'':'nocv'}" style="${img?'':'height:250px'}">${img?`<img src="${img}" alt="">`:'<div class="wbg"></div>'}<span class="wlb">${isT?'Today’s workout':'Chosen workout'}</span>${done?`<span class="wprog"><i style="width:${Math.round(done/Math.max(1,ex.length)*100)}%"></i></span>`:''}<div class="whp"><div class="top"><div style="min-width:0"><span class="k">${ex.length} exercise${ex.length===1?'':'s'} · ${min} min${done?` · ${done} done`:''}</span><span class="n">${esc(d.name)}</span></div><button class="go" data-a="wsel">${done?'CARRY ON':'START'}</button></div><div class="ex">${ex.slice(0,3).map(ln).join('')}</div></div></div>`}
+function wkDress(){if(!S.nat||!NAT[S.nat]||tab!=='plan')return;const A=$('#app');if(!A||A.querySelector(':scope>.dsec'))return;
+ const cards=[...A.querySelectorAll(':scope>.card')],h2=t=>c=>{const h=c.querySelector(':scope>h2');return h&&h.textContent.trim()===t};
+ const st=cards.find(h2('Start workout'));if(!st)return;A.classList.add('wv');
+ const lg=cards.find(h2('Did a workout without your phone?')),rp=cards.find(h2('Workout reports'));
+ const t=today(),sel=st.querySelector('select[data-b="W.k"]'),k=sel&&sel.value;
+ // header
+ const H=A.querySelector(':scope>.hdr');if(H){const tl=H.querySelector('.tl');if(tl&&tl.firstChild&&tl.firstChild.nodeType===3)tl.firstChild.nodeValue=WK7[new Date(t+'T12:00').getDay()];
+  const row=H.querySelector('.row');if(row&&!H.querySelector('.hsub')){const L=row.firstElementChild,w=document.createElement('div');row.insertBefore(w,L);w.insertAdjacentHTML('afterbegin','<span class="deye">WORKOUT</span>');w.appendChild(L);
+   let line='';try{const d=dayWork(t);if(d)line=`${d.name} today · ${(d.ex||[]).length} exercises`;else{const n=nextSession();line=n?`Rest day · ${n.name} ${n.d===addDays(t,1)?'tomorrow':'on '+wkName(n.d)}`:'Rest day'}}catch(_){}
+   if(line)w.insertAdjacentHTML('beforeend',`<span class="hsub">${esc(line)}</span>`)}
+  const sb=H.querySelector('.stkb');if(sb&&!sb.querySelector('small')){const n=(sb.textContent||'').trim();sb.innerHTML=`<b>${esc(n)}</b><small>DAY STREAK</small>`}}
+ // today's session up top, the switch and rest time under it
+ st.classList.add('wkst');const hero=wkHeroFor(k);if(hero)st.insertAdjacentHTML('beforebegin',hero);
+ const lab=st.querySelector(':scope>label');if(lab&&lab.firstChild&&lab.firstChild.nodeType===3)lab.firstChild.nodeValue='Different one?';try{const O=[...sel.options],pre=O.map(o=>o.textContent.split(': ')[0]);if(pre.every(x=>x===pre[0]))O.forEach(o=>{o.textContent=o.textContent.split(': ').slice(1).join(': ')||o.textContent})}catch(_){}
+ const hs=[...st.querySelectorAll(':scope>h2')],rh=hs.find(h=>/timer|rest/i.test(h.textContent));
+ if(rh&&!st.querySelector('.wrest')){const det=document.createElement('details');det.className='wrest';if(WKR.open)det.open=true;const rm=(st.querySelector('[data-b="W.rm"]')||{}).value||'0',rs=(st.querySelector('[data-b="W.rs"]')||{}).value||'0';
+  det.innerHTML=`<summary><span>Rest between sets</span><b>${+rm}:${String(+rs).padStart(2,'0')}</b></summary>`;let n=rh;const move=[];while(n){move.push(n);n=n.nextElementSibling}move.forEach(x=>det.appendChild(x));st.appendChild(det);det.addEventListener('toggle',()=>{WKR.open=det.open})}
+ // log a session you did without the phone: one row
+ if(lg&&!A.querySelector('.wlog')){lg.insertAdjacentHTML('beforebegin',`<button class="wlog" data-a="clopen">${ico('<path d="M3 12h18M6 8v8M18 8v8M3 10v4M21 10v4"/>')}<span><b>Log a session</b><small>For a workout you did without your phone</small></span></button>`);lg.remove()}
+ // plans: a short line, and the three ways to add one as tiles
+ const ph=A.querySelector(':scope>h2'),pp=ph&&ph.nextElementSibling&&ph.nextElementSibling.matches('p.sm')?ph.nextElementSibling:null;if(pp){pp.classList.add('wpi');pp.textContent='Your active plan has the tick. Tap a plan to edit it, swipe left to delete.'}
+ const nb=A.querySelector(':scope>.btn.big[data-a=newp]');if(nb&&!A.querySelector('.wnew')){const has=a=>!!A.querySelector(`:scope>.btn.big[data-a=${a}]`);
+  nb.insertAdjacentHTML('beforebegin',`<div class="wnew"><button class="pri" data-a="newp">${ico('<path d="M12 5v14M5 12h14"/>')}New plan</button>${has('imp')?`<button data-a="imp">${ico('<rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 4h6v3H9z"/>')}Paste a plan</button>`:''}${has('impimg')?`<button data-a="impimg">${ico('<rect x="4" y="5" width="16" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m5 17 5-5 4 4 2-2 3 3"/>')}From an image</button>`:''}</div>`)}
+ // order, under headings
+ const sec=x=>{const h=document.createElement('h3');h.className='dsec';h.textContent=x;return h};
+ const heroEl=A.querySelector(':scope>.whero');if(heroEl)A.insertBefore(sec('Today'),heroEl);else A.insertBefore(sec('Today'),st);
+ const firstPlan=A.querySelector(':scope>.sr')||A.querySelector(':scope>.wnew');if(firstPlan){const ref=pp||firstPlan;A.insertBefore(sec('Your plans'),ref)}
+ if(rp)A.insertBefore(sec('Reports'),rp)}
+const WKR={open:false};
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab!=='plan')$('#app').classList.remove('wv');wkDress()}catch(e){}return r}}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 12h18M6 8v8M18 8v8"/>',h:'A cleaner Workout page',p:'Today’s session up top with one Start button, your plans as cards, and rest times tucked into a single row.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
