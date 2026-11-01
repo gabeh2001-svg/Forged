@@ -6400,6 +6400,179 @@ try{const g=SETG.find(x=>x[0]==='Look and feel');if(g&&!g[1].includes('motset'))
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=motset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const s=el.querySelector('small');
  if(S.motion==='yes'){S.motion='no';save();if(s)s.textContent='Off';return}motAsk().then(ok=>{if(s)s.textContent=ok?'On':'Off';if(!ok)toast('iPhone said no. If you tapped Cancel earlier, close Swell fully and try again.')})},true);
 
+/* ===== v83: nature looks with dark glass widgets ===== */
+// Research notes for this block:
+// - Colour: lower saturation lowers arousal and brighter colour feels more pleasant (Valdez and Mehrabian 1994, JEP:General;
+//   Wilms and Oberfeld 2018, Psychological Research), so each look is a muted palette lifted from one natural thing, with
+//   a single stronger accent kept for things you can tap (roughly 60/30/10).
+// - Glass: depth cues (a lit top edge, a darker lower edge, a soft drop shadow and a faint frosted grain) separate a panel
+//   from what's behind it and make it read as a physical layer, which is how Apple's materials are built (Apple HIG,
+//   Materials). The grain is a 3% noise inside the glass only, so the background stays clean.
+// - Readability: text inside the dark glass is always light; any accent used inside the glass is a lighter tint of the
+//   look's accent so it keeps at least 4.5:1 contrast (WCAG 2.2, 1.4.3).
+const NAT={
+ basalt:{n:'Basalt',from:'Volcanic rock and ember',g:'d',tone:'#121212',p:'#E0643A',s:'#5A544E',ac:'#F07A4E',on:'#141210',cg:'rgba(20,19,18,.55)'},
+ avocado:{n:'Avocado',from:'Avocado on slate',g:'d',tone:'#171A15',p:'#B4BF55',s:'#B07A4F',ac:'#C3CE63',on:'#141610',cg:'rgba(22,25,19,.55)'},
+ tidepool:{n:'Tide pool',from:'Sea between wet rocks',g:'d',tone:'#0D181D',p:'#4F98B8',s:'#A07A55',ac:'#86C3D8',on:'#0D181D',cg:'rgba(10,22,27,.52)'},
+ fig:{n:'Fig',from:'Ripe figs',g:'d',tone:'#1A1016',p:'#8C3E6A',s:'#E09484',ac:'#EBA190',on:'#1A1016',cg:'rgba(28,16,24,.55)'},
+ matcha:{n:'Matcha',from:'Matcha, oat and clay',g:'l',tone:'#ECE7DB',p:'#9DB86A',s:'#C79A78',ac:'#B2CC74',on:'#151711',cg:'rgba(26,28,23,.80)'},
+ coconut:{n:'Coconut',from:'Coconut against its husk',g:'l',tone:'#EEE7DD',p:'#B08A68',s:'#E8DCCB',ac:'#E2BE98',on:'#1A140F',cg:'rgba(30,24,19,.80)'},
+ flamingo:{n:'Flamingo',from:'Flamingos in a lagoon',g:'l',tone:'#F6E4DE',p:'#FF8E7A',s:'#1E9AA0',ac:'#7FD8DB',on:'#0F1F21',cg:'rgba(14,34,37,.80)'},
+ pistachio:{n:'Pistachio',from:'Pistachio kernel and skin',g:'l',tone:'#ECE7DA',p:'#9AA84E',s:'#8E3446',ac:'#C2CE73',on:'#161711',cg:'rgba(27,28,22,.80)'}};
+(function(){const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&display=swap';document.head.appendChild(l)})();
+const GRAIN=`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")`;
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] .card,html[data-look] .wd{background:${GRAIN},linear-gradient(165deg,rgba(255,255,255,.11),rgba(255,255,255,.025) 34%,rgba(255,255,255,0) 58%,rgba(0,0,0,.10)),var(--cg)!important;
+ backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important;border:1px solid rgba(255,255,255,.10)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.45),inset 1px 0 0 rgba(255,255,255,.04),0 20px 40px -18px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.22)!important;color:#F3F1EC}
+html[data-look] .card .sm,html[data-look] .wd .sm{color:rgba(243,241,236,.72)}
+html[data-look] .btn.on,html[data-look] .btn.big.on{background:var(--ac)!important;color:var(--on-ac)!important;border-color:transparent!important}
+html[data-look] h1,html[data-look] .wl span,html[data-look] .wnum,html[data-look] .wqv b,html[data-look] .wm b{font-family:'Archivo',system-ui,sans-serif;font-stretch:78%;letter-spacing:-.005em}
+html[data-look] h1{font-weight:900}
+html[data-look] .wl span{font-stretch:100%;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+html[data-look] .wqv b,html[data-look] .wm b,html[data-look] .wnum{font-weight:900;font-stretch:70%}
+html[data-look] .nav{background:${GRAIN},linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0)),var(--cg)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 18px 40px -14px rgba(0,0,0,.65)!important}
+html[data-ground=l] body,html[data-ground=l] #app{color:#22231E}
+html[data-ground=l] #app>h1,html[data-ground=l] #app>.sub2,html[data-ground=l] #app>p.sm,html[data-ground=l] #app>.hdr *,html[data-ground=l] #app .wk *,html[data-ground=l] #app>h2{color:#22231E}
+html[data-ground=l] .card,html[data-ground=l] .wd,html[data-ground=l] #sheet,html[data-ground=l] #fs .card,html[data-ground=l] .nav{color:#F3F1EC}
+.natl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.natl button{border:1px solid var(--edge);border-radius:18px;overflow:hidden;padding:0;background:rgba(255,255,255,.04);color:inherit;font:inherit;text-align:left}
+.natl button.on{outline:2px solid #fff;outline-offset:1px}.natl .sw{height:64px;display:flex}.natl .sw i{flex:6}.natl .sw i+i{flex:3}.natl .sw i+i+i{flex:1}
+.natl b{display:block;padding:8px 10px 0;font-size:14px}.natl small{display:block;padding:0 10px 10px;color:var(--dim);font-size:12px}`;document.head.appendChild(st)})();
+function natApply(){const R=document.documentElement,L=S.nat&&NAT[S.nat];if(!L){delete R.dataset.look;delete R.dataset.ground;return}
+ R.dataset.look=S.nat;R.dataset.ground=L.g;R.style.setProperty('--ac',L.ac);R.style.setProperty('--on-ac',L.on);R.style.setProperty('--cg',L.cg)}
+function natSet(id){const L=NAT[id];if(!L){S.nat=null;natApply();save();render();return}S.nat=id;S.p=L.p;S.s=L.s;S.tone=L.tone;S.lights=null;save();natApply();try{applyBg()}catch(_){}try{applyLights()}catch(_){}render()}
+{const _r=render;render=function(){natApply();return _r.apply(this,arguments)}}
+function natSheet(){sheet(`<h2>Look</h2><p class="sm" style="margin:-2px 0 12px">Each look comes from something in nature. Your widgets stay dark glass.</p><div class="natl">${Object.entries(NAT).map(([k,L])=>`<button class="${S.nat===k?'on':''}" data-a="natpick" data-i="${k}"><span class="sw"><i style="background:${L.tone}"></i><i style="background:${L.p}"></i><i style="background:${L.s}"></i></span><b>${L.n}</b><small>${L.from}</small></button>`).join('')}</div>
+ <button class="btn big" data-a="natpick" data-i="" style="margin-top:12px">Classic Swell</button><button class="btn big on" data-a="shx">Done</button>`)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=natpick],[data-a=natopen]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();if(el.dataset.a==='natopen')return natSheet();natSet(el.dataset.i||null);natSheet()},true);
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=natopen]')){L.insertAdjacentHTML('afterbegin',`<button data-a="natopen">${ico('<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>')}<span>Look<small>${S.nat&&NAT[S.nat]?NAT[S.nat].n:'Classic'}</small></span></button>`);setGroup()}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Look and feel');if(g&&!g[1].includes('natopen'))g[1].unshift('natopen')}catch(_){}
+natApply();
+
+/* ===== v85: liquid water and coffee widgets that move, and spill when you go over ===== */
+// Research notes for this block:
+// - The surface is a row of springs (the "spring surface" method used for 2D water in games), so a tap or a tilt sends real
+//   waves across that settle by themselves. It costs a few dozen sums a frame, and the loop stops when the water is still.
+// - Style sits between a cartoon and a render: a solid body with a darker depth gradient, a bright meniscus line and
+//   soft highlights (the cues people use to read a surface as liquid; Fleming 2014, "Visual perception of materials"),
+//   a few rising bubbles, and numbers that wobble when they're under the surface.
+// - The spill merges droplets into one liquid with a "goo" filter (blur then sharpen the edge), pours from the corner
+//   nearest the middle of the screen, runs over the tops of the widgets below and drains off the bottom. Shake to wash it
+//   away. It plays once when you cross your goal. With Reduce Motion on there's no movement and no spill.
+window.LIQUID=1;
+(function(){const st=document.createElement('style');st.textContent=`
+.lq{position:absolute;inset:0;border-radius:inherit;overflow:hidden}
+.lq canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation}
+.lq .lqh{position:absolute;top:12px;left:14px;right:56px;z-index:2;background:none;border:0;padding:0;color:inherit;text-align:left;font:inherit}
+.lq .lqb{position:absolute;top:8px;right:8px;z-index:2;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;padding:0}
+.wd[data-id=water].lqon,.wd[data-id=caf].lqon{padding:0}
+#lqspill{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:45;pointer-events:none;filter:url(#lqgoo)}`;document.head.appendChild(st);
+ const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.setAttribute('width','0');sv.setAttribute('height','0');sv.style.position='absolute';
+ sv.innerHTML='<filter id="lqgoo"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/><feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter>';document.body.appendChild(sv)})();
+const LQK={water:{top:[150,214,240],bot:[30,104,160],ink:'#F3F8FB',lab:'Water',ic:'drop'},caf:{top:[140,92,60],bot:[52,30,18],crema:[214,176,132],ink:'#FBF4EC',lab:'Caffeine',ic:'cup'}};
+const LQS={};// per kind: springs, bubbles, tilt
+const lqVal=k=>{if(k==='water'){const v=watOn(),g=watGoal();return{v,g,big:L1(v),unit:`of ${L1(g)} L`}}const v=cafLog(today()).reduce((a,x)=>a+x.mg,0),g=cafLim();return{v,g,big:String(v),unit:`of ${g} mg`}};
+const LRM=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+function lqState(k){let s=LQS[k];if(!s){const n=36;s=LQS[k]={n,h:new Float32Array(n),v:new Float32Array(n),tilt:0,tt:0,bub:[],t:0,lvl:null,live:0}}return s}
+{const _wd=wd;wd=function(l){if(!l||(l.id!=='water'&&l.id!=='caf')||S.liquid===false)return _wd.apply(this,arguments);const K=LQK[l.id];
+ const add=l.id==='water'?`data-a="wadd" data-i="${WAT().glass}" aria-label="Add a glass of water"`:(()=>{const r=CAFP().reg;return r?`data-a="careg" aria-label="Add your usual coffee"`:`data-a="dago" data-i="coffee" aria-label="Add a coffee"`})();
+ return`<div class="lq" data-liquid="${l.id}"><canvas data-a="lqtap" data-i="${l.id}" aria-hidden="true"></canvas><button class="lqh" data-a="lqopen" data-i="${l.id}" aria-label="Open ${K.lab}">${wlab(K.ic,K.lab)}</button><button class="lqb" ${add}>+</button></div>`}}
+// draw
+function lqBind(){document.querySelectorAll('#app [data-liquid]').forEach(el=>{const c=el.querySelector('canvas');el.closest('.wd')&&el.closest('.wd').classList.add('lqon');const k=el.dataset.liquid,s=lqState(k),r=c.getBoundingClientRect();if(!r.width)return;
+ const dpr=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(r.width*dpr)){c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr)}c._k=k;c._s=s;s.c=c;s.dpr=dpr;s.live=performance.now()});lqKick()}
+let LQRAF=0,LQLAST=0;
+function lqKick(){if(!LQRAF)LQRAF=requestAnimationFrame(lqFrame)}
+function lqFrame(now){LQRAF=0;const dt=Math.min(40,now-(LQLAST||now))/16.7;LQLAST=now;let busy=false;
+ for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected)continue;const V=lqVal(k),target=Math.max(.04,Math.min(.97,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
+  s.tilt+=(s.tt-s.tilt)*.08*dt;s.t+=dt;let e=Math.abs(target-s.lvl)*40+Math.abs(s.tt-s.tilt)*10;
+  if(!LRM()){const n=s.n,st=Math.min(dt,1.5);for(let i=0;i<n;i++){s.v[i]+=(-.02*s.h[i]-.035*s.v[i])*st;s.h[i]+=s.v[i]*st;if(s.h[i]>10)s.h[i]=10;if(s.h[i]<-10)s.h[i]=-10}
+   const L=s.L||(s.L=new Float32Array(n)),R=s.R||(s.R=new Float32Array(n));for(let p=0;p<3;p++){for(let i=0;i<n;i++){L[i]=i>0?.12*(s.h[i]-s.h[i-1]):0;R[i]=i<n-1?.12*(s.h[i]-s.h[i+1]):0}for(let i=0;i<n;i++){if(i>0){s.v[i-1]+=L[i]*st;s.h[i-1]+=L[i]*.5}if(i<n-1){s.v[i+1]+=R[i]*st;s.h[i+1]+=R[i]*.5}}}
+   for(let i=0;i<n;i++)e+=Math.abs(s.v[i])+Math.abs(s.h[i])*.2;
+   // a gentle idle swell for a few seconds after it appears or is touched, drawn as a smooth wave
+   s.idle=Math.max(0,1-(now-s.live)/6000);if(s.idle>0)e+=.1
+   if(Math.random()<.04*dt&&s.bub.length<6)s.bub.push({x:Math.random(),y:1.02,r:1+Math.random()*2.2,sp:.003+Math.random()*.004});s.bub=s.bub.filter(b=>(b.y-=b.sp*dt)>1-s.lvl);if(s.bub.length)e+=.05}
+  lqDraw(k,s,V);if(e>.05)busy=true}
+ if(busy&&!document.hidden)LQRAF=requestAnimationFrame(lqFrame);else LQLAST=0}
+function lqDraw(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s.dpr,K=LQK[k],n=s.n,base=H*(1-s.lvl);
+ x.clearRect(0,0,W,H);const sy=i=>base+s.h[i]*d*2.2+(i/(n-1)-.5)*W*s.tilt*.55+(s.idle||0)*Math.sin(i/(n-1)*Math.PI*2.2+s.t*.06)*2.2*d;
+ const path=()=>{x.beginPath();x.moveTo(0,sy(0));for(let i=1;i<n;i++){const x0=(i-1)/(n-1)*W,x1=i/(n-1)*W;x.quadraticCurveTo(x0,sy(i-1),(x0+x1)/2,(sy(i-1)+sy(i))/2)}x.lineTo(W,sy(n-1))};
+ // body
+ path();x.lineTo(W,H);x.lineTo(0,H);x.closePath();const g=x.createLinearGradient(0,base,0,H),T=K.top,B=K.bot;g.addColorStop(0,`rgba(${T},.92)`);g.addColorStop(1,`rgba(${B},.96)`);x.fillStyle=g;x.fill();
+ x.save();x.clip();
+ // depth and caustic light
+ x.globalAlpha=.10;for(let j=0;j<3;j++){x.beginPath();const yy=base+(H-base)*(.25+j*.25),off=Math.sin(s.t*.03+j*2)*W*.08;x.ellipse(W*.5+off,yy,W*.42,(H-base)*.06+2*d,0,0,Math.PI*2);x.fillStyle='#fff';x.fill()}x.globalAlpha=1;
+ // bubbles
+ s.bub.forEach(b=>{const bx=b.x*W,by=b.y*H;x.beginPath();x.arc(bx,by,b.r*d,0,Math.PI*2);x.strokeStyle='rgba(255,255,255,.45)';x.lineWidth=d*.8;x.stroke();x.beginPath();x.arc(bx-b.r*d*.35,by-b.r*d*.35,b.r*d*.3,0,Math.PI*2);x.fillStyle='rgba(255,255,255,.7)';x.fill()});
+ x.restore();
+ // crema for coffee, meniscus for both
+ if(K.crema){x.save();path();x.lineTo(W,sy(n-1)+7*d);for(let i=n-1;i>=0;i--)x.lineTo(i/(n-1)*W,sy(i)+7*d);x.closePath();x.fillStyle=`rgba(${K.crema},.9)`;x.fill();x.restore()}
+ path();x.lineWidth=2*d;x.strokeStyle='rgba(255,255,255,.75)';x.stroke();path();x.lineWidth=7*d;x.strokeStyle='rgba(255,255,255,.10)';x.stroke();
+ // glints on the surface
+ x.fillStyle='rgba(255,255,255,.8)';for(let j=0;j<2;j++){const i=((s.t*.15+j*13)|0)%n;x.beginPath();x.ellipse(i/(n-1)*W,sy(i)+3*d,6*d,1.4*d,0,0,Math.PI*2);x.fill()}
+ // the numbers: crisp above the surface, wobbling beneath it
+ const off=lqText(k,V,W,H,d);x.save();path();x.lineTo(W,0);x.lineTo(0,0);x.closePath();x.clip();x.drawImage(off,0,0);x.restore();
+ x.save();path();x.lineTo(W,H);x.lineTo(0,H);x.closePath();x.clip();x.globalAlpha=.92;const step=2*d;for(let y=0;y<H;y+=step){const dx=LRM()?0:Math.sin(y*.09/d+s.t*.12)*1.8*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}x.restore()}
+const LQT={};
+function lqText(k,V,W,H,d){const key=[k,V.big,V.unit,W,H].join('|');let o=LQT[k];if(o&&o._key===key)return o;o=LQT[k]=document.createElement('canvas');o._key=key;o.width=W;o.height=H;const x=o.getContext('2d');
+ const big=Math.min(H*.36,W*.3);x.fillStyle=LQK[k].ink;x.shadowColor='rgba(0,0,0,.35)';x.shadowBlur=6*d;x.textBaseline='alphabetic';
+ x.font=`900 ${big}px Archivo, system-ui, sans-serif`;try{x.fontStretch='condensed'}catch(_){}x.fillText(V.big,14*d,H-30*d);
+ x.font=`600 ${12.5*d}px system-ui, sans-serif`;x.globalAlpha=.85;x.fillText(V.unit,14*d,H-12*d);return o}
+// touch, tilt and shake
+function lqSplash(k,fx,amt){const s=LQS[k];if(!s)return;const i=Math.max(0,Math.min(s.n-1,Math.round(fx*(s.n-1))));for(let j=-2;j<=2;j++){const q=i+j;if(q>=0&&q<s.n)s.v[q]+=amt*(1-Math.abs(j)*.3)}s.live=performance.now();lqKick()}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lqtap],[data-a=lqopen]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const k=el.dataset.i;
+ if(el.dataset.a==='lqopen'){fsOpen(k);return}const r=el.getBoundingClientRect();lqSplash(k,(e.clientX-r.left)/r.width,4.5);try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true);
+let LQSH=0;MOT.listeners.add(ev=>{const g=ev.accelerationIncludingGravity,a=ev.acceleration;if(g&&g.x!=null){const o=(screen.orientation&&screen.orientation.angle)||0,gx=o===90?-g.y:o===-90||o===270?g.y:g.x;const tt=Math.max(-.7,Math.min(.7,-gx/9.8));for(const k in LQS){const s=LQS[k];if(Math.abs(tt-s.tt)>.01){s.tt=tt;s.live=performance.now()}}lqKick()}
+ if(a&&a.x!=null){const m=Math.hypot(a.x,a.y,a.z);if(m>16&&Date.now()-LQSH>600){LQSH=Date.now();for(const k in LQS)lqSplash(k,Math.random(),8);spillShake()}}});
+// spill: when today's total crosses the goal
+const LQP={};
+function lqCheck(){for(const k of ['water','caf']){const el=$(`#app [data-liquid="${k}"]`);const V=lqVal(k),was=LQP[k];LQP[k]=V.v;if(!el||was==null||LRM())continue;if(was<V.g&&V.v>=V.g||was>=V.g&&V.v>was)spill(el,k,Math.min(2.5,Math.max(.4,(V.v-Math.max(was,V.g))/Math.max(1,V.g)*8)))}}
+let SP=null;
+function spill(el,k,amt){const r=el.getBoundingClientRect(),cx=innerWidth/2,left=r.left+r.width/2>cx,ox=left?r.left+8:r.right-8,oy=r.bottom-6;
+ let c=$('#lqspill');if(!c){c=document.createElement('canvas');c.id='lqspill';document.body.appendChild(c)}const d=Math.min(2,devicePixelRatio||1);c.width=innerWidth*d;c.height=innerHeight*d;
+ const K=LQK[k];SP={c,d,k,K,ox,oy,dir:left?-1:1,left:Math.round(70*amt),P:[],t:0,src:el};lqSplash(k,left?0:1,6);
+ el.closest('.wd').animate([{transform:'none'},{transform:`translateX(${left?-2:2}px) rotate(${left?-.6:.6}deg)`},{transform:'none'}],{duration:320,easing:'ease-out'});
+ if(!SPRAF)SPRAF=requestAnimationFrame(spFrame)}
+let SPRAF=0;
+function spillShake(){if(!SP)return;SP.P.forEach(p=>{p.vx+=(Math.random()-.5)*14;p.vy-=Math.random()*4});SP.left=0}
+function spFrame(){SPRAF=0;const S2=SP;if(!S2)return;const {c,d,K}=S2,x=c.getContext('2d');S2.t++;
+ for(let i=0;i<(S2.t%2?2:1)&&S2.left>0;i++){S2.left--;S2.P.push({x:S2.ox,y:S2.oy,vx:S2.dir*(1.2+Math.random()*1.6),vy:.5+Math.random(),r:5+Math.random()*5})}
+ const rects=[...document.querySelectorAll('#app .wd,#app .card')].filter(e=>e!==S2.src.closest('.wd')).map(e=>e.getBoundingClientRect()).filter(r=>r.bottom>0&&r.top<innerHeight);
+ S2.P.forEach(p=>{p.vy+=.32;p.vx*=.995;const ny=p.y+p.vy,nx=p.x+p.vx;
+  for(const r of rects){if(nx>r.left+6&&nx<r.right-6&&p.y+p.r<=r.top+2&&ny+p.r>r.top){p.vy*=-.12;p.y=r.top-p.r;const mid=(r.left+r.right)/2;const sd=nx<mid?-1:1;p.vx+=sd*.5+(Math.random()-.5)*.3;if(Math.abs(p.vx)<.9)p.vx=sd*.9;p.vx*=.95;p.x+=p.vx;p.on=1;return}}
+  p.x=nx;p.y=ny});S2.P=S2.P.filter(p=>p.y-p.r<innerHeight+20&&p.x>-30&&p.x<innerWidth+30);
+ x.clearRect(0,0,c.width,c.height);S2.P.forEach(p=>{const g=x.createRadialGradient(p.x*d-p.r*d*.3,p.y*d-p.r*d*.4,0,p.x*d,p.y*d,p.r*d*1.2);g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(.25,`rgb(${K.top})`);g.addColorStop(1,`rgb(${K.bot})`);x.fillStyle=g;x.beginPath();x.arc(p.x*d,p.y*d,p.r*d*1.25,0,Math.PI*2);x.fill()});
+ if(S2.P.length||S2.left>0)SPRAF=requestAnimationFrame(spFrame);else{c.remove();SP=null}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'){lqBind();lqCheck()}}catch(_){}return r}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)lqKick()});
+// the water and caffeine pages can switch the liquid widgets off
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=lqset]')){L.insertAdjacentHTML('beforeend',`<button data-a="lqset">${ico('<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>')}<span>Liquid water and coffee widgets<small>${S.liquid===false?'Off':'On'}</small></span></button>`);setGroup()}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Look and feel');if(g&&!g[1].includes('lqset'))g[1].push('lqset')}catch(_){}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lqset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();S.liquid=S.liquid===false;save();const s=el.querySelector('small');if(s)s.textContent=S.liquid===false?'Off':'On';render()},true);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',h:'Liquid widgets',p:'Your water and coffee now fill their widgets. Tap to splash, tilt your phone to slosh, and go over your goal to see what happens.'},{i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Looks from nature',p:'Pick a look in Settings: Basalt, Tide pool, Matcha, Flamingo and more, with dark glass widgets.'})}
+
+/* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
+// The live site is unaffected (PREVIEW is false on netlify.app and localhost).
+if(PREVIEW){
+ (function(){const st=document.createElement('style');st.textContent='.ftip,#splash,#wn,#req{display:none!important}body.spon{overflow:auto!important}';document.head.appendChild(st)})();
+ document.querySelectorAll('#splash').forEach(e=>e.remove());document.body.classList.remove('spon');
+ splash=function(){};wnShow=function(){};reqShow=function(){const o=$('#req');o&&o.remove()};tipCheck=function(){};
+ Object.assign(S,{tourDone:1,npAsked:1,seenA2HS:1,wqUsed:1,seenVer:APP_VER});
+ try{if(!S.nat)S.nat='basalt';const L=NAT[S.nat];if(L&&!S.natSeeded){S.p=L.p;S.s=L.s;S.tone=L.tone;S.lights=null;S.natSeeded=1}}catch(_){}
+ // every widget on Home, including the new ones
+ if(!S.prevW){S.prevW=1;S.lay=S.lay||[];[{id:'water',w:1,h:1},{id:'caf',w:1,h:1},{id:'macros',w:2,h:1},{id:'shop',w:2,h:1},{id:'micro',w:1,h:1},{id:'cyc',w:1,h:1},{id:'sleep',w:1,h:1},{id:'supp',w:1,h:1}].forEach(x=>{if(!S.lay.some(l=>l.id===x.id))S.lay.push(x)})}
+ // cycle tracking on with a few months of history
+ const t=realToday();S.cyc=S.cyc||{};if(!S.cyc.on){S.cyc.on=1;NM.cyc='Cycle'}
+ if(!(S.cyc.p||[]).length){S.cyc.p=[{s:addDays(t,-88),e:addDays(t,-84)},{s:addDays(t,-59),e:addDays(t,-55)},{s:addDays(t,-30),e:addDays(t,-25)},{s:addDays(t,-1),e:null}];S.cyc.d={[addDays(t,-30)]:{fl:'h',sy:['Cramps','Tired']},[addDays(t,-59)]:{fl:'m',sy:['Cramps']},[t]:{fl:'m',sy:['Cramps','Bloating']}}}
+ // a day that's nearly done, so the water can overflow when you add a glass
+ if(!S.prevSeed){S.prevSeed=1;S.water=S.water||{};S.water[t]=Math.max(0,(typeof watGoal==='function'?watGoal(t):2000)-150);S.meals=S.meals||{};if(!(S.meals[t]||[]).length){S.meals[t]=[{n:'Overnight oats',k:501,p:18,f:9,c:86},{n:'Chicken burrito bowl',k:512,p:62,f:6,c:53}];}if(!S.macros[t]||!+S.macros[t].k)S.macros[t]={k:1013,p:80,f:15,c:139};
+  S.cafl=S.cafl||{};if(!(S.cafl[t]||[]).length)S.cafl[t]=[{t:480,mg:126,n:'Flat white',k:0}];
+  if(!(S.recipes||[]).length)S.recipes=[{id:'rdemo1',n:'Chicken burrito bowl',sv:4,items:[{q:'680 g chicken breast',nm:'Chicken breast',g:680,k:1027,p:211,f:21,c:0,ri:null},{q:'185 g basmati rice',nm:'Rice',g:185,k:650,p:14,f:2,c:145,ri:null},{q:'1 can black beans',nm:'Black beans',g:240,k:310,p:21,f:1,c:56,ri:null},{q:'2 peppers',nm:'Peppers',g:300,k:60,p:3,f:1,c:12,ri:null}],steps:['Cook the rice.','Grill the chicken and slice it.','Warm the beans and divide everything between four bowls.']},{id:'rdemo2',n:'Overnight oats',sv:1,items:[{q:'80 g oats',nm:'Oats',g:80,k:300,p:10,f:6,c:50,ri:null},{q:'200 ml semi-skimmed milk',nm:'Milk',g:200,k:94,p:7,f:3,c:9,ri:null},{q:'1 banana',nm:'Banana',g:120,k:107,p:1,f:0,c:27,ri:null}],steps:['Mix everything in a jar and leave it in the fridge overnight.']}];
+  const D=SHD();if(!D.stores.length){D.stores.push({id:'sdemo',n:'Tesco',items:[]});D.cur='sdemo'}
+  try{const ws=fpWs(0);FP().d[ws]=[{r:'rdemo2',sv:1},{r:'rdemo1',sv:1}];FP().d[addDays(ws,1)]=[{r:'rdemo2',sv:1},{r:'rdemo1',sv:1}];fpSync()}catch(_){}}
+ save();
+}
+
 render();periodic();reqShow();
 </script>
 <script>requestAnimationFrame(()=>document.documentElement.classList.add('ready'))</script></body></html>
