@@ -7506,6 +7506,45 @@ function fpdTarget(x,y){const t=document.elementFromPoint(x,y);return t&&(t.clos
   const nd=t&&(t.dataset.fpd||t.dataset.fpday);if(nd)fpMove(FPDG.src.d,FPDG.src.i,nd);setTimeout(()=>{FPDG=null},350);if(FS==='food')fsr();else render()};
  window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true);
  document.addEventListener('touchmove',e=>{if(FPDG&&FPDG.on&&e.cancelable)e.preventDefault()},{passive:false,capture:true})}
+/* ===== v96: the rating lives in both scanners, softer text links, and a quick fade between exercises ===== */
+// Research notes for this block:
+// - The score shows up where the scan lands, so there's no extra step to see it (Fogg 2009: fewer steps, more use).
+//   A label scan is scored on the phone from the numbers it read, so it works offline; only the better-choice
+//   suggestions need a signal, and the screen says so instead of failing.
+// - Text links become small soft buttons: a dotted underline reads as a hyperlink on the web, not a control in an
+//   app, and a visible button shape makes it clear something can be tapped (NN/g, "Beyond blue links: making
+//   clickable elements recognizable").
+// - Changing exercise is a plain cross-fade, out in 90 ms and in in 160 ms with nothing moving. Motion that only changes
+//   opacity can't jitter, and 100 to 200 ms is long enough to register the change without slowing you between sets
+//   (NN/g, "The role of animation and motion in UX": keep functional transitions short).
+(function(){const st=document.createElement('style');st.textContent=`
+.glink{display:inline-flex!important;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:9px 16px!important;border-radius:14px!important;background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.1)!important;color:rgba(243,241,236,.85)!important;font-size:14px!important;font-weight:600!important;text-decoration:none!important;align-self:center}
+.glink:active{transform:scale(.97);background:rgba(255,255,255,.13)!important}
+.fpday{margin:10px 0 16px!important;gap:14px!important}
+.rtmini{padding:12px 14px}.rtmini svg{width:52px;height:52px}.rtmini b{font-size:16px}
+.rtlb{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;margin:10px 0 0;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);cursor:pointer}
+.rtlb svg{width:52px;height:52px;flex:none}.rtlb b{display:block;font-size:16px}.rtlb small{display:block;font-size:12.5px;color:var(--dim);line-height:1.35}.rtlb>span:last-child{margin-left:auto;font-size:13px;font-weight:700;white-space:nowrap}`;document.head.appendChild(st)})();
+// a score straight under a label scan, worked out on the phone
+function rtLabelR(){if(!SCAN||!SCAN.cols)return null;const c=SCAN.cols.find(x=>x.kind==='100')||SCAN.cols[SCAN.sel]||SCAN.cols[0];if(!c)return null;const f=c.kind==='100'?1:c.g>0?100/c.g:null;if(!f)return null;
+ const g=k=>c.v&&c.v[k]!=null?+c.v[k]*f:null,kcal=g('k');if(kcal==null)return null;
+ return{n:'Scanned label',b:'From your label scan',img:'',cat:[],kind:'food',drink:false,kcal,kj:kcal*4.184,prot:g('p'),fat:g('f'),carb:g('c'),sug:g('sug'),sf:g('sf'),salt:g('salt'),fib:null,fv:0,add:[],lab:'',ing:'',nm:'',sw:false,lbl:1}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&SCAN){const old=$('#app [data-a=rtlbl].rtentry');old&&old.remove();const bx=$('.scbox');const R=rtLabelR();
+ if(bx&&R&&!$('#app .rtlb')){const O=rtScore({...R}),[bn,bc]=RTBAND(O.score),why=(O.neg[0]||O.pos[0]||{}).sub||'';bx.insertAdjacentHTML('afterend',`<button class="rtlb" data-a="rtlbl">${rtRing(O.score,bc,0)}<span><b>${bn}${O.miss.length?' · partial':''}</b><small>${esc(why)}${navigator.onLine===false?'. Better choices when you’re online.':''}</small></span><span>See why</span></button>`)}}}catch(_){}return r}}
+// offline: say why there are no better choices yet
+{const _a=rtAltDone;rtAltDone=function(best){const r=_a.apply(this,arguments);try{if(!best||!best.length){const b=$('#rt [data-rtalt]');if(b&&!b.querySelector('.rtoff')&&(navigator.onLine===false||RTC&&RTC.R&&RTC.R.lbl)){b.querySelector('h3').insertAdjacentHTML('afterend',`<p class="rtlook rtoff" style="padding-left:15px">${RTC&&RTC.R&&RTC.R.lbl?'Scan the barcode as well to see better-rated products like this one.':'Better choices need a signal. Open this again when you’re back online.'}</p>`)}}}catch(_){}return r}}
+{const _o=rtOpen;rtOpen=function(o){const r=_o.apply(this,arguments);try{if(o&&o.R&&(o.R.lbl||navigator.onLine===false))rtAltDone(null)}catch(_){}return r}}
+// the preview's sample yoghurt has a score too
+RTDEMO['5000159459228']={product_name:'Greek style yoghurt',brands:'Sample (preview)',categories_tags:['en:dairies','en:fermented-milk-products','en:yogurts','en:greek-style-yogurts'],nutriments:{'energy-kcal_100g':97,proteins_100g:5.7,fat_100g:6.7,'saturated-fat_100g':4.4,carbohydrates_100g:3.6,sugars_100g:3.6,salt_100g:.12},additives_tags:[],nova_group:1,serving_quantity:150,serving_size:'150 g pot',ingredients_text:'Whole milk, cream, live cultures'};
+// changing exercise: a plain, quick fade
+{const _w=awr;let busy=false;const key=()=>AW?AW.e+'|'+AW.s+'|'+AW.ph:'';
+ const kids=o=>[...o.children].filter(c=>{const p=getComputedStyle(c).position;return p!=='fixed'&&p!=='absolute'});
+ awr=function(){const o=$('#aw'),k=key(),args=arguments,self=this;
+  if(busy)return;if(!o||!AW||!o.dataset.k||o.dataset.k===k||MRM())return _w.apply(self,args);
+  busy=true;const K=kids(o);K.forEach(c=>c.getAnimations().forEach(a=>a.cancel()));
+  const out=K.map(c=>c.animate([{opacity:1},{opacity:0}],{duration:90,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}));
+  const go=()=>{busy=false;const cur=$('#aw');if(cur)cur.dataset.k=key();_w.apply(self,args);const n=$('#aw');if(!n)return;n.dataset.k=key();
+   kids(n).forEach(c=>{c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:0},{opacity:1}],{duration:160,easing:'cubic-bezier(0,0,.2,1)'})})};
+  Promise.all(out.map(a=>a.finished)).then(go,go)}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
