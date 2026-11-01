@@ -9060,13 +9060,13 @@ new MutationObserver(()=>{document.querySelectorAll('.fpst').forEach(f=>{const n
 /* ---------- 5. widgets that use their space ---------- */
 {const _wd=wd;wd=function(l){
  // workout, large, with no cover photo: no empty top, more of the session
- if(l&&l.id==='work'&&l.w===2&&l.h===2&&S.nat&&NAT[S.nat]&&!ED){try{const t=today(),p=activePlan(),d=dayWork(t),img=d&&typeof cvImg==='function'?cvImg(d):null;
+ if(l&&l.id==='work'&&l.w===2&&l.h===2&&S.nat&&NAT[S.nat]){try{const t=today(),p=activePlan(),d=dayWork(t),img=d&&typeof cvImg==='function'?cvImg(d):null;
   if(p&&!img){if(d){const ex=d.ex||[],sets=ex.reduce((a,e)=>a+(+e.s||3),0),min=Math.max(10,Math.round(sets*2.6/5)*5),sh=ex.slice(0,5);
     return`<div class="wkL">${wlab('','Workout')}<span class="k">${ex.length} exercise${ex.length===1?'':'s'} · ${min} min</span><span class="nm">${esc(d.name)}</span><div class="ls">${sh.map(e=>`<div><span>${esc(e.n)}</span><span>${e.s?e.s+' × ':''}${esc(String(e.v||''))}</span></div>`).join('')}${ex.length>sh.length?`<div class="more">and ${ex.length-sh.length} more</div>`:''}</div><button class="go" data-a="wsel">START</button></div>`}
    const up=[];try{ensureSched();for(let k=1;k<=10&&up.length<4;k++){const dd=addDays(t,k),v=S.sch&&S.sch[dd];if(v!=null){const day=p.days[v%p.days.length];up.push([k===1?'Tomorrow':new Date(dd+'T12:00').toLocaleDateString('en-GB',{weekday:'long'}),day.name])}}}catch(_){}
    return`<div class="wkL">${wlab('','Workout')}<span class="k">Recovery</span><span class="nm">Rest day</span><span class="sb">Rest is when the muscle gets built.</span><div class="ls">${up.map(([a,b])=>`<div><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('')}</div><button class="go ghost" data-a="wsel">Train anyway</button></div>`}}catch(_){}}
  // food plan, small: no box in a box
- if(l&&l.id==='food'&&l.w===1&&!ED){try{const N=fpNext(),head=`<div class="wl">${WIS.cal7||''}<span>Food plan</span></div>`;
+ if(l&&l.id==='food'&&l.w===1){try{const N=fpNext(),head=`<div class="wl">${WIS.cal7||''}<span>Food plan</span></div>`;
   if(N){const m=rcPer(N.r),f=+N.e.sv||1;return`<div class="fp1" data-a="fpopen" data-i="plan">${head}<span class="when">${esc(dayWord(N.d))} · ${esc(N.s.lbl)}</span><b>${esc(N.r.n)}</b><span class="m">${Math.round(m.k*f)} kcal · ${Math.round(m.p*f)} g protein</span></div>`}
   return`<div class="fp1" data-a="fpopen" data-i="plan">${head}<span class="when">Nothing planned</span><b>${(S.recipes||[]).length?'Plan your week':'Add a recipe'}</b><span class="m">Tap to open</span></div>`}catch(_){}}
  // goal, large, none set: quick ways to start
@@ -9074,6 +9074,35 @@ new MutationObserver(()=>{document.querySelectorAll('.fpst').forEach(f=>{const n
   return W2(l,{lab:'Goal',icon:'flag',big:'No goal',sub:'A goal with a date keeps you going. Pick one to start.',artL:`<div class="gq">${Q.map(([t,s])=>`<button data-a="gq" data-i="${t}"><b>${t==='Develop'?'Something else':t}</b><small>${s}</small></button>`).join('')}</div>`})}
  return _wd.apply(this,arguments)}}
 window.addEventListener('click',e=>{const b=e.target.closest('[data-a=gq]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();GF={type:b.dataset.i};sheet(gForm())},true);
+
+/* ===== v116: the week dots on Diet and Workout swipe like Home's week, inside one pill; edit mode shows the new widgets ===== */
+// Research notes for this block:
+// - Same gesture, same result: Home taught that the week swipes, so the smaller week strip should too (Nielsen's
+//   heuristic 4, consistency; Apple HIG, "Gestures": use familiar gestures consistently). A contained, rounded track
+//   with edge chevrons is a common signifier that content continues sideways (NN/g, "Signifiers"; carousel peeks).
+// - The strip follows the finger and settles with the same easing as Home, with taps on the chevrons as the
+//   accessible alternative to the swipe (WCAG 2.5.1, pointer gestures need a single-pointer alternative).
+(function(){const st=document.createElement('style');st.textContent=`
+.hdr .wk.wkp{position:relative;display:grid;grid-template-columns:22px repeat(7,minmax(0,1fr)) 22px;gap:2px;align-items:center;height:auto;width:100%;margin-top:12px;padding:8px 4px;border-radius:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none;box-sizing:border-box}
+.hdr .wk.wkp .wd2{padding:2px 0}
+.hdr .wk.wkp .wkn{all:unset;cursor:pointer;display:grid;place-items:center;height:100%;color:rgba(243,241,236,.45)}.hdr .wk.wkp .wkn svg{width:14px;height:14px}
+.hdr .wk.wkp .wkn:active{color:#fff}
+.hdr .wk.wkp .wkr{display:contents}`;document.head.appendChild(st)})();
+const WKC=(d)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+function wkpDress(){document.querySelectorAll('#app>.hdr .wk:not(.wkp)').forEach(w=>{w.classList.add('wkp');w.insertAdjacentHTML('afterbegin',`<button class="wkn" data-a="wkpn" data-i="-1" aria-label="Previous week">${WKC('M15 6l-6 6 6 6')}</button>`);w.insertAdjacentHTML('beforeend',`<button class="wkn" data-a="wkpn" data-i="1" aria-label="Next week">${WKC('M9 6l6 6-6 6')}</button>`)})}
+let WKIN=0;
+function wkpGo(dir){const nv=addDays(today(),dir*7);VDFROM=today();VDT=Date.now();VD=nv===realToday()?null:nv;WKIN=dir;render()}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{wkpDress();if(WKIN&&!MRM()){const d=WKIN;WKIN=0;document.querySelectorAll('#app>.hdr .wk.wkp .wd2').forEach((b,i)=>b.animate([{opacity:0,transform:`translateX(${d*36}px)`},{opacity:1,transform:'none'}],{duration:300,delay:i*18,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'}))}else WKIN=0}catch(_){}return r}}
+window.addEventListener('click',e=>{const b=e.target.closest('[data-a=wkpn]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();wkpGo(+b.dataset.i)},true);
+{let g=null,swiped=0;
+ document.addEventListener('touchstart',e=>{g=null;const w=e.target.closest('#app>.hdr .wk.wkp');if(!w||e.touches.length!==1||ED)return;const t=e.touches[0];g={w,x:t.clientX,y:t.clientY,on:false,dx:0}},{passive:true,capture:true});
+ document.addEventListener('touchmove',e=>{if(!g)return;const t=e.touches[0],dx=t.clientX-g.x,dy=t.clientY-g.y;if(!g.on){if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.2)g.on=true;else if(Math.abs(dy)>10){g=null;return}else return}
+  if(e.cancelable)e.preventDefault();g.dx=dx;g.w.querySelectorAll('.wd2').forEach(b=>b.style.transform=`translateX(${dx*.6}px)`)},{passive:false,capture:true});
+ const end=()=>{if(!g)return;const G=g;g=null;if(!G.on)return;swiped=Date.now();const bs=G.w.querySelectorAll('.wd2');
+  if(Math.abs(G.dx)>45){bs.forEach(b=>b.animate([{transform:`translateX(${G.dx*.6}px)`,opacity:1},{transform:`translateX(${G.dx>0?60:-60}px)`,opacity:0}],{duration:140,easing:'ease-in',fill:'forwards'}));setTimeout(()=>wkpGo(G.dx>0?-1:1),130)}
+  else bs.forEach(b=>{const f=b.style.transform;b.style.transform='';b.animate([{transform:f},{transform:'none'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})})};
+ document.addEventListener('touchend',end,{capture:true});document.addEventListener('touchcancel',end,{capture:true});
+ window.addEventListener('click',e=>{if(Date.now()-swiped<350&&e.target.closest('#app>.hdr .wk')){e.stopImmediatePropagation();e.preventDefault()}},true)}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
