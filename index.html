@@ -6103,7 +6103,7 @@ WIS.cart=WIS.cart||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 // ticking on the widget: the item fades out and the rest slide up, without opening anything
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=fpwck]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const st=fpCur(),x=st.items[+el.dataset.i];if(!x)return;x.done=true;save();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}
  const row=el.closest('.wi'),box=el.closest('.fpw');row.classList.add('dn');const pre=new Map([...box.querySelectorAll('.wi')].map(r=>[r.dataset.wi,r.getBoundingClientRect().top]));
- setTimeout(()=>{row.style.opacity='0';row.style.transform='translateX(18px)';setTimeout(()=>{const w=box.closest('.wd'),l=S.lay.find(z=>z.id==='shop')||{w:2,h:1};const h=wd({...l});const tmp=document.createElement('div');tmp.innerHTML=h;const nb=tmp.querySelector('.fpw');if(nb){box.replaceWith(nb);nb.querySelectorAll('.wi').forEach(r=>{const y=pre.get(r.dataset.wi);if(y!=null){const dy=y-r.getBoundingClientRect().top;if(dy)r.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'})}else r.animate([{opacity:0},{opacity:1}],{duration:260})})}},230)},260)},true);
+ setTimeout(()=>{row.style.opacity='0';row.style.transform='translateX(18px)';setTimeout(()=>{const w=box.closest('.wd'),l=S.lay.find(z=>z.id==='shop')||{w:2,h:1};const h=wd({...l});const tmp=document.createElement('div');tmp.innerHTML=h;const nb=tmp.querySelector('.fpw');if(nb){box.replaceWith(nb);nb.querySelectorAll('.wi').forEach(r=>{const y=pre.get(r.dataset.wi);if(y!=null){const dy=y-r.getBoundingClientRect().top;if(dy)r.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'})}else r.animate([{opacity:0},{opacity:1}],{duration:260})})}else{const sd=tmp.firstElementChild;if(sd){box.replaceWith(sd);if(!MRM())[...sd.children].forEach((p,i)=>p.animate([{opacity:0,transform:'translateY(10px)'},{opacity:1,transform:'none'}],{duration:320,delay:60*i,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'}))}else render()}},230)},260)},true);
 document.addEventListener('click',e=>{const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=shop]');if(!w||ED||e.target.closest('button,input,a,[data-a]'))return;if(Date.now()-WTD>450)return;FPT='list';fsOpen('food')});
 /* --- interactions --- */
 const fpRe=()=>{if(FS==='food')fsr();else render()};
@@ -8406,6 +8406,95 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cykc]');i
 /* ---------- 6. what's new ---------- */
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/>',h:'Food and your cycle',p:'Cycle tracking now shows each phase, including the days before your period, with foods to have for each one. Turn on targets that follow your cycle for a bit more room before your period, balanced over the month.'});
  R.items.push({i:'<path d="M7 3v8a3 3 0 0 0 3 3v7"/><path d="M10 3v5M4 3v5a3 3 0 0 0 3 3"/><path d="M17 21V3c2.5 1.5 3.5 4 3.5 7s-1.5 4-3.5 4"/>',h:'How you eat',p:'Tell Swell if you’re vegetarian, vegan, pescatarian or anything else, and what to leave out. Food ideas and tips then only suggest things you eat. It’s in Settings, under Your plan and goals.'})}}
+
+/* ===== v109: shopping done animates in, rows that fill the widget, Back to today without a jump, drag recipes from the tray, landings instead of pop-ups ===== */
+// Research notes for this block:
+// - Feedback should come from the thing itself: when the result of an action is visible where the person is looking, a
+//   separate message is redundant and pulls the eye away (NN/g, "Visibility of system status" and "Indicators,
+//   validations and notifications": use toasts for things the person can't otherwise see). A short landing animation
+//   on the meal that moved is the confirmation.
+// - Layout shift: content that jumps after a tap makes people lose their place and mis-tap; Google's Core Web Vitals
+//   treat unexpected shifts as a quality problem (web.dev, Cumulative Layout Shift). Back to today now takes the
+//   streak's place in the header (the streak only describes today anyway), so nothing below it moves.
+// - Direct manipulation (Shneiderman 1983): dragging the thing you mean onto where you want it is easier to learn than
+//   a select-then-place mode you have to remember to leave. Tap to pick still works and now lets go by itself after
+//   one drop, so there's no hidden mode left on (Tesler's "no modes"; NN/g on mode errors).
+// - Motion that explains a change (an item settling into place, a finished state rising in) helps people follow what
+//   happened (Material motion guidelines, "informative" motion; Chang & Ungar 1993, animation in interfaces). Kept
+//   under 350 ms and off with Reduce motion.
+// - Money tips: advice nobody asked for, at a moment of success, reads as nagging. It moves behind an opt-in button on
+//   the list ("Want to spend less next week?"), which follows "pull, not push" for optional advice (NN/g, help and
+//   documentation).
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] .wd[style*="grid-row:span 1"] .fpw .wi{flex:1 1 0;padding:0!important;font-size:16px;min-height:0}
+html[data-look] .wd[style*="grid-row:span 1"] .fpw .wi .ck{width:24px;height:24px}
+html[data-look] .wd[style*="grid-row:span 1"] .fpw .wi:first-of-type{margin-top:6px}
+.hdr .stkb.hide{display:none!important}
+.hdr .today2.r2{margin:0;flex:none;align-self:center}
+.fptray button{touch-action:none}
+.fptray button.lift{opacity:.35;transform:scale(.96);transition:opacity .15s,transform .15s}
+#fs .fpd.over{background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1.5px var(--ac,#fff);border-radius:16px}
+.fpghost.v109{transform:translate(-50%,-125%) rotate(-2deg) scale(1.04);background:#F3F1EC;color:#141412;font-weight:700;transition:none}
+.shsave{margin-top:12px}.shsave .btn{width:100%;margin:10px 0 0}
+.svl{display:flex;flex-direction:column;gap:10px;margin:12px 0 4px}.svl div{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:15px;line-height:1.4}`;document.head.appendChild(st)})();
+const RM2=()=>{try{return MRM()}catch(_){return matchMedia('(prefers-reduced-motion: reduce)').matches}};
+
+/* ---------- 2. shopping done: no tip line; spend if known, otherwise a plain line ---------- */
+{const _wd=wd;wd=function(l){let h=_wd.apply(this,arguments);if(!l||l.id!=='shop'||typeof h!=='string'||h.indexOf('shdone')<0)return h;
+ return h.replace(/<span class="tips">([\s\S]*?)<\/span>/,(m,t)=>{const sp=(t.match(/^About [^.]+\./)||[''])[0];return`<span class="tips">${sp||'Everything’s ticked off.'}</span>`})}}
+// on the list itself, once everything's got: an opt-in for ways to spend less
+{const _l=fpListTab;fpListTab=function(){let h=_l.apply(this,arguments);try{const st=fpCur(),I=fpItems(st);if(!I.n&&I.got.length)h+=`<div class="card shsave"><h2>Want to spend less next week?</h2><p class="sm" style="margin:0">A few ways to get the same food for less.</p><button class="btn" data-a="shsave">Show me</button></div>`}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=shsave]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ sheet(`<h2>Spend less, eat the same</h2><div class="svl">${SAVE.map(t=>`<div>${esc(t)}</div>`).join('')}</div><button class="btn big on" data-a="shx" style="margin-top:8px">Done</button>`)},true);
+
+let TDWAS=false;
+// the header keeps today's height on other days, so the week strip never jumps (today's line can wrap to two rows)
+let HROWH=0;{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const R=$('#app>.hdr>.row');if(R){if(today()===realToday()){R.style.minHeight='';HROWH=R.getBoundingClientRect().height}else if(HROWH)R.style.minHeight=HROWH+'px'}}catch(_){}return r}}
+/* ---------- 3. Back to today in the streak's place: nothing moves ---------- */
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const H=$('#app>.hdr');if(H){const b=H.querySelector('.today2'),s=H.querySelector('.stkb');
+  if(b&&s&&!b.classList.contains('r2')){b.classList.add('r2');s.classList.add('hide');s.parentNode.insertBefore(b,s);if(!TDWAS&&!RM2())b.animate([{opacity:0,transform:'scale(.92)'},{opacity:1,transform:'none'}],{duration:200,easing:'cubic-bezier(.2,.8,.2,1)'})}
+  TDWAS=!!b}}catch(_){}return r}}
+
+/* ---------- 4. no pop-ups for things you can see happen; a landing instead ---------- */
+let QUIET=0;
+{const _t=toast;toast=function(){if(QUIET)return;return _t.apply(this,arguments)}}
+const quiet=f=>function(){QUIET++;try{return f.apply(this,arguments)}finally{QUIET--}};
+let LAND=null;
+function fpLand(){const L=LAND;LAND=null;if(!L||RM2())return;requestAnimationFrame(()=>{try{let el=null;
+  if(L.e){const d=L.d,i=fpOf(d).indexOf(L.e);if(i>=0)el=document.querySelector(`#fs .fpm [data-a=fpent][data-i="${d}|${i}"]`)}
+  if(!el)el=document.querySelector(`.fpw7 [data-fpday="${L.d}"]`)||document.querySelector(`#fs .fpd[data-fpd="${L.d}"]`);if(!el)return;
+  el.animate([{transform:'translateY(-14px) scale(1.08)',opacity:.2},{transform:'translateY(2px) scale(.98)',opacity:1,offset:.65},{transform:'none',opacity:1}],{duration:340,easing:'cubic-bezier(.2,.8,.2,1)'});
+  el.animate([{boxShadow:'0 0 0 2px var(--ac,#fff)'},{boxShadow:'0 0 0 0 transparent'}],{duration:700,delay:200,easing:'ease-out'})}catch(_){}})}
+{const _p=fpPut;fpPut=quiet(function(d,id){const r=_p.apply(this,arguments);const L=fpOf(d);LAND={d,e:L[L.length-1]};FPH=null;return r})}
+{const _m=fpMove;fpMove=quiet(function(d,i,nd){const e=fpOf(d)[i];const r=_m.apply(this,arguments);LAND={d:nd,e};return r})}
+{const _l=fpLater;fpLater=quiet(function(d,i){const e=fpOf(d)[i];const r=_l.apply(this,arguments);let nd=d;for(const k of Object.keys(FP().d))if(fpOf(k).includes(e))nd=k;LAND={d:nd,e};return r})}
+{const _f=fsr;fsr=function(){const r=_f.apply(this,arguments);if(LAND)fpLand();return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);if(LAND&&FS!=='food')fpLand();return r}}
+// widget Later: the next meal slides in rather than a message
+window.addEventListener('click',e=>{const el=e.target.closest('#app .wd[data-id=food] [data-a=fplater]');if(!el||RM2())return;setTimeout(()=>{const n=$('#app .wd[data-id=food] .fpnx');n&&n.animate([{opacity:0,transform:'translateX(16px)'},{opacity:1,transform:'none'}],{duration:280,easing:'cubic-bezier(.2,.8,.2,1)'})},0)});
+
+/* ---------- 5. drag a recipe from the tray, or tap it then a day (lets go after one drop) ---------- */
+{const _p=fpPlanTab;fpPlanTab=function(){let h=_p.apply(this,arguments);
+ return h.replace(/data-a="fphold"/g,'data-a="fphold2"').replace('Tap a recipe, then a day, or drag it onto a day. Hold a planned meal to drag it to another day.','Drag a recipe onto a day, or tap it and then a day. Hold a planned meal to move it.').replace('Now tap a day to drop it in. Tap the recipe again to let go.','Now tap a day to drop it in.')}}
+{let D=null,tm=null;
+ const over=(x,y)=>{const t=document.elementFromPoint(x,y);return t&&t.closest('#fs .fpd[data-fpd]')};
+ const start=()=>{if(!D||D.on)return;D.on=true;D.b.classList.add('lift');const g=document.createElement('div');g.className='fpghost v109';g.textContent=D.b.childNodes[0].textContent;document.body.appendChild(g);D.g=g;g.style.left=D.x+'px';g.style.top=D.y+'px';try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}};
+ const move=(x,y)=>{D.x=x;D.y=y;if(!D.on)return;D.g.style.left=x+'px';D.g.style.top=y+'px';const t=over(x,y);document.querySelectorAll('#fs .fpd.over').forEach(z=>z!==t&&z.classList.remove('over'));t&&t.classList.add('over');
+  const o=$('#fs');if(o&&!tm){const step=()=>{if(!D||!D.on){tm=null;return}const v=D.y>innerHeight-90?14:D.y<140?-14:0;if(v)o.scrollTop+=v;tm=requestAnimationFrame(step)};tm=requestAnimationFrame(step)}};
+ const end=drop=>{if(!D)return;clearTimeout(D.t);const d=D;D=null;if(!d.on)return;d.b.classList.remove('lift');d.g.remove();const t=drop?over(d.x,d.y):null;document.querySelectorAll('#fs .fpd.over').forEach(z=>z.classList.remove('over'));DRG2=Date.now();
+  if(t){fpPut(t.dataset.fpd,d.id);fsr()}else if(!RM2())d.b.animate([{transform:'translateY(-6px)'},{transform:'none'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})};
+ // touch: a short hold or pulling down off the tray picks it up; sideways still scrolls the tray
+ document.addEventListener('touchstart',e=>{const b=e.target.closest('#fs .fptray [data-a=fphold2]');if(!b||e.touches.length!==1)return;const t=e.touches[0];D={b,id:b.dataset.i,x:t.clientX,y:t.clientY,x0:t.clientX,y0:t.clientY,on:false,touch:true};D.t=setTimeout(start,260)},{passive:true,capture:true});
+ document.addEventListener('touchmove',e=>{if(!D||!D.touch)return;const t=e.touches[0];if(!D.on){const dx=t.clientX-D.x0,dy=t.clientY-D.y0;if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){clearTimeout(D.t);start()}else if(Math.abs(dx)>10){clearTimeout(D.t);D=null;return}}
+  if(D&&D.on){if(e.cancelable)e.preventDefault();move(t.clientX,t.clientY)}},{passive:false,capture:true});
+ document.addEventListener('touchend',()=>end(true),{capture:true});document.addEventListener('touchcancel',()=>end(false),{capture:true});
+ // mouse
+ window.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;const b=e.target.closest('#fs .fptray [data-a=fphold2]');if(!b)return;D={b,id:b.dataset.i,x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,on:false};D.t=setTimeout(start,260)},true);
+ window.addEventListener('pointermove',e=>{if(!D||D.touch)return;if(!D.on&&Math.hypot(e.clientX-D.x0,e.clientY-D.y0)>8){clearTimeout(D.t);start()}if(D&&D.on)move(e.clientX,e.clientY)},true);
+ window.addEventListener('pointerup',e=>{if(D&&!D.touch)end(true)},true)}
+let DRG2=0;
+// taps: pick a recipe (tap again to put it back); a day takes it and lets go
+window.addEventListener('click',e=>{const b=e.target.closest('#fs .fptray [data-a=fphold2]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();if(Date.now()-DRG2<450)return;FPH=FPH===b.dataset.i?null:b.dataset.i;fsr()},true);
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
