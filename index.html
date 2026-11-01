@@ -655,7 +655,7 @@ function render(){applyBg();syncCur();const a=$('#app');if(!S.user||!S.setup.don
  tourShow()}
 addEventListener('resize',()=>{if(TU!=null)tourShow()});
 document.addEventListener('gesturestart',e=>e.preventDefault());
-document.addEventListener('touchmove',e=>{if(e.scale&&e.scale!==1)e.preventDefault()},{passive:false});
+// pinch zoom is blocked by touch-action in CSS (v105), so nothing here holds up scrolling
 let lastT=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastT<300&&!e.target.closest('input,select,textarea'))e.preventDefault();lastT=n},{passive:false});
 document.addEventListener('keydown',e=>{if(e.target.id==='nm'&&e.key==='Enter'){e.preventDefault();const b=$('[data-a=nok]');b&&b.click()}});
 document.addEventListener('input',e=>{if(e.target.id==='nm')NS.v=e.target.value;if((e.target.dataset.b||'').startsWith('X.')){const pv=$('.prev');if(pv){pv.hidden=!X.n;pv.innerHTML=prevX()}}});
@@ -8063,6 +8063,110 @@ let LKFROM=false;
 window.addEventListener('pointerdown',e=>{if(e.target.closest('#sheet .setv:not(.lkv) [data-a=natopen],#sheet .setv:not(.lkv) [data-a=lxopen]'))LKFROM=true},true);
 window.addEventListener('click',e=>{const el=e.target.closest('#sheet .lkv [data-a=shx],#sheet .lkv .sx');if(!el||!LKFROM)return;e.stopImmediatePropagation();e.preventDefault();LKFROM=false;settingsSheet()},true);
 {const _s=sheet;sheet=function(h){if(!h)LKFROM=LKFROM&&!!$('#sheet .lkv');return _s.apply(this,arguments)}}
+/* ===== v105: smoother scrolling (lighter glass, a cheaper grain, effects that rest while you scroll) ===== */
+// Research notes for this block:
+// - Live background blur (backdrop-filter) is one of the most expensive things a phone can paint: every blurred panel
+//   is re-rendered each frame the page scrolls (WebKit and Chrome rendering guidance; web.dev, "Rendering performance").
+//   Headless profiling here showed it costing about a third of each scroll frame. Widgets sit over a soft, slow
+//   background, so a slightly more solid glass looks the same without the blur; the moving layers that sit over busy
+//   content (tab bar, sheets, dock) keep it.
+// - The grain was an SVG noise filter drawn for every card at every size. It's now one small noise tile made once.
+// - Touch listeners that can block scrolling make the browser wait for the page before it scrolls (WICG passive event
+//   listeners). The pinch-zoom blocker is replaced by CSS (touch-action), which costs nothing.
+// - Decorative motion (water, light on widget edges) pauses while you scroll and picks up when you stop.
+(function(){
+ // one noise tile, drawn once
+ let g='';try{const c=document.createElement('canvas');c.width=c.height=96;const x=c.getContext('2d'),im=x.createImageData(96,96);for(let i=0;i<im.data.length;i+=4){const v=Math.random()*255|0;im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=v<128?0:Math.round((v-128)/127*18)}x.putImageData(im,0,0);g=`url(${c.toDataURL('image/png')})`}catch(_){g='none'}
+ document.documentElement.style.setProperty('--grain',g);
+ const st=document.createElement('style');st.textContent=`
+html{touch-action:pan-x pan-y}
+html[data-look] .card,html[data-look] .wd{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--grain),linear-gradient(165deg,rgba(255,255,255,.11),rgba(255,255,255,.025) 34%,rgba(255,255,255,0) 58%,rgba(0,0,0,.10)),var(--cgs,var(--cg))!important}
+html[data-look] #sheet .card,html[data-look] #sheet .mwc{backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important;background:var(--grain),linear-gradient(165deg,rgba(255,255,255,.11),rgba(255,255,255,0) 58%),var(--cg)!important}
+html[data-look] .nav{background:var(--grain),linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0)),var(--cg)!important}
+html.busy .grid *,html.busy .grid .wd::before,html.busy .grid .wd::after{animation-play-state:paused!important}
+html[data-look] .edit .wd.rcol .hd{right:auto!important;left:9px;border-right:0!important;border-left:3.5px solid rgba(255,255,255,.95)!important;border-radius:0 0 0 7px!important}
+html[data-look] #ov:not(.on) .lw path,html[data-look] #ov:not(.on) #q{animation:none!important}
+#bgl.drift i{will-change:transform}
+html[data-look] .edit .wd{padding-bottom:26px!important}html[data-look] .edit .wd.lqon{padding-bottom:0!important}`;document.head.appendChild(st)})();
+// a more solid glass for widgets, since they no longer blur what's behind
+{const _n=natApply;natApply=function(){const r=_n.apply(this,arguments);try{const L=S.nat&&NAT[S.nat];if(L){const m=String(L.cg).match(/rgba\(([^)]+),\s*([\d.]+)\)/);if(m){const a=Math.min(.92,+m[2]+(L.g==='l'?.08:.22));document.documentElement.style.setProperty('--cgs',`rgba(${m[1]},${a})`)}}}catch(_){}return r}}
+try{natApply()}catch(_){}
+// the water and coffee rest while the page is moving
+{const _f=lqFrame;lqFrame=function(now){if(document.documentElement.classList.contains('busy')){LQRAF=0;setTimeout(()=>lqKick(),180);return}return _f.apply(this,arguments)}}
+/* ===== v106: every widget in the same style, with a picture of the data at the wider sizes ===== */
+// Research notes for this block:
+// - One pattern everywhere (small label, one big number, a short line, then a visual) so each widget is read the same
+//   way at a glance (Apple HIG, Widgets: "glanceable", one key piece of information; Nielsen's heuristic 4,
+//   consistency).
+// - The wider sizes show the data as a small chart instead of more words: people pick out trends and gaps from a
+//   simple graphic much faster than from text (Cleveland and McGill 1984; Tufte's "data-ink" and sparklines, 2006).
+// - Charts use length and position (bars, a ring of days), the encodings people judge most accurately.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] .wv2{display:flex;flex-direction:column;height:100%;min-height:0;color:#F3F1EC}
+html[data-look] .wv2 .wl{display:flex!important;justify-content:flex-start!important;text-align:left!important;width:100%;align-self:stretch}
+html[data-look] .wv2 .wl{margin:0}
+html[data-look] .wv2 .big{font-family:'Archivo',system-ui,sans-serif;font-size:34px;font-weight:900;font-stretch:70%;line-height:1;letter-spacing:-.005em;margin-top:auto}
+html[data-look] .wv2 .big small{font-family:system-ui,sans-serif;font-stretch:100%;font-size:15px;font-weight:700;color:rgba(243,241,236,.6);letter-spacing:0}
+html[data-look] .wv2 .sub{font-size:12.5px;color:rgba(243,241,236,.66);margin-top:3px;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html[data-look] .wv2.m{flex-direction:row;align-items:stretch;gap:14px}
+html[data-look] .wv2.m>.l{flex:none;width:44%;display:flex;flex-direction:column;min-width:0}
+html[data-look] .wv2.m>.r{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end}
+html[data-look] .wv2.m>.r>svg{width:100%}
+html[data-look] .wv2.m>.r>.bigico{width:78px;height:78px;color:color-mix(in srgb,var(--ac) 70%,#fff);opacity:.85}
+html[data-look] .wv2.m>.r>.bigico svg{width:100%;height:100%}
+html[data-look] .wv2.lg>.art{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin:10px 0}
+html[data-look] .wv2 .art svg{display:block;width:100%;height:100%;overflow:visible}
+html[data-look] .wv2 .rows{display:flex;flex-direction:column;margin-top:8px;font-size:13px}
+html[data-look] .wv2 .rows div{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.08)}
+html[data-look] .wv2 .rows span+span{color:rgba(243,241,236,.62);white-space:nowrap}
+html[data-look] .wv2 .ico{position:absolute;right:12px;top:10px;width:30px;height:30px;color:color-mix(in srgb,var(--ac) 75%,#fff);opacity:.9}
+html[data-look] .wv2 .ico svg{width:100%;height:100%}
+html[data-look] .wv2 .spl{display:flex;flex-direction:column;gap:4px;width:100%}
+html[data-look] .wv2.m .spl .spck{width:20px;height:20px}html[data-look] .wv2.m .spl .sprow{font-size:13px;padding:2px 0;border:0}
+html[data-look] .wv2 .spl .sprow{display:flex;align-items:center;gap:9px;font-size:13.5px;min-width:0}
+html[data-look] .wv2 .spl .sprow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-look] .wv2 .spl .spck{width:22px;height:22px;flex:none}
+html[data-look] .wv2 .spd2{display:flex;gap:5px;margin-bottom:8px}.wv2 .spd2 i{width:16px;height:16px;border-radius:50%;border:2px solid rgba(243,241,236,.5);box-sizing:border-box}.wv2 .spd2 i.on{background:#F3F1EC;border-color:#F3F1EC}
+html[data-look] .wv2 .wbtn{all:unset;cursor:pointer;margin-top:10px;align-self:flex-start;padding:9px 16px;border-radius:12px;background:var(--ac);color:var(--on-ac);font-weight:800;font-size:14px}`;document.head.appendChild(st)})();
+const IC2={leaf:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>',moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',bag:'<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',flag:'<path d="M5 21V4h11l-2 4 2 4H5"/>',pill:'<rect x="3.5" y="8.5" width="17" height="7" rx="3.5" transform="rotate(-35 12 12)"/><path d="M9.6 8.6l4.8 6.8"/>'};
+const icoW=k=>`<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${IC2[k]}</svg></span>`;
+function W2(l,o){const lab=wlab(o.ic||'',o.lab),txt=`<span class="big">${o.big}</span>${o.sub?`<span class="sub">${o.sub}</span>`:''}`;
+ if(l.w===1)return`<div class="wv2">${lab}${o.icon?icoW(o.icon):''}${txt}</div>`;
+ if(l.h===1)return`<div class="wv2 m"><div class="l">${lab}${txt}</div><div class="r">${o.art||''}</div></div>`;
+ return`<div class="wv2 lg">${lab}<div style="margin-top:8px">${txt.replace('margin-top:auto','')}</div><div class="art">${o.artL||o.art||''}</div>${o.rows||''}</div>`}
+const AC=()=>getComputedStyle(document.documentElement).getPropertyValue('--ac').trim()||'#E0643A';
+// charts
+function barsSVG(vals,max,o={}){const n=vals.length,w=100,h=o.h||60,g=o.gap??(n>12?2:5),bw=(w-g*(n-1))/n,ac=o.c||AC();
+ return`<svg viewBox="0 0 ${w} ${h+(o.lab?12:0)}" preserveAspectRatio="none" style="height:${o.px||64}px">${vals.map((v,i)=>{const bh=Math.max(3,Math.min(1,(v||0)/Math.max(1,max))*h),x=i*(bw+g);const hi=o.hi===i;return`<rect x="${x.toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="${Math.min(3,bw/2)}" fill="${o.cf?o.cf(v,i):(hi?'#F3F1EC':v>=max?ac:'rgba(243,241,236,.35)')}"/>${o.lab?`<text x="${(x+bw/2).toFixed(1)}" y="${h+10}" text-anchor="middle" font-size="7" font-weight="700" fill="rgba(243,241,236,.5)">${o.lab[i]}</text>`:''}`}).join('')}${o.goal?`<line x1="0" x2="${w}" y1="${(h-h*o.goal/max).toFixed(1)}" y2="${(h-h*o.goal/max).toFixed(1)}" stroke="rgba(243,241,236,.35)" stroke-dasharray="2 2" stroke-width=".6"/>`:''}</svg>`}
+function cycRing(n,size){const st=cycStats(),len=st.len||28,pl=st.pl||5,day=Math.min(len,n.day),ov=len-14,R=40,cx=50,cy=50,seg=360/len;let p='';
+ for(let i=0;i<len;i++){const a0=(i*seg-90+1.2)*Math.PI/180,a1=((i+1)*seg-90-1.2)*Math.PI/180,x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1);
+  const col=i<pl?'#FF6B8B':i>=ov-3&&i<=ov+1?'#7FD8DB':'rgba(243,241,236,.18)';p+=`<path d="M${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" stroke="${col}" stroke-width="${i===day-1?11:7}" fill="none" stroke-linecap="butt" ${i===day-1?'':'opacity=".95"'}/>`}
+ const a=((day-.5)*seg-90)*Math.PI/180;p+=`<circle cx="${(cx+R*Math.cos(a)).toFixed(2)}" cy="${(cy+R*Math.sin(a)).toFixed(2)}" r="6" fill="#F3F1EC" stroke="#141414" stroke-width="2"/>`;
+ return`<svg viewBox="0 0 100 100" style="width:${size}px;height:${size}px">${p}<text x="50" y="48" text-anchor="middle" font-size="18" font-weight="900" fill="#F3F1EC" font-family="Archivo,system-ui" style="font-stretch:70%">${day}</text><text x="50" y="62" text-anchor="middle" font-size="8" font-weight="700" fill="rgba(243,241,236,.55)" letter-spacing="1">OF ${len}</text></svg>`}
+// the widgets
+{const _wd=wd;wd=function(l){if(!l||!S.nat||!NAT[S.nat])return _wd.apply(this,arguments);const id=l.id;try{
+ if(id==='micro'){const t=today(),R=miRange([t]),rows=mnRows(R.per),pc=rows.map(([k,v])=>Math.min(150,miPct(k,v))),ok=pc.filter(p=>p>=67).length,low=rows.filter(([k,v])=>miPct(k,v)<67).slice(0,3).map(([k])=>MN[k][0].replace(/ \(.*\)/,''));
+  const art=barsSVG(pc,100,{cf:v=>v>=100?'#7FD8A0':v>=67?'#F2C14E':'rgba(243,241,236,.28)',px:70,goal:67});
+  return W2(l,{lab:'Nutrients',ic:'leaf',icon:'leaf',big:`${ok}<small> / ${rows.length}</small>`,sub:l.w===1?'at a good level today':`Lowest: ${esc(low.join(', '))}`,art,artL:barsSVG(pc,100,{cf:v=>v>=100?'#7FD8A0':v>=67?'#F2C14E':'rgba(243,241,236,.28)',px:120,goal:67}),rows:`<div class="rows">${rows.slice(0,3).map(([k,v])=>`<div><span>${esc(MN[k][0])}</span><span>${Math.round(miPct(k,v))}%</span></div>`).join('')}</div>`})}
+ if(id==='cyc'){if(typeof cycOn==='function'&&!cycOn())return _wd.apply(this,arguments);const n=cycNow();if(!n)return _wd.apply(this,arguments);const per=n.ph==='period',nx=n.next?new Date(n.next+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+  const sub=per?`Period · next one around ${nx}`:`Next period in ${n.toNext} days`;
+  return W2(l,{lab:'Cycle',big:per?`Day ${n.day}`:`${n.toNext}<small> days</small>`,sub:l.w===1?(per?'of your period':'until your next period'):esc(sub),art:cycRing(n,96),artL:cycRing(n,180),rows:`<div class="rows"><div><span>Next period</span><span>${esc(nx)}</span></div><div><span>Average cycle</span><span>${cycStats().len} days</span></div></div>`})}
+ if(id==='sleep'){const sl=SLP(),k=slpKey(),days=[...Array(7)].map((_,i)=>addDays(k,i-6)),v=days.map(d=>{const x=(S.sleep||{})[d];return x?Math.max(0,x.b-x.a):0}),L=v[6];
+  if(sl.on)return _wd.apply(this,arguments);
+  const lab=days.map(d=>'SMTWTFS'[new Date(d+'T12:00').getDay()]),got=v.filter(x=>x>0),avg=got.length?got.reduce((a,b)=>a+b,0)/got.length:0;
+  return W2(l,{lab:'Sleep',icon:'moon',big:L?durTxt(L).replace(' ',''):'—',sub:L?`Last night · goal ${sl.goal/60}h`:'Tap to log last night',art:barsSVG(v,sl.goal,{px:72,lab,hi:6,goal:sl.goal}),artL:barsSVG(v,sl.goal,{px:130,lab,hi:6,goal:sl.goal}),rows:`<div class="rows"><div><span>7-night average</span><span>${avg?durTxt(avg):'—'}</span></div><div><span>Bedtime</span><span>${(()=>{try{const b=bedEff();return b!=null?hm12f(Math.round(b/5)*5):'Not set'}catch(_){return'—'}})()}</span></div></div>`})}
+ if(id==='supp'&&l.h===1){const d=today(),due=supDue(d),tk=supTaken(d);if(!SUP().list.length)return W2(l,{lab:'Supplements',icon:'pill',big:'None yet',sub:'Tap to add yours'});
+  const n=due.filter(x=>tk.includes(x.id)).length,nx=due.find(x=>!tk.includes(x.id)),sub=!due.length?'Nothing due today':nx?`${esc(nx.n)} at ${hm12(toMin(supTime(nx)))}`:'All done for today';
+  if(l.w===1)return`<div class="wv2">${wlab('pill','Supplements')}<span class="spd2" style="margin-top:auto">${due.slice(0,6).map(x=>`<i class="${tk.includes(x.id)?'on':''}"></i>`).join('')}</span><span class="big" style="margin-top:0">${n} of ${due.length}<small> taken</small></span><span class="sub">${sub}</span></div>`;
+  return`<div class="wv2 m"><div class="l">${wlab('pill','Supplements')}<span class="big">${n}<small> of ${due.length}</small></span><span class="sub">${sub}</span></div><div class="r"><div class="spl">${due.slice(0,3).map(x=>`<div class="sprow"><button class="spck ${tk.includes(x.id)?'on':''}" data-a="sptk" data-i="${x.id}" role="checkbox" aria-checked="${tk.includes(x.id)}" aria-label="${esc(x.n)} taken"><i>${TICK}</i></button><span>${esc(x.n)}</span></div>`).join('')}</div></div></div>`}
+ if(id==='shop'&&l.w===1){let n=0,st=null;try{fpRoll();st=SHD().stores.length?fpCur():null;n=st?fpItems(st).n:0}catch(_){}return W2(l,{lab:'Shopping',big:n?`${n}<small> to get</small>`:'All got',sub:st?esc(st.n):'Tap to start a list'})}
+ if(id==='bring'){let d=null;try{d=dayWork(today())}catch(_){}const eq=d&&d.equip?String(d.equip).split(/,|\band\b/).map(s=>s.trim()).filter(Boolean):[];
+  return W2(l,{lab:'Gym bag',icon:'bag',big:eq.length?`${eq.length}<small> to pack</small>`:'All set',sub:eq.length?esc(eq.join(', ')):d?'Nothing extra today':'Rest day',art:`<span class="bigico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${IC2.bag}</svg></span>`,artL:`<span class="bigico" style="width:120px;height:120px;color:var(--ac);opacity:.8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">${IC2.bag}</svg></span>`,rows:eq.length?`<div class="rows">${eq.map(x=>`<div><span>${esc(x)}</span><span></span></div>`).join('')}</div>`:''})}
+ if(id==='goal'&&!S.goal2)return W2(l,{lab:'Goal',icon:'flag',big:'No goal',sub:'A goal with a date keeps you going',art:'<button class="wbtn" data-a="gnew" style="margin:0">Set a goal</button>',artL:'<button class="wbtn" data-a="gnew">Set a goal</button>'});
+ if(id==='macros'&&l.w===2&&l.h===2){const m=S.macros[today()]||{},g=S.setup||{},kc=Math.round(+m.k||0),gk=+g.k||0,left=Math.max(0,gk-kc),pc=(v,G)=>G>0?Math.min(100,v/G*100):0;
+  const bar=(k,n,c)=>{const v=Math.round(+m[k]||0),G=+g[k]||0;return`<div style="display:block;border:0;padding:6px 0"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span>${n}</span><span>${v} / ${G||'-'} g</span></div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden"><i style="display:block;height:100%;width:${pc(v,G).toFixed(0)}%;background:${c}"></i></div></div>`};
+  return`<div class="wv2 lg">${wlab('plate','Calories')}<div style="margin-top:8px"><span class="big" style="font-size:52px">${kc.toLocaleString('en-GB')}</span><span class="sub">${gk?`${left.toLocaleString('en-GB')} left of ${gk.toLocaleString('en-GB')}`:'kcal today'}</span></div><div class="rows" style="margin-top:auto">${bar('p','Protein','#F3F1EC')}${bar('f','Fat','rgba(243,241,236,.5)')}${bar('c','Carbs','var(--ac)')}</div><button class="wbtn" data-a="godiet">Log a meal</button></div>`}
+ }catch(e){console.warn('widget',id,e)}return _wd.apply(this,arguments)}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
