@@ -7631,7 +7631,7 @@ function mfAsk(x){MFQ={x,q:1};sheet(`<h2>${esc(x.n)}</h2><p class="sm" style="ma
 function mfLog(kind,id){if(kind==='m'){const x=mfMeals().find(m=>nmk(m.n)===nmk(id));if(x)mfAsk(x);return}
  if(kind==='r'){rcLogSheet(+id);return}
  if(kind==='p'){const p=(S.bc||{})[id];if(!p)return;BC={mode:'food',code:id};bcDone(p)}}
-window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mft],[data-a=mflog],[data-a=mfstar],[data-a=mfall],[data-a=mfq],[data-a=mfadd],[data-mfpic]');if(!el)return;
+window.addEventListener('click',e=>{if(e.target.closest('#app .mfc .mfr .ph'))return;const el=e.target.closest('[data-a=mft],[data-a=mflog],[data-a=mfstar],[data-a=mfall],[data-a=mfq],[data-a=mfadd],[data-mfpic]');if(!el)return;
  if(el.matches('[data-mfpic]')&&e.target.closest('.ph')){e.stopImmediatePropagation();e.preventDefault();const b=document.querySelector(`#app .svd [data-a=smpic][data-i="${el.dataset.mfpic}"]`);if(b){b.click()}return}
  const a=el.dataset.a;if(!a)return;e.stopImmediatePropagation();e.preventDefault();
  if(a==='mft'){MFT.t=el.dataset.i;MFT.all=false;return mfRe()}
@@ -7996,6 +7996,31 @@ const QWHO={'YEAH BUDDY!':'Ronnie Coleman','Light weight, baby!':'Ronnie Coleman
 // switching session on the Workout page: no flash, just the card swapping quietly
 {let quiet=0;document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('select[data-b="W.k"]'))quiet=Date.now()},true);
  const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(Date.now()-quiet<600&&tab==='plan'){document.querySelectorAll('#app .fx-in,#app [class*=fx-]').forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.style.animation='none'});const h=$('#app .whero');h&&h.animate([{opacity:.4},{opacity:1}],{duration:180,easing:'ease-out'})}}catch(_){}return r}}
+/* ===== v102: closing a full page fades straight back to Home, and every logged food can have a picture ===== */
+// Research notes for this block:
+// - The page shrank into its widget over a dark fill, then Home redrew, which read as a black flash. Now Home is drawn
+//   first underneath, without its entrance animation, and the page simply fades out on top (200 ms). A plain opacity
+//   change can't flicker, and drawing the destination before revealing it avoids the blank frame (web.dev, "Rendering
+//   performance"; Material motion, "fade through").
+// - A picture helps you recognise a food faster than its name (picture superiority effect, Paivio 1971), so any food in
+//   My foods can have one: tap the initial square. No + badge on each, to keep the list calm.
+(function(){const st=document.createElement('style');st.textContent=`html[data-look] #fs{background-color:var(--tone0,#121212)!important}
+.mfr .ph.add::after{display:none!important}.mfr .ph{cursor:pointer}`;document.head.appendChild(st)})();
+{const _fc=fsClose;fsClose=function(){const o=$('#fs');if(!o||!S.nat||!NAT[S.nat]||MRM())return _fc.apply(this,arguments);
+ const k=FS;FS=null;try{FXQ=Date.now()}catch(_){}o.style.pointerEvents='none';o.id='fsout';
+ // draw Home underneath first, quietly
+ try{render();document.querySelectorAll('#app .fx-in').forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.style.animation='none'})}catch(_){}
+ o.getAnimations().forEach(a=>a.cancel());const wr=o.querySelector('.fsw');wr&&wr.getAnimations().forEach(a=>a.cancel());
+ o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.985)'}],{duration:200,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}).onfinish=()=>{o.remove();try{lockOff()}catch(_){}}}}
+// a picture for any food in My foods (kept by name in IndexedDB, like workout covers)
+S.fimg=S.fimg||{};
+{let FPK=null;const fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.style.cssText='position:fixed;left:-9999px;opacity:0';document.body.appendChild(fi);
+ fi.addEventListener('change',()=>{const f=fi.files&&fi.files[0];const k=FPK;fi.value='';if(!f||!k)return;const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const c=document.createElement('canvas'),z=160,s=Math.min(im.width,im.height);c.width=c.height=z;c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,z,z);URL.revokeObjectURL(u);const d=c.toDataURL('image/jpeg',.8),id='fi_'+k.replace(/[^a-z0-9]/g,'').slice(0,40);IMGS[id]=d;idbPut(id,d).catch(()=>{});S.fimg[k]=id;save();render();toast('Picture added.')};im.src=u});
+ window.addEventListener('click',e=>{const ph=e.target.closest('#app .mfc .mfr .ph');if(!ph)return;const row=ph.closest('.mfr'),v=(row.dataset.i||'').split('|');e.stopImmediatePropagation();e.preventDefault();
+  FPK=v[0]==='m'?nmk(v.slice(1).join('|')):v[0]==='r'?'r:'+((S.recipes||[])[+v[1]]||{}).n:'p:'+v[1];FPK=nmk(FPK);fi.click()},true)}
+// show the pictures
+(async()=>{try{for(const id of Object.values(S.fimg||{}))if(!IMGS[id]){const v=await idbGet(id);if(v)IMGS[id]=v}render()}catch(_){}})();
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{document.querySelectorAll('#app .mfc .mfr').forEach(row=>{const v=(row.dataset.i||'').split('|');let k=v[0]==='m'?nmk(v.slice(1).join('|')):v[0]==='r'?nmk('r:'+((S.recipes||[])[+v[1]]||{}).n):nmk('p:'+v[1]);const id=S.fimg&&S.fimg[k],src=id&&IMGS[id];const ph=row.querySelector('.ph');if(ph){ph.removeAttribute('data-mfpic');ph.classList.remove('add');if(src&&!ph.querySelector('img'))ph.innerHTML=`<img src="${src}" alt="">`}})}catch(_){}return r}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
