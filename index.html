@@ -7545,6 +7545,18 @@ RTDEMO['5000159459228']={product_name:'Greek style yoghurt',brands:'Sample (prev
   const go=()=>{busy=false;const cur=$('#aw');if(cur)cur.dataset.k=key();_w.apply(self,args);const n=$('#aw');if(!n)return;n.dataset.k=key();
    kids(n).forEach(c=>{c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:0},{opacity:1}],{duration:160,easing:'cubic-bezier(0,0,.2,1)'})})};
   Promise.all(out.map(a=>a.finished)).then(go,go)}}
+/* ===== v97: no "Not this week", and the picture square on a saved meal is the button ===== */
+// Research notes for this block:
+// - An empty plan already means "not this week", so the extra button only added a choice nobody needs (Hick's law:
+//   fewer options, faster decisions). The picture placeholder itself is the target, a bigger and more obvious one than
+//   a text button beside it (Fitts 1954; Apple HIG: make the thing itself tappable where you can).
+(function(){const st=document.createElement('style');st.textContent=`
+#app .fpc [data-a=fpskip]{display:none!important}
+.smt [data-a=smpic]{display:none!important}
+.smph{cursor:pointer;position:relative}
+.smph.empty::after{content:"+";position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:var(--ac,#fff);color:var(--on-ac,#111);font-size:15px;font-weight:800;line-height:20px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}`;document.head.appendChild(st)})();
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{document.querySelectorAll('#app .smr .smph').forEach(p=>{if(!p.querySelector('img'))p.classList.add('empty');p.setAttribute('role','button');p.setAttribute('aria-label',p.querySelector('img')?'Change picture':'Add a picture')})}catch(_){}return r}}
+window.addEventListener('click',e=>{const ph=e.target.closest('#app .smr .smph');if(!ph)return;const b=ph.closest('.smr').querySelector('[data-a=smpic]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();b.click()},true);
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
