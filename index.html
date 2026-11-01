@@ -9153,6 +9153,121 @@ const GEAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
 try{const g=SETG.find(x=>x[0]==='Your data');if(g&&!g[1].includes('reports'))g[1].unshift('reports')}catch(_){}
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',h:'Settings is the gear',p:'Settings now sits behind the gear at the top of Home, and Reports live inside it under Your data.'})}
+/* ===== v119: a shorter, friendlier sign-up; a condensed "What's new"; one skippable catch-up for existing users ===== */
+// Research notes for this block:
+// - Ask only what you'll use, say why next to each ask, and let people skip: explaining why personal data is needed
+//   raises willingness to share it (Knijnenburg & Kobsa 2013, ACM TiiS, "Making decisions about privacy: information
+//   disclosure in context-aware recommender systems"), and every extra form field costs completions (Baymard
+//   Institute checkout research: fewer, clearer fields; NN/g "Website forms usability"). Defaults stand in for
+//   anything skipped, and it can all be filled in later from Settings.
+// - Show value early: an onboarding that ends with a personal result (your daily target, worked out live from the
+//   answers) keeps people going more than one that front-loads explanation (NN/g, "Mobile-app onboarding: an
+//   analysis of components and techniques"; deck-of-cards tours are mostly skipped and forgotten).
+// - The tour becomes a choice at the end ("Show me around" or "I'll explore"), since pushed tours are dismissed and
+//   tips at the moment of need work better (NN/g, "Onboarding tutorials vs. contextual help").
+// - Updates: three highlights, the rest folded away. Long changelogs go unread; a few concrete benefits are what
+//   people take in (NN/g, "Release notes"; Microsoft Fluent "Teaching callouts": one idea at a time).
+// - Existing users are asked once, on one sheet, only for what's missing (how they eat; sex and age for targets;
+//   cycle tracking for women), each with a one-line reason and a clear "Skip for now".
+(function(){const st=document.createElement('style');st.textContent=`
+.gearw{display:flex;justify-content:center;margin:18px 0 6px}.gearw .gearb{all:unset;box-sizing:border-box;cursor:pointer;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#F3F1EC}.gearw .gearb svg{width:23px;height:23px}
+.obw{max-width:460px;margin:7vh auto 0}
+.obp{display:flex;gap:6px;margin:0 2px 18px}.obp i{flex:1;height:4px;border-radius:99px;background:rgba(255,255,255,.14)}.obp i.on{background:var(--ac,#E0643A)}
+.obw h1{font-family:'Archivo',system-ui,sans-serif;font-size:40px;font-weight:900;font-stretch:72%;line-height:1;margin:0 2px 6px;letter-spacing:-.01em}
+.obw .why{display:flex;gap:8px;align-items:flex-start;margin:0 2px 16px;font-size:14.5px;line-height:1.45;color:rgba(243,241,236,.72)}.obw .why svg{flex:none;width:16px;height:16px;margin-top:2px;opacity:.8}
+.obw .card{padding:16px}.obw .lab3{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(243,241,236,.6);margin:14px 2px 8px}.obw .lab3:first-child{margin-top:0}
+.obw .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.obw .two label{margin:0}
+.obw input{width:100%;box-sizing:border-box}
+.obw .res{margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.obw .res b.k{display:block;font-family:'Archivo',system-ui,sans-serif;font-size:38px;font-weight:900;font-stretch:72%;line-height:1}
+.obw .res .mx{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.obw .res .mx div{font-size:12px;color:rgba(243,241,236,.62)}.obw .res .mx b{display:block;font-size:17px;color:#F3F1EC}
+.obw .act{display:flex;flex-direction:column;gap:8px;margin-top:16px}.obw .act .btn{margin:0}
+.obw .skip{all:unset;cursor:pointer;text-align:center;padding:10px;color:rgba(243,241,236,.62);font-size:15px;font-weight:600}
+.obw .lkg{padding:0}
+#wn .wnmore{margin:6px 0 10px}#wn .wnmore summary{cursor:pointer;list-style:none;color:var(--dim);font-size:14px;font-weight:600;padding:8px 0}#wn .wnmore summary::-webkit-details-marker{display:none}
+.cus .q{padding:14px 0;border-top:1px solid rgba(255,255,255,.09)}.cus .q:first-of-type{border-top:0;padding-top:4px}.cus .q b{display:block;font-size:16px}.cus .q small{display:block;color:var(--dim);font-size:13px;margin:2px 0 10px}
+.cus .q .chips{padding:0}.cus input{width:100%;box-sizing:border-box}`;document.head.appendChild(st)})();
+const LOCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+/* ---------- 1. the gear: centred at the bottom of Home ---------- */
+(function(){const st=document.createElement('style');st.textContent='.hdr .gearb{display:none!important}';document.head.appendChild(st)})();
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'&&S.user&&S.setup.done){const A=$('#app');if(A&&!A.querySelector('.gearw')){const nav=A.querySelector(':scope>nav');const d=document.createElement('div');d.className='gearw';d.innerHTML=`<button class="gearb" data-a="settings" aria-label="Settings">${GEAR}</button>`;nav?A.insertBefore(d,nav):A.appendChild(d)}}}catch(_){}return r}}
+
+/* ---------- 2. sign-up: four short steps, each with a why, each skippable ---------- */
+let OB={i:0,u:null,sex:'',age:'',w:'',h:'',ft:'',inch:'',goal:'',act:2,man:0,k:'',p:'',f:'',c:'',diet:'',av:[]};
+const OBN=4;
+function obEst(){const u=U(),sx=OB.sex==='f'?'Female':OB.sex==='m'?'Male':'';if(!sx||!(+OB.w>0)||!(+OB.age>0)||!(+S.setup.h>0))return null;
+ const g=OB.goal||'maintain',goal=g==='muscle'?'gain':g,rate=g==='muscle'?.25:g==='gain'?.5:.5;const days=[0,2,4,6,5][(+OB.act||2)-1],life=+OB.act===5?(LIFE.find(l=>/phys|active|feet|manual/i.test(l[0]+l[1]))||LIFE[LIFE.length-1])[0]:LIFE[0][0];try{return calcEst({w:OB.w,age:OB.age,sex:sx,act:OB.act,days,life,goal,rate})}catch(_){return null}}
+function obH(){const u=U(),hu=u==='lb'?'ft':'cm';if(hu==='cm')S.setup.h=+OB.h||S.setup.h||0;else{const t=(+OB.ft||0)*12+(+OB.inch||0);if(t)S.setup.h=Math.round(t*2.54)}S.setup.hu=hu}
+function obStep(){const u=U(),ch=(a,v,l,on)=>`<button class="chip ${on?'on':''}" data-a="${a}" data-i="${v}">${l}</button>`,prog=`<div class="obp">${[...Array(OBN)].map((_,i)=>`<i class="${i<=OB.i?'on':''}"></i>`).join('')}</div>`;
+ const skip=`<button class="skip" data-a="obskip">Skip for now</button>`,next=l=>`<button class="btn big on" data-a="obnext">${l||'Next'}</button>`;
+ if(OB.i===0)return`${prog}<h1>Hi ${esc(S.user||'')}. A bit about you</h1><p class="why">${LOCK}<span>Used to work out your calories, protein and water. It stays on this phone and is never uploaded.</span></p>
+ <div class="card"><span class="lab3">Units</span><div class="chips">${ch('obu','kg','Kilograms',u==='kg')}${ch('obu','lb','Pounds',u==='lb')}</div>
+ <span class="lab3">Sex</span><div class="chips">${ch('obsx','f','Female',OB.sex==='f')}${ch('obsx','m','Male',OB.sex==='m')}${ch('obsx','x','Prefer not to say',OB.sex==='x')}</div>
+ <div class="two" style="margin-top:14px"><label>Age<input type="number" inputmode="numeric" data-ob="age" value="${esc(OB.age)}" placeholder="e.g. 30"></label><label>Weight (${u})<input type="number" inputmode="decimal" data-ob="w" value="${esc(OB.w)}" placeholder="${u==='lb'?'e.g. 160':'e.g. 70'}"></label></div>
+ ${u==='lb'?`<div class="two" style="margin-top:10px"><label>Height (ft)<input type="number" inputmode="numeric" data-ob="ft" value="${esc(OB.ft)}"></label><label>(in)<input type="number" inputmode="numeric" data-ob="inch" value="${esc(OB.inch)}"></label></div>`:`<label style="display:block;margin-top:10px">Height (cm)<input type="number" inputmode="numeric" data-ob="h" value="${esc(OB.h)}" placeholder="e.g. 170"></label>`}</div>
+ <div class="act">${next()}${skip}</div>`;
+ if(OB.i===1){const r=obEst();return`${prog}<h1>What are you after?</h1><p class="why">${LOCK}<span>This sets your daily target. You can change it any time.</span></p>
+ <div class="card"><div class="chips">${[['lose','Lose fat'],['maintain','Stay as I am'],['muscle','Build muscle'],['gain','Gain weight']].map(([v,l])=>ch('obg',v,l,OB.goal===v)).join('')}</div>
+ <span class="lab3">How active are you?</span><div class="chips">${[[1,'Mostly sitting'],[2,'1 to 3 workouts a week'],[3,'3 to 5 a week'],[4,'6 or 7 a week'],[5,'Athlete or physical job']].map(([v,l])=>ch('oba',v,l,+OB.act===v)).join('')}</div>
+ <div class="res">${r?`<span class="sm">Your daily target</span><b class="k">${r.k.toLocaleString('en-GB')} kcal</b><div class="mx"><div><b>${r.p} g</b>protein</div><div><b>${r.f} g</b>fat</div><div><b>${r.c} g</b>carbs</div></div>`:`<span class="sm">${OB.goal?'Add your age, weight and height to get a target made for you. Until then Swell uses 2,000 kcal.':'Pick a goal and Swell works out your daily target.'}</span>`}</div></div>
+ <div class="act">${next()}${skip}</div>`}
+ if(OB.i===2)return`${prog}<h1>How do you eat?</h1><p class="why">${LOCK}<span>So food ideas and tips only suggest things you eat.</span></p>
+ <div class="card"><div class="chips dgrid">${DIETS.map(x=>`<button class="chip ${OB.diet===x[0]?'on':''}" data-a="obd" data-i="${x[0]}">${x[1]}${x[2]?`<small>${x[2]}</small>`:''}</button>`).join('')}</div>
+ <span class="lab3">Leave anything out? (optional)</span><div class="chips">${DAVOID.map(x=>ch('obav',x[0],x[1],OB.av.includes(x[0]))).join('')}</div></div>
+ <div class="act">${next()}${skip}</div>`;
+ const E=Object.entries(NAT).filter(([k])=>k!=='custom');
+ return`${prog}<h1>Pick a look</h1><p class="why"><span>Each one comes from something in nature. Change it whenever you like.</span></p>
+ <div class="card"><div class="lkg">${E.map(([k,L])=>`<button class="${S.nat===k?'on':''}" data-a="obnat" data-i="${k}" aria-label="${esc(L.n)}">${typeof lkBig==='function'?lkBig(k,L):lkTile(k,L)}${esc(L.n)}</button>`).join('')}</div></div>
+ <div class="act">${next('Start using Swell')}</div>`}
+{const _o=onb;onb=function(){if(!S.user||S.setup.done)return _o.apply(this,arguments);if(!S.nat){try{natSet(Object.keys(NAT)[0])}catch(_){}}return`<div class="obw">${obStep()}</div>`}}
+function obFinish(){const s=S.setup;obH();if(+OB.w>0)s.w=+OB.w;if(+OB.age>0)s.age=+OB.age;if(OB.sex==='f'||OB.sex==='m')s.sex=OB.sex;s.act=(ACT[(+OB.act||2)-1]||ACT[1])[1];s.freq=[1,2,4,6,6][(+OB.act||2)-1];s.thr=s.thr||80;
+ const r=obEst();if(r){s.k=r.k;s.p=r.p;s.f=r.f;s.c=r.c}else if(!(+s.k>0)){s.k=2000;s.p=150;s.f=65;s.c=225}
+ if(OB.diet){s.diet=OB.diet;s.avoid=OB.av.slice();S.dietAsk=1;try{dietApply()}catch(_){}}
+ s.done=true;S.cuAsk=APP_VER;try{periodic()}catch(_){}save();tab='home';render();
+ setTimeout(()=>sheet(`<h2>You’re all set, ${esc(S.user||'')}</h2><p class="sm" style="margin:4px 2px 14px">Want a one-minute look around, or would you rather explore? Tips pop up as you go either way.</p><button class="btn big on" data-a="obtour">Show me around</button><button class="btn big" data-a="obexp">I’ll explore</button>`),350)}
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.ob;if(!k)return;OB[k]=e.target.value;if(k==='h'||k==='ft'||k==='inch')obH();if(OB.i===0)return},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=ob]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(obu|obsx|obnext|obskip|obg|oba|obd|obav|obnat|obtour|obexp)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ const re=()=>{render();scrollTo(0,0)};
+ if(a==='obu'){S.setup.u=i;return re()}
+ if(a==='obsx'){OB.sex=i;return re()}if(a==='obg'){OB.goal=i;return re()}if(a==='oba'){OB.act=+i;return re()}if(a==='obd'){OB.diet=i;return re()}
+ if(a==='obav'){const k=OB.av.indexOf(i);k>=0?OB.av.splice(k,1):OB.av.push(i);el.classList.toggle('on',k<0);return}
+ if(a==='obnat'){try{natSet(i)}catch(_){}return re()}
+ if(a==='obnext'||a==='obskip'){if(OB.i===0)obH();if(a==='obskip'&&OB.i===2){OB.diet=''}if(OB.i>=OBN-1)return obFinish();OB.i++;return re()}
+ if(a==='obtour'){sheet(null);TU=0;render();return}
+ if(a==='obexp'){sheet(null);S.tourDone=1;save();render();return}},true);
+
+/* ---------- 3. What's new: three highlights, the rest folded away ---------- */
+const WNTOP=['Food and your cycle','Report for a doctor','How you eat','Settings is the gear','Nutrients has its own page','Check a product'];
+// the original is called by its own interval, so tidy the pop-up whenever it appears
+setInterval(()=>{const o=$('#wn');if(!o||o.dataset.c)return;o.dataset.c=1;const bd=o.querySelector('.wnbadge');if(bd&&/Next update/.test(bd.textContent))bd.textContent='New in this update';const box=o.querySelector('.mwc'),I=[...box.querySelectorAll('.wni')];if(I.length<=4)return;
+ const score=el=>{const t=((el.querySelector('b')||{}).textContent||'').trim();const k=WNTOP.indexOf(t);return k<0?99:k};const top=I.slice().sort((a,b)=>score(a)-score(b)).slice(0,3),rest=I.filter(x=>!top.includes(x));
+ top.forEach(x=>{const d=x.querySelector(':scope>div');if(!d)return;const t=[...d.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim(),f=(t.match(/^[^.]+\./)||[t])[0];[...d.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());d.appendChild(document.createTextNode(f))});const h2=box.querySelector('h2');I.forEach(x=>x.remove());let at=h2;top.forEach(x=>{at.after(x);at=x});
+ const d=document.createElement('details');d.className='wnmore';d.innerHTML=`<summary>And ${rest.length} more improvements</summary>`;rest.forEach(x=>d.appendChild(x));at.after(d)},300);
+/* ---------- 4. catch-up for existing users: only what's missing, once, skippable ---------- */
+let CU=null;
+function cuNeeds(){const s=S.setup||{},n=[];if(!s.diet&&!S.dietAsk)n.push('diet');if(s.sex!=='f'&&s.sex!=='m')n.push('sex');if(!(+s.age>0))n.push('age');if(s.sex==='f'&&!(S.cyc&&(S.cyc.on||S.cyc.asked)))n.push('cyc');return n}
+function cuSheet(){const N=cuNeeds();if(!N.length)return false;CU=CU||{diet:'',sex:'',age:'',cyc:''};const ch=(a,v,l,on)=>`<button class="chip ${on?'on':''}" data-a="${a}" data-i="${v}">${l}</button>`;
+ sheet(`<div class="cus"><h2>${N.length===1?'One quick question':'A few quick questions'}</h2><p class="sm" style="margin:2px 2px 12px">New features work better with these. Answer what you like and skip the rest. It all stays on your phone.</p>
+ ${N.includes('diet')?`<div class="q"><b>How do you eat?</b><small>So food ideas only suggest things you eat.</small><div class="chips">${DIETS.map(x=>ch('cud',x[0],x[1],CU.diet===x[0])).join('')}</div></div>`:''}
+ ${N.includes('sex')?`<div class="q"><b>Sex</b><small>Sets your water, iron and calorie targets correctly.</small><div class="chips">${ch('cusx','f','Female',CU.sex==='f')}${ch('cusx','m','Male',CU.sex==='m')}${ch('cusx','x','Prefer not to say',CU.sex==='x')}</div></div>`:''}
+ ${N.includes('age')?`<div class="q"><b>Age</b><small>Calorie targets change with age.</small><input type="number" inputmode="numeric" id="cuage" value="${esc(CU.age)}" placeholder="e.g. 30"></div>`:''}
+ ${N.includes('cyc')||CU.sex==='f'&&!(S.cyc&&(S.cyc.on||S.cyc.asked))?`<div class="q"><b>Track your cycle?</b><small>Forecasts, symptoms and food that fits each phase.</small><div class="chips">${ch('cucy','y','Yes, turn it on',CU.cyc==='y')}${ch('cucy','n','Not now',CU.cyc==='n')}</div></div>`:''}
+ <button class="btn big on" data-a="cusave" style="margin-top:12px">Save</button><button class="btn big" data-a="cuskip">Skip for now</button></div>`);return true}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=cu]');if(!el)return;const a=el.dataset.a,i=el.dataset.i;if(!/^(cud|cusx|cucy|cusave|cuskip)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ const keep=()=>{const g=$('#cuage');if(g)CU.age=g.value};
+ if(a==='cud'){keep();CU.diet=i;return cuSheet()}if(a==='cusx'){keep();CU.sex=i;return cuSheet()}if(a==='cucy'){keep();CU.cyc=i;return cuSheet()}
+ if(a==='cuskip'){S.cuAsk=APP_VER;save();sheet(null);return}
+ if(a==='cusave'){keep();const s=S.setup;if(CU.diet){s.diet=CU.diet;S.dietAsk=1;try{dietApply()}catch(_){}}if(CU.sex==='f'||CU.sex==='m')s.sex=CU.sex;if(+CU.age>0)s.age=+CU.age;
+  if(CU.cyc==='y'){const c=CYC();c.on=1;NM.cyc='Cycle';if(!S.lay.some(l=>l.id==='cyc'))S.lay.push({id:'cyc',w:1,h:1})}else if(CU.cyc==='n'){CYC().asked=1}
+  S.cuAsk=APP_VER;save();sheet(null);render();toast('Saved. Thanks.');return}},true);
+// shown once, after What's new is closed (or its tour ends), never on top of anything else
+{let shown=false;setInterval(()=>{if(shown||PREVIEW&&!window.__cuTest||!S.user||!S.setup||!S.setup.done||S.cuAsk===APP_VER||$('#wn')||$('#sheet')||$('#req')||$('#splash')||$('#fs')||AW||TU!=null)return;if(S.seenVer!==APP_VER)return;shown=true;if(!cuSheet()){S.cuAsk=APP_VER;save()}},1500)}
+
+
+// one prompt at a time on Home: the most useful first, the next one once that's answered
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'){const A=$('#app'),grid=A&&A.querySelector(':scope>.grid');if(grid){const P=[...A.querySelectorAll(':scope>.card')].filter(c=>c.compareDocumentPosition(grid)&Node.DOCUMENT_POSITION_FOLLOWING&&(c.classList.contains('cyoffer')||c.classList.contains('motc')||c.querySelector('[data-a=godiet]')));
+  const rank=c=>c.classList.contains('cyoffer')?0:c.querySelector('[data-a=godiet]')?1:2;P.sort((a,b)=>rank(a)-rank(b)).forEach((c,i)=>{c.style.display=i?'none':''})}}}catch(_){}return r}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
