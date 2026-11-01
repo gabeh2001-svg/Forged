@@ -7840,6 +7840,162 @@ function wkDress(){if(!S.nat||!NAT[S.nat]||tab!=='plan')return;const A=$('#app')
 const WKR={open:false};
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab!=='plan')$('#app').classList.remove('wv');wkDress()}catch(e){}return r}}
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M3 12h18M6 8v8M18 8v8"/>',h:'A cleaner Workout page',p:'Today’s session up top with one Start button, your plans as cards, and rest times tucked into a single row.'})}
+/* ===== v101: adding an exercise in plain words, a weight calculator, proper supersets, keyboard you can swipe away ===== */
+// Research notes for this block:
+// - One field per row, in the order you'd say it out loud (what, how many sets, how many reps, what with, how heavy),
+//   is completed faster and with fewer errors than side-by-side fields (Baymard Institute, "single-column form
+//   layouts"; Penzo 2006 on label placement).
+// - Labels are questions in everyday words ("How heavy?"), because plain language is understood faster by everyone,
+//   not just less confident readers (GOV.UK content design; NN/g, "Plain language is for everyone").
+// - People got "total weight" wrong because it asks them to do sums. Swell does the maths: bar plus the plates on each
+//   side (a calculation the app can do is one the user shouldn't have to; Norman, "knowledge in the world").
+// - Supersets are opt-in with a switch, then you pick the exercises that go together and the rest after each round,
+//   which matches how lifters describe them (ACE and NSCA definitions: exercises done back to back, rest after the
+//   round). Works for cardio too.
+// - The keyboard can be swiped away by dragging down, and a Done button sits just above it on the right, in thumb
+//   reach (Hoober 2013), instead of only at the top of the screen.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] .xf{display:flex;flex-direction:column;gap:14px}
+html[data-look] .xf>.xl{display:flex;flex-direction:column;gap:7px;margin:0}
+html[data-look] .xf>.xl>span{font-size:14.5px;font-weight:600;color:#F3F1EC}
+html[data-look] .xf>.xl>small{font-size:12.5px;color:rgba(243,241,236,.55);margin-top:-3px}
+html[data-look] .xf input,html[data-look] .xf select{margin:0!important}
+html[data-look] .xf .chips{padding:0!important;flex-wrap:wrap;gap:6px}
+html[data-look] .xf .chip{min-height:38px;padding:8px 14px;font-size:14px}
+html[data-look] .xf .xcalc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html[data-look] .xf .xcalc label{font-size:12.5px;color:rgba(243,241,236,.6);margin:0}
+html[data-look] .xf .xtot{display:flex;align-items:baseline;justify-content:space-between;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);font-size:13.5px;color:rgba(243,241,236,.7)}
+html[data-look] .xf .xtot b{white-space:nowrap;font-family:'Archivo',system-ui,sans-serif;font-size:26px;font-weight:900;font-stretch:72%;color:#F3F1EC}
+html[data-look] .xf .xtot small{display:block;font-size:12px;color:rgba(243,241,236,.5);margin-top:2px}
+html[data-look] .xf .xsw{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06)}
+html[data-look] .xf .xsw b{display:block;font-size:14.5px}.xf .xsw small{font-size:12.5px;color:rgba(243,241,236,.55)}
+html[data-look] .xf .xsw i{position:relative;flex:none;width:50px;height:30px;border-radius:15px;background:rgba(255,255,255,.16);transition:background .22s}
+html[data-look] .xf .xsw i::after{content:"";position:absolute;left:2px;top:2px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .25s cubic-bezier(.3,1.3,.5,1)}
+html[data-look] .xf .xsw.on i{background:var(--ac)}html[data-look] .xf .xsw.on i::after{transform:translateX(20px)}
+html[data-look] .xf .xssb{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:14px;border:1px dashed rgba(255,255,255,.18)}
+html[data-look] .xf .xssb p{margin:0;font-size:13px;color:rgba(243,241,236,.7)}
+html[data-look] .xf .xssl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;font-weight:700}
+html[data-look] .xf .xssl span{padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--ac) 25%,transparent)}
+html[data-look] .xf .xssl em{font-style:normal;opacity:.5}
+html[data-look] .xf .xbtns{display:flex;gap:8px;margin-top:4px}.xf .xbtns .btn{flex:1;margin:0}
+.kbd{position:fixed;right:12px;z-index:200;padding:9px 18px;border-radius:999px;border:0;background:#F3F1EC;color:#141412;font:inherit;font-size:15px;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.4);display:none}
+.kbd.on{display:block}
+/* the weekly wrap-up fits on one screen */
+#sheet .mwc:has(.wkr)>h2{margin-top:14px}
+#sheet .wkr{gap:8px!important;margin:10px 0!important}#sheet .wkr>div{padding:10px 6px!important}#sheet .wkr b{font-size:26px!important}#sheet .wkr small{font-size:12px!important}
+#sheet .mwc:has(.wkr) p.sm{font-size:13px;margin:6px 2px}
+#sheet .mwc:has(.wkr) .fopt{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+#sheet .mwc:has(.wkr) .fopt button{padding:11px 12px!important;min-height:0!important;margin:0!important;position:relative}
+#sheet .mwc:has(.wkr) .fopt button b{font-size:14px}#sheet .mwc:has(.wkr) .fopt button small{font-size:12px}
+#sheet .mwc:has(.wkr) .fopt button>span[aria-hidden]{position:absolute;top:8px;right:10px}
+#sheet .mwc:has(.wkr) [data-a=wkno]{display:none!important}
+#sheet .mwc:has(.wkr) [data-a=wkok]{margin-top:12px}
+#sheet .wkh{display:none}
+#sheet .mwc:has(.wkr) .wkft{background:none!important;box-shadow:none!important;border:0!important;padding-top:4px!important}
+/* the loading screen */
+html[data-look] #ov{background:radial-gradient(90% 60% at 80% 0%,color-mix(in srgb,var(--ac) 35%,transparent),transparent 60%),color-mix(in srgb,var(--tone0,#121212) 92%,transparent)!important;backdrop-filter:blur(24px)!important}
+html[data-look] #ov .ringw{display:none!important}
+html[data-look] #ov .lw{display:flex;flex-direction:column;align-items:center;gap:26px;max-width:320px;margin:0 auto}
+html[data-look] #ov .lw svg{width:92px;height:46px;overflow:visible}
+html[data-look] #ov .lw path{fill:none;stroke:#F3F1EC;stroke-width:3;stroke-linecap:round;stroke-dasharray:120;stroke-dashoffset:120;animation:lwdraw 1.6s cubic-bezier(.65,0,.35,1) infinite}
+html[data-look] #ov .lw path+path{animation-delay:.18s;opacity:.55}html[data-look] #ov .lw path+path+path{animation-delay:.36s;opacity:.3}
+@keyframes lwdraw{0%{stroke-dashoffset:120}50%{stroke-dashoffset:0}100%{stroke-dashoffset:-120}}
+html[data-look] #ov #q{font-family:'Archivo',system-ui,sans-serif;font-size:30px;font-weight:900;font-stretch:76%;line-height:1.05;letter-spacing:-.005em;text-transform:none;animation:lwq .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lwq{from{opacity:0;transform:translateY(8px)}}
+html[data-look] #ov .lwa{font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);min-height:16px;margin-top:-14px}
+html[data-look] #ov .lwb{width:160px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
+html[data-look] #ov .lwb i{display:block;height:100%;width:0;background:#F3F1EC;border-radius:2px}
+html[data-look] #ov.on .lwb i{animation:lwfill 3.4s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes lwfill{to{width:100%}}
+@media (prefers-reduced-motion:reduce){html[data-look] #ov .lw path{animation:none;stroke-dashoffset:0}html[data-look] #ov #q{animation:none}}`;document.head.appendChild(st)})();
+// the exercise form
+const XTT=[['Target Reps','Reps'],['Rep Range','A range'],['Until Failure','To failure'],['Time Under Tension','Timed'],['Custom','Something else']];
+const XEQ=[['Bar','Barbell'],['Free Weights','Dumbbells'],['Machine','Machine'],['Body Weight','Bodyweight']];
+function xWeightBox(u){const eq=X.eq;
+ if(eq==='Bar'){const bar=X.bar===''||X.bar==null?(u==='lb'?45:20):+X.bar;if(X.pl==null&&+X.w>0)X.pl=Math.max(0,(+X.w-bar)/2);const pl=+X.pl||0,tot=bar+2*pl;
+  return`<div class="xl"><span>How heavy?</span><small>Tell Swell the bar and what goes on each side. It adds it up.</small><div class="xcalc"><label>The bar (${u})<input type="number" inputmode="decimal" step="0.5" data-b="X.bar" value="${esc(X.bar===''||X.bar==null?bar:X.bar)}"></label><label>On each side (${u})<input type="number" inputmode="decimal" step="0.5" data-b="X.pl" value="${X.pl==null?'':esc(X.pl)}" placeholder="e.g. 20"></label></div>
+  <div class="xtot"><span>Total on the bar<small data-xpl>${pl?esc(plates(pl))+' each side':'Just the bar'}</small></span><b data-xtot>${tot} ${u}</b></div></div>`}
+ if(eq==='Body Weight')return`<label class="xl"><span>Adding any weight?</span><small>A vest, a belt or a dumbbell between your feet. Leave it empty if not.</small><input type="number" inputmode="decimal" step="0.5" data-b="X.w" value="${esc(X.w)}" placeholder="${u}"></label>`;
+ return`<label class="xl"><span>${eq==='Free Weights'?'How heavy is each dumbbell?':'What’s the stack set to?'}</span><input type="number" inputmode="decimal" step="0.5" data-b="X.w" value="${esc(X.w)}" placeholder="${u}"></label>`}
+function xTargetBox(){const t=X.t||'Target Reps';
+ const val=t==='Until Failure'?'<small>Each set goes until you can’t do another rep.</small>':t==='Custom'?`<input placeholder="e.g. 5 lengths or 40 metres" data-b="X.cv" value="${esc(X.cv??X.v??'')}">`:t==='Rep Range'?`<div class="xcalc"><label>From<input type="number" inputmode="numeric" data-b="X.v1" value="${esc(X.v1)}" placeholder="8"></label><label>To<input type="number" inputmode="numeric" data-b="X.v2" value="${esc(X.v2)}" placeholder="12"></label></div>`:`<input type="number" inputmode="numeric" data-b="X.v" value="${esc(X.v)}" placeholder="${t==='Time Under Tension'?'Seconds':'e.g. 10'}">`;
+ return`<div class="xl"><span>${t==='Time Under Tension'?'How long is each set?':'How many reps each set?'}</span><div class="chips">${XTT.map(([k,l])=>`<button class="chip ${t===k?'on':''}" data-a="xtt" data-i="${k}">${l}</button>`).join('')}</div>${val}</div>`}
+function xSuperBox(d){const L=d.ex,me=X.ei,others=L.map((e,i)=>({e,i})).filter(o=>o.i!==me);if(!others.length)return'';
+ const on=!!X.ssOn,M=X.ssM||[];const names=M.map(i=>L[i]&&L[i].n).filter(Boolean);
+ return`<button class="xsw ${on?'on':''}" data-a="xsst"><span><b>Part of a superset?</b><small>Exercises done back to back, then a rest</small></span><i></i></button>
+ ${on?`<div class="xssb"><p>Which exercises go with it?</p><div class="chips">${others.map(o=>`<button class="chip ${M.includes(o.i)?'on':''}" data-a="xssm" data-i="${o.i}">${esc(o.e.n||o.e.act||'Exercise')}</button>`).join('')}</div>
+  ${names.length?`<div class="xssl">${names.map(n=>`<span>${esc(n)}</span><em>+</em>`).join('')}<span>${esc(X.n||'This one')}</span></div>`:''}
+  <label class="xl" style="margin:0"><span style="font-size:13.5px">Rest after each round (seconds)</span><input type="number" inputmode="numeric" data-b="X.gro" value="${esc(X.gro??'')}" placeholder="Uses the day’s rest time"></label></div>`:''}`}
+function xForm(d){const cardio=X.eq==='Cardio',u=U(),rest=(()=>{try{return D.days[D.sel].rest}catch(_){return null}})();
+ let cf='';if(cardio){cf=cardioFields().replace('>Activity<','>What are you doing?<').replace('>Style<','>Steady or intervals?<').replace('Duration (min)','How long? (minutes)').replace('Work (sec)','Work (seconds)').replace('Rest (sec)','Rest (seconds)').replace(/<div class="row">/g,'<div class="xcalc">')}
+ return`<h2>${X.ei!=null?'Edit exercise':'Add exercise'}</h2><div class="xf">
+ <div class="seg"><button class="${cardio?'':'on'}" data-a="xk" data-i="Strength">Strength</button><button class="${cardio?'on':''}" data-a="xk" data-i="Cardio">Cardio</button></div>
+ <label class="xl"><span>${cardio?'Give it a name (optional)':'What’s the exercise?'}</span><input placeholder="${cardio?'e.g. Hill walk':'e.g. Bench press'}" data-b="X.n" value="${esc(X.n)}"></label>
+ ${cardio?cf:`<label class="xl"><span>How many sets?</span><input type="number" inputmode="numeric" min="1" data-b="X.s" value="${esc(X.s)}" placeholder="e.g. 3"></label>
+ ${xTargetBox()}
+ <div class="xl"><span>What are you using?</span><div class="chips">${XEQ.map(([k,l])=>`<button class="chip ${X.eq===k?'on':''}" data-a="xeq" data-i="${k}">${l}</button>`).join('')}</div></div>
+ ${xWeightBox(u)}`}
+ <div class="prev" ${X.n?'':'hidden'}>${X.n?prevX():''}</div>
+ ${xSuperBox(d)}
+ ${cardio?'':`<label class="xl"><span>Need more or less rest after this one?</span><small>Leave it empty to use the rest time for the whole day.</small><input type="number" inputmode="numeric" data-b="X.ro" placeholder="Seconds" value="${esc(X.ro)}"></label>`}
+ <label class="xl"><span>Anything to remember?</span><input placeholder="e.g. Bench at height 3, slow on the way down" data-b="X.o" value="${esc(X.o)}"></label>
+ ${X.err?`<p class="err">${X.err}</p>`:''}
+ <div class="xbtns"><button class="btn on" data-a="addx2">${X.ei!=null?'Save exercise':'Add to '+esc(d.name)}</button>${X.ei!=null?'<button class="btn" data-a="xcancel">Cancel</button>':''}</div></div>`}
+function xDress(){if(!S.nat||!NAT[S.nat]||tab!=='plan'||!D)return;const b=$('#app [data-a=addx2]');if(!b)return;const card=b.closest('.card');if(!card||card.querySelector('.xf'))return;const d=D.days[D.sel];if(!d)return;
+ if(X.eq==null)X.eq='Bar';if(X.ssOn==null){const L=d.ex,i=X.ei;if(i!=null&&L[i]&&L[i].g){X.ssOn=true;X.ssM=L.map((e,j)=>e.g===L[i].g&&j!==i?j:-1).filter(j=>j>=0);const a=L.findIndex(e=>e.g===L[i].g);X.gro=L[a]&&L[a].ro||''}else{X.ssOn=false;X.ssM=[]}}
+ card.innerHTML=xForm(d)}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{xDress()}catch(e){console.warn(e)}return r}}
+// live total as you type
+document.addEventListener('input',e=>{const t=e.target;if(!t.matches||!t.matches('.xf [data-b="X.pl"],.xf [data-b="X.bar"]'))return;setTimeout(()=>{const u=U(),bar=X.bar===''||X.bar==null?(u==='lb'?45:20):+X.bar,pl=+X.pl||0,tot=bar+2*pl;X.w=tot;const a=$('.xf [data-xtot]'),b=$('.xf [data-xpl]');if(a)a.textContent=`${tot} ${u}`;if(b)b.textContent=pl?plates(pl)+' each side':'Just the bar'},0)},true);
+// chips and switches
+window.addEventListener('click',e=>{const el=e.target.closest('.xf [data-a=xtt],.xf [data-a=xeq],.xf [data-a=xsst],.xf [data-a=xssm]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='xtt')X.t=el.dataset.i;
+ if(a==='xeq'){X.eq=el.dataset.i;if(X.eq!=='Bar')X.pl=null}
+ if(a==='xsst'){X.ssOn=!X.ssOn;if(!X.ssOn)X.ssM=[]}
+ if(a==='xssm'){const i=+el.dataset.i;X.ssM=X.ssM||[];X.ssM=X.ssM.includes(i)?X.ssM.filter(x=>x!==i):[...X.ssM,i]}
+ const y=scrollY;render();scrollTo(0,y)},true);
+// a new look resets the form's own memory
+window.addEventListener('click',e=>{if(e.target.closest('[data-a=xedit],[data-a=xcancel],[data-a=sel]')){X.ssOn=null;X.ssM=[];X.pl=null}},true);
+// saving: the old "chain to the one above" superset is replaced by the group you picked
+{let P=null;
+ window.addEventListener('click',e=>{const el=e.target.closest('.xf [data-a=addx2]');if(!el||!D)return;const L=D.days[D.sel].ex;
+  if(X.eq==='Bar'&&X.pl!=null){const u=U(),bar=X.bar===''||X.bar==null?(u==='lb'?45:20):+X.bar;X.bar=bar;X.w=bar+2*(+X.pl||0)}
+  P={day:D.sel,n0:L.length,ei:X.ei,on:!!X.ssOn,M:(X.ssM||[]).slice(),gro:X.gro,sets:X.s,keep:L.slice()};X.ss=false},true);
+ document.addEventListener('click',e=>{if(!P)return;const p=P;P=null;setTimeout(()=>{try{if(!D)return;const L=D.days[p.day].ex;const added=p.ei==null?(L.length>p.n0?L[L.length-1]:null):L[p.ei];if(!added||X.err)return;
+   // take it out of any old group
+   const oldG=added.g;added.g=undefined;if(oldG){const rest=L.filter(x=>x.g===oldG);if(rest.length<2)rest.forEach(x=>x.g=undefined)}
+   if(p.on&&p.M.length){const members=p.M.map(i=>p.keep[i]).filter(x=>x&&L.includes(x));if(members.length){const g=members.find(x=>x.g)?.g||('g'+Date.now());
+     // everyone in the group, kept together in plan order, with this one at the end
+     const grp=[...new Set([...L.filter(x=>x.g===g||members.includes(x)),added])].filter(x=>x!==added).concat([added]);
+     const first=Math.min(...grp.map(x=>L.indexOf(x)).filter(i=>i>=0));const restL=L.filter(x=>!grp.includes(x));restL.splice(Math.min(first,restL.length),0,...grp);L.splice(0,L.length,...restL);
+     grp.forEach(x=>{x.g=g;if(added.t!=='Cardio'&&x.t!=='Cardio'&&+p.sets)x.s=p.sets});if(p.gro!==''&&p.gro!=null)grp[0].ro=p.gro}}
+   X.ssOn=null;X.ssM=[];X.pl=null;save();render()}catch(_){}},0)},true)}
+// the keyboard: drag down to put it away, and a Done button in reach
+(function(){const b=document.createElement('button');b.className='kbd';b.textContent='Done';b.setAttribute('aria-label','Hide the keyboard');document.body.appendChild(b);
+ const isTx=el=>el&&(el.tagName==='TEXTAREA'||el.tagName==='INPUT'&&!/^(checkbox|radio|range|button|submit|color|file|date|time)$/.test(el.type));
+ const place=()=>{const a=document.activeElement;if(!isTx(a)){b.classList.remove('on');return}const v=window.visualViewport;const top=v?v.offsetTop+v.height:innerHeight;b.style.top=(top-52)+'px';b.classList.add('on')};
+ document.addEventListener('focusin',()=>setTimeout(place,60));document.addEventListener('focusout',()=>setTimeout(place,60));
+ if(window.visualViewport){visualViewport.addEventListener('resize',place);visualViewport.addEventListener('scroll',place)}
+ b.addEventListener('pointerdown',e=>{e.preventDefault()});b.addEventListener('click',e=>{e.preventDefault();const a=document.activeElement;a&&a.blur&&a.blur();b.classList.remove('on')});
+ let y0=null;document.addEventListener('touchstart',e=>{y0=isTx(document.activeElement)&&!isTx(e.target)?e.touches[0].clientY:null},{passive:true});
+ document.addEventListener('touchmove',e=>{if(y0==null)return;if(e.touches[0].clientY-y0>40){const a=document.activeElement;a&&a.blur&&a.blur();y0=null}},{passive:true})})();
+// the weekly wrap-up: tap a focus again to clear it; Start with none picked means no focus
+// (the wrap-up's own tap handler runs first and stops the click, so these act on pointer events around it)
+{let CLR=null;window.addEventListener('pointerdown',e=>{const el=e.target.closest('#sheet [data-a=wkf]');CLR=el&&el.classList.contains('on')?el:null;
+  const k=e.target.closest('#sheet [data-a=wkok]');if(k&&!k.dataset.i)k.dataset.a='wkno'},true);
+ window.addEventListener('pointerup',e=>{const el=e.target.closest('#sheet [data-a=wkf]');if(!el)return;const c=CLR===el;CLR=null;const ok=$('#sheet [data-a=wkok]');
+  setTimeout(()=>{if(c){el.classList.remove('on');const m=el.querySelector('span[aria-hidden]');m&&m.remove();if(ok){ok.dataset.i='';ok.textContent='Start the week, no focus'}}else if(ok)ok.textContent='Start the week'},40)},true)}
+{const _s=sheet;sheet=function(h){const r=_s.apply(this,arguments);try{if(h&&$('#sheet .wkr')){const p=[...document.querySelectorAll('#sheet p.sm')].find(x=>/Pick one focus/.test(x.textContent));if(p&&!p.querySelector('small'))p.insertAdjacentHTML('beforeend',' <small style="font-weight:500;opacity:.6">· tap again to clear</small>')}}catch(_){}return r}}
+// the loading screen: a quote, who said it, a wave drawing itself, a line filling
+QUOTES.splice(0,QUOTES.length,'YEAH BUDDY!','Light weight, baby!','The last three or four reps is what makes the muscle grow.','It’s still your set!','I’ll be back. For leg day.','May the gains be with you.','You shall not pass… on leg day.','Houston, we have a PR.','Show me the gains!','You’re gonna need a bigger plate.','To failure, and beyond!','I feel the need. The need for feed.','Here’s looking at you, quads.','Just keep lifting, just keep lifting.','There’s no place like the gym.','Why so serious? It’s only cardio.','Say hello to my little gains.','I see dead lifts.','Gains incoming…','Plan locked. Excuses cancelled.');
+const QWHO={'YEAH BUDDY!':'Ronnie Coleman','Light weight, baby!':'Ronnie Coleman','The last three or four reps is what makes the muscle grow.':'Arnold Schwarzenegger','It’s still your set!':'CT Fletcher','I’ll be back. For leg day.':'The Terminator, sort of','May the gains be with you.':'Star Wars, sort of','You shall not pass… on leg day.':'Gandalf, sort of','Houston, we have a PR.':'Apollo 13, sort of','Show me the gains!':'Jerry Maguire, sort of','You’re gonna need a bigger plate.':'Jaws, sort of','To failure, and beyond!':'Toy Story, sort of','I feel the need. The need for feed.':'Top Gun, sort of','Here’s looking at you, quads.':'Casablanca, sort of','Just keep lifting, just keep lifting.':'Finding Nemo, sort of','There’s no place like the gym.':'The Wizard of Oz, sort of','Why so serious? It’s only cardio.':'The Dark Knight, sort of','Say hello to my little gains.':'Scarface, sort of','I see dead lifts.':'The Sixth Sense, sort of'};
+(function(){const ov=$('#ov'),q=$('#q');if(!ov||!q)return;const box=q.parentElement;const lw=document.createElement('div');lw.className='lw';lw.innerHTML='<svg viewBox="0 0 92 46" aria-hidden="true"><path d="M2 30c10-14 20-14 30 0s20 14 30 0 20-14 28 0"/><path d="M2 38c10-10 20-10 30 0s20 10 30 0 20-10 28 0"/><path d="M2 22c10-12 20-12 30 0s20 12 30 0 20-12 28 0"/></svg>';
+ box.insertBefore(lw,box.firstChild);lw.appendChild(q);const a=document.createElement('div');a.className='lwa';lw.appendChild(a);const bar=document.createElement('div');bar.className='lwb';bar.innerHTML='<i></i>';lw.appendChild(bar);
+ new MutationObserver(()=>{const t=q.textContent;a.textContent=QWHO[t]?'— '+QWHO[t]:'';q.style.animation='none';void q.offsetWidth;q.style.animation=''}).observe(q,{childList:true,characterData:true,subtree:true});
+ new MutationObserver(()=>{if(ov.classList.contains('on')){const i=bar.firstChild;i.style.animation='none';void i.offsetWidth;i.style.animation=''}}).observe(ov,{attributes:true,attributeFilter:['class']})})();
+// switching session on the Workout page: no flash, just the card swapping quietly
+{let quiet=0;document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('select[data-b="W.k"]'))quiet=Date.now()},true);
+ const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(Date.now()-quiet<600&&tab==='plan'){document.querySelectorAll('#app .fx-in,#app [class*=fx-]').forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.style.animation='none'});const h=$('#app .whero');h&&h.animate([{opacity:.4},{opacity:1}],{duration:180,easing:'ease-out'})}}catch(_){}return r}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
