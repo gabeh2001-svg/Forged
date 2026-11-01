@@ -6457,7 +6457,7 @@ natApply();
 // - Style sits between a cartoon and a render: a solid body with a darker depth gradient, a bright meniscus line and
 //   soft highlights (the cues people use to read a surface as liquid; Fleming 2014, "Visual perception of materials"),
 //   a few rising bubbles, and numbers that wobble when they're under the surface.
-// - The spill merges droplets into one liquid with a "goo" filter (blur then sharpen the edge), pours from the corner
+// - The spill merges droplets into one liquid (a metaball field, shaded so its top edge catches the light), pours from the corner
 //   nearest the middle of the screen, runs over the tops of the widgets below and drains off the bottom. Shake to wash it
 //   away. It plays once when you cross your goal. With Reduce Motion on there's no movement and no spill.
 window.LIQUID=1;
@@ -6467,9 +6467,8 @@ window.LIQUID=1;
 .lq .lqh{position:absolute;top:12px;left:14px;right:56px;z-index:2;background:none;border:0;padding:0;color:inherit;text-align:left;font:inherit}
 .lq .lqb{position:absolute;top:8px;right:8px;z-index:2;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.28);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;padding:0}
 .wd[data-id=water].lqon,.wd[data-id=caf].lqon{padding:0}
-#lqspill{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:45;pointer-events:none;filter:url(#lqgoo)}`;document.head.appendChild(st);
- const sv=document.createElementNS('http://www.w3.org/2000/svg','svg');sv.setAttribute('width','0');sv.setAttribute('height','0');sv.style.position='absolute';
- sv.innerHTML='<filter id="lqgoo"><feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b"/><feColorMatrix in="b" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"/></filter>';document.body.appendChild(sv)})();
+#lqspill{position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:45;pointer-events:none}`;document.head.appendChild(st);
+})();
 const LQK={water:{top:[150,214,240],bot:[30,104,160],ink:'#F3F8FB',lab:'Water',ic:'drop'},caf:{top:[140,92,60],bot:[52,30,18],crema:[214,176,132],ink:'#FBF4EC',lab:'Caffeine',ic:'cup'}};
 const LQS={};// per kind: springs, bubbles, tilt
 const lqVal=k=>{if(k==='water'){const v=watOn(),g=watGoal();return{v,g,big:L1(v),unit:`of ${L1(g)} L`}}const v=cafLog(today()).reduce((a,x)=>a+x.mg,0),g=cafLim();return{v,g,big:String(v),unit:`of ${g} mg`}};
@@ -6480,11 +6479,13 @@ function lqState(k){let s=LQS[k];if(!s){const n=36;s=LQS[k]={n,h:new Float32Arra
  return`<div class="lq" data-liquid="${l.id}"><canvas data-a="lqtap" data-i="${l.id}" aria-hidden="true"></canvas><button class="lqh" data-a="lqopen" data-i="${l.id}" aria-label="Open ${K.lab}">${wlab(K.ic,K.lab)}</button><button class="lqb" ${add}>+</button></div>`}}
 // draw
 function lqBind(){document.querySelectorAll('#app [data-liquid]').forEach(el=>{const c=el.querySelector('canvas');el.closest('.wd')&&el.closest('.wd').classList.add('lqon');const k=el.dataset.liquid,s=lqState(k),r=c.getBoundingClientRect();if(!r.width)return;
- const dpr=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(r.width*dpr)){c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr)}c._k=k;c._s=s;s.c=c;s.dpr=dpr;s.live=performance.now()});lqKick()}
+ const dpr=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(r.width*dpr)){c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr)}if(c._k!==k){c._k=k;s.live=performance.now();lqObs().observe(c)}c._s=s;s.c=c;s.dpr=dpr});lqKick()}
+let LQIO=null;const lqObs=()=>LQIO||(LQIO=new IntersectionObserver(es=>{es.forEach(e=>{e.target._vis=e.isIntersecting});lqKick()}));
+const LQV={};const lqV=k=>{const n=performance.now(),o=LQV[k];if(o&&n-o.t<400)return o.V;const V=lqVal(k);LQV[k]={t:n,V};return V};
 let LQRAF=0,LQLAST=0;
 function lqKick(){if(!LQRAF)LQRAF=requestAnimationFrame(lqFrame)}
 function lqFrame(now){LQRAF=0;const dt=Math.min(40,now-(LQLAST||now))/16.7;LQLAST=now;let busy=false;
- for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected)continue;const V=lqVal(k),target=Math.max(.04,Math.min(.97,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
+ for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected||c._vis===false)continue;const V=lqV(k),target=Math.max(.04,Math.min(.97,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
   s.tilt+=(s.tt-s.tilt)*.08*dt;s.t+=dt;let e=Math.abs(target-s.lvl)*40+Math.abs(s.tt-s.tilt)*10;
   if(!LRM()){const n=s.n,st=Math.min(dt,1.5);for(let i=0;i<n;i++){s.v[i]+=(-.02*s.h[i]-.035*s.v[i])*st;s.h[i]+=s.v[i]*st;if(s.h[i]>10)s.h[i]=10;if(s.h[i]<-10)s.h[i]=-10}
    const L=s.L||(s.L=new Float32Array(n)),R=s.R||(s.R=new Float32Array(n));for(let p=0;p<3;p++){for(let i=0;i<n;i++){L[i]=i>0?.12*(s.h[i]-s.h[i-1]):0;R[i]=i<n-1?.12*(s.h[i]-s.h[i+1]):0}for(let i=0;i<n;i++){if(i>0){s.v[i-1]+=L[i]*st;s.h[i-1]+=L[i]*.5}if(i<n-1){s.v[i+1]+=R[i]*st;s.h[i+1]+=R[i]*.5}}}
@@ -6512,7 +6513,7 @@ function lqDraw(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s
  x.fillStyle='rgba(255,255,255,.8)';for(let j=0;j<2;j++){const i=((s.t*.15+j*13)|0)%n;x.beginPath();x.ellipse(i/(n-1)*W,sy(i)+3*d,6*d,1.4*d,0,0,Math.PI*2);x.fill()}
  // the numbers: crisp above the surface, wobbling beneath it
  const off=lqText(k,V,W,H,d);x.save();path();x.lineTo(W,0);x.lineTo(0,0);x.closePath();x.clip();x.drawImage(off,0,0);x.restore();
- x.save();path();x.lineTo(W,H);x.lineTo(0,H);x.closePath();x.clip();x.globalAlpha=.92;const step=2*d;for(let y=0;y<H;y+=step){const dx=LRM()?0:Math.sin(y*.09/d+s.t*.12)*1.8*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}x.restore()}
+ x.save();path();x.lineTo(W,H);x.lineTo(0,H);x.closePath();x.clip();x.globalAlpha=.92;const step=3*d;let ys=H;for(let i=0;i<n;i+=3)ys=Math.min(ys,sy(i));for(let y=Math.max(0,(ys|0)-step);y<H;y+=step){const dx=LRM()?0:Math.sin(y*.09/d+s.t*.12)*1.8*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}x.restore()}
 const LQT={};
 function lqText(k,V,W,H,d){const key=[k,V.big,V.unit,W,H].join('|');let o=LQT[k];if(o&&o._key===key)return o;o=LQT[k]=document.createElement('canvas');o._key=key;o.width=W;o.height=H;const x=o.getContext('2d');
  const big=Math.min(H*.36,W*.3);x.fillStyle=LQK[k].ink;x.shadowColor='rgba(0,0,0,.35)';x.shadowBlur=6*d;x.textBaseline='alphabetic';
@@ -6522,27 +6523,50 @@ function lqText(k,V,W,H,d){const key=[k,V.big,V.unit,W,H].join('|');let o=LQT[k]
 function lqSplash(k,fx,amt){const s=LQS[k];if(!s)return;const i=Math.max(0,Math.min(s.n-1,Math.round(fx*(s.n-1))));for(let j=-2;j<=2;j++){const q=i+j;if(q>=0&&q<s.n)s.v[q]+=amt*(1-Math.abs(j)*.3)}s.live=performance.now();lqKick()}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lqtap],[data-a=lqopen]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const k=el.dataset.i;
  if(el.dataset.a==='lqopen'){fsOpen(k);return}const r=el.getBoundingClientRect();lqSplash(k,(e.clientX-r.left)/r.width,4.5);try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true);
-let LQSH=0;MOT.listeners.add(ev=>{const g=ev.accelerationIncludingGravity,a=ev.acceleration;if(g&&g.x!=null){const o=(screen.orientation&&screen.orientation.angle)||0,gx=o===90?-g.y:o===-90||o===270?g.y:g.x;const tt=Math.max(-.7,Math.min(.7,-gx/9.8));for(const k in LQS){const s=LQS[k];if(Math.abs(tt-s.tt)>.01){s.tt=tt;s.live=performance.now()}}lqKick()}
+let LQSH=0;MOT.listeners.add(ev=>{const g=ev.accelerationIncludingGravity,a=ev.acceleration;if(g&&g.x!=null){const o=(screen.orientation&&screen.orientation.angle)||0,gx=o===90?-g.y:o===-90||o===270?g.y:g.x;const tt=Math.max(-.7,Math.min(.7,-gx/9.8));for(const k in LQS){const s=LQS[k];if(Math.abs(tt-s.tt)>.035){s.tt=tt;s.live=performance.now();lqKick()}}}
  if(a&&a.x!=null){const m=Math.hypot(a.x,a.y,a.z);if(m>16&&Date.now()-LQSH>600){LQSH=Date.now();for(const k in LQS)lqSplash(k,Math.random(),8);spillShake()}}});
 // spill: when today's total crosses the goal
 const LQP={};
 function lqCheck(){for(const k of ['water','caf']){const el=$(`#app [data-liquid="${k}"]`);const V=lqVal(k),was=LQP[k];LQP[k]=V.v;if(!el||was==null||LRM())continue;if(was<V.g&&V.v>=V.g||was>=V.g&&V.v>was)spill(el,k,Math.min(2.5,Math.max(.4,(V.v-Math.max(was,V.g))/Math.max(1,V.g)*8)))}}
-let SP=null;
-function spill(el,k,amt){const r=el.getBoundingClientRect(),cx=innerWidth/2,left=r.left+r.width/2>cx,ox=left?r.left+8:r.right-8,oy=r.bottom-6;
- let c=$('#lqspill');if(!c){c=document.createElement('canvas');c.id='lqspill';document.body.appendChild(c)}const d=Math.min(2,devicePixelRatio||1);c.width=innerWidth*d;c.height=innerHeight*d;
- const K=LQK[k];SP={c,d,k,K,ox,oy,dir:left?-1:1,left:Math.round(70*amt),P:[],t:0,src:el};lqSplash(k,left?0:1,6);
- el.closest('.wd').animate([{transform:'none'},{transform:`translateX(${left?-2:2}px) rotate(${left?-.6:.6}deg)`},{transform:'none'}],{duration:320,easing:'ease-out'});
- if(!SPRAF)SPRAF=requestAnimationFrame(spFrame)}
-let SPRAF=0;
-function spillShake(){if(!SP)return;SP.P.forEach(p=>{p.vx+=(Math.random()-.5)*14;p.vy-=Math.random()*4});SP.left=0}
-function spFrame(){SPRAF=0;const S2=SP;if(!S2)return;const {c,d,K}=S2,x=c.getContext('2d');S2.t++;
- for(let i=0;i<(S2.t%2?2:1)&&S2.left>0;i++){S2.left--;S2.P.push({x:S2.ox,y:S2.oy,vx:S2.dir*(1.2+Math.random()*1.6),vy:.5+Math.random(),r:5+Math.random()*5})}
- const rects=[...document.querySelectorAll('#app .wd,#app .card')].filter(e=>e!==S2.src.closest('.wd')).map(e=>e.getBoundingClientRect()).filter(r=>r.bottom>0&&r.top<innerHeight);
- S2.P.forEach(p=>{p.vy+=.32;p.vx*=.995;const ny=p.y+p.vy,nx=p.x+p.vx;
-  for(const r of rects){if(nx>r.left+6&&nx<r.right-6&&p.y+p.r<=r.top+2&&ny+p.r>r.top){p.vy*=-.12;p.y=r.top-p.r;const mid=(r.left+r.right)/2;const sd=nx<mid?-1:1;p.vx+=sd*.5+(Math.random()-.5)*.3;if(Math.abs(p.vx)<.9)p.vx=sd*.9;p.vx*=.95;p.x+=p.vx;p.on=1;return}}
-  p.x=nx;p.y=ny});S2.P=S2.P.filter(p=>p.y-p.r<innerHeight+20&&p.x>-30&&p.x<innerWidth+30);
- x.clearRect(0,0,c.width,c.height);S2.P.forEach(p=>{const g=x.createRadialGradient(p.x*d-p.r*d*.3,p.y*d-p.r*d*.4,0,p.x*d,p.y*d,p.r*d*1.2);g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(.25,`rgb(${K.top})`);g.addColorStop(1,`rgb(${K.bot})`);x.fillStyle=g;x.beginPath();x.arc(p.x*d,p.y*d,p.r*d*1.25,0,Math.PI*2);x.fill()});
- if(S2.P.length||S2.left>0)SPRAF=requestAnimationFrame(spFrame);else{c.remove();SP=null}}
+let SP=null,SPRAF=0;
+// The spill lives in page coordinates, so it scrolls with the widgets; it's drawn as one liquid by summing a soft field
+// for each drop on a small canvas (half resolution) and shading it, which is far cheaper on a phone than a blur filter.
+function spill(el,k,amt){spillStop();const r=el.getBoundingClientRect(),cx=innerWidth/2,left=r.left+r.width/2>cx,Y=scrollY;
+ const c=document.createElement('canvas');c.id='lqspill';document.body.appendChild(c);const q=.5;c.width=Math.ceil(innerWidth*q);c.height=Math.ceil(innerHeight*q);
+ const K=LQK[k];SP={c,q,k,K,ox:left?r.left+10:r.right-10,oy:r.bottom-8+Y,dir:left?-1:1,left:Math.round(46*amt),P:[],t:0,t0:performance.now(),src:el.closest('.wd'),R:[],rt:0,img:null};
+ lqSplash(k,left?0:1,6);SP.src&&SP.src.animate([{transform:'none'},{transform:`translateX(${left?-2:2}px) rotate(${left?-.6:.6}deg)`},{transform:'none'}],{duration:320,easing:'ease-out'});
+ SPRAF=requestAnimationFrame(spFrame)}
+function spillStop(){if(SPRAF)cancelAnimationFrame(SPRAF);SPRAF=0;const c=$('#lqspill');c&&c.remove();SP=null}
+function spillShake(){if(!SP)return;SP.P.forEach(p=>{p.on=-1;p.vx+=(Math.random()-.5)*12;p.vy=-2-Math.random()*4});SP.left=0}
+function spRects(S2){const Y=scrollY;S2.R=[...document.querySelectorAll('#app .wd,#app>.card,#app .card.cal,#app .whero,#app .pills2')].filter(e=>e!==S2.src&&e.offsetParent).map(e=>{const r=e.getBoundingClientRect();return{l:r.left+6,r:r.right-6,t:r.top+Y+1}})}
+function spFrame(now){SPRAF=0;const S2=SP;if(!S2||document.hidden)return spillStop();const age=now-S2.t0;S2.t++;
+ if(S2.t%20===1)spRects(S2);
+ for(let i=0;i<2&&S2.left>0;i++){S2.left--;S2.P.push({x:S2.ox+(Math.random()-.5)*4,y:S2.oy,vx:S2.dir*(.8+Math.random()*1.4),vy:.4+Math.random(),r:4.5+Math.random()*4,on:-1})}
+ const Y=scrollY,H=innerHeight,W=innerWidth;
+ for(const p of S2.P){
+  if(p.on>=0){const R=S2.R[p.on];if(!R){p.on=-1;continue}const mid=(R.l+R.r)/2;p.vx+=(p.x<mid?-1:1)*.14;p.vx*=.975;if(Math.abs(p.vx)<1.1)p.vx=(p.x<mid?-1.1:1.1);p.x+=p.vx;p.y=R.t-p.r*(.45+(p.r%1)*.3);if(p.x<R.l||p.x>R.r){p.on=-1;p.vy=.5}continue}
+  p.vy=Math.min(p.vy+.38,14);const ny=p.y+p.vy;p.x+=p.vx;p.vx*=.995;
+  for(let j=0;j<S2.R.length;j++){const R=S2.R[j];if(p.x>R.l&&p.x<R.r&&p.y+p.r*.55<=R.t+1&&ny+p.r*.55>=R.t){p.on=j;p.vy=0;p.vx*=.7;break}}
+  if(p.on<0)p.y=ny}
+ S2.P=S2.P.filter(p=>p.y-Y<H+30&&p.x>-30&&p.x<W+30&&p.y-Y>-200);
+ // after a few seconds everything lets go and drains away
+ if(age>3800)S2.P.forEach(p=>{if(p.on>=0){p.on=-1;p.vy=.5}});
+ spDraw(S2,Y,Math.max(0,Math.min(1,(7000-age)/1200)));
+ if((S2.P.length||S2.left>0)&&age<8000)SPRAF=requestAnimationFrame(spFrame);else spillStop()}
+function spDraw(S2,Y,fade){const {c,q,K}=S2,x=c.getContext('2d'),cw=c.width,ch=c.height;x.clearRect(0,0,cw,ch);if(!S2.P.length)return;
+ let x0=cw,y0=ch,x1=0,y1=0;const ps=[];for(const p of S2.P){const R=p.r*2.3*q,px=p.x*q,py=(p.y-Y)*q;if(py<-R||py>ch+R)continue;ps.push([px,py,R]);x0=Math.min(x0,px-R);y0=Math.min(y0,py-R);x1=Math.max(x1,px+R);y1=Math.max(y1,py+R)}
+ x0=Math.max(0,x0|0);y0=Math.max(0,y0|0);x1=Math.min(cw,Math.ceil(x1));y1=Math.min(ch,Math.ceil(y1));const w=x1-x0,h=y1-y0;if(w<3||h<3)return;
+ const F=new Float32Array(w*h);for(const [px,py,R] of ps){const R2=R*R,ax=Math.max(x0,px-R|0),bx=Math.min(x1-1,px+R|0),ay=Math.max(y0,py-R|0),by=Math.min(y1-1,py+R|0);
+  for(let yy=ay;yy<=by;yy++){const dy=yy-py,row=(yy-y0)*w;for(let xx=ax;xx<=bx;xx++){const dx=xx-px,d2=dx*dx+dy*dy;if(d2<R2){const u=1-d2/R2;F[row+xx-x0]+=u*u}}}}
+ const im=x.createImageData(w,h),D=im.data,T=K.top,B=K.bot;
+ for(let yy=1;yy<h-1;yy++)for(let xx=1;xx<w-1;xx++){const i=yy*w+xx,f=F[i];if(f<.3)continue;
+  const a=Math.min(1,(f-.3)/.18),gx=F[i+1]-F[i-1],gy=F[i+w]-F[i-w],gl=Math.hypot(gx,gy)+1e-4,lit=(gx*.45+gy*.9)/gl,rim=Math.max(0,1-(f-.3)/.9);
+  const hi=Math.pow(Math.max(0,lit),4)*rim,sh=Math.max(0,-lit)*rim*.35,dp=Math.min(1,(f-.3)*.8);
+  const o=i*4;for(let ch2=0;ch2<3;ch2++){let v=T[ch2]+(B[ch2]-T[ch2])*dp;v=v+(255-v)*hi*.85;D[o+ch2]=v*(1-sh)}D[o+3]=(a*.86+hi*.14)*255*fade}
+ x.putImageData(im,x0,y0)}
+// stop the spill whenever you leave Home or open a page or sheet
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(SP&&(tab!=='home'||$('#fs')||!SP.src.isConnected))spillStop()}catch(_){}return r}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)spillStop()});
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'){lqBind();lqCheck()}}catch(_){}return r}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)lqKick()});
 // the water and caffeine pages can switch the liquid widgets off
@@ -6550,7 +6574,131 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)lqKick()})
 try{const g=SETG.find(x=>x[0]==='Look and feel');if(g&&!g[1].includes('lqset'))g[1].push('lqset')}catch(_){}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=lqset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();S.liquid=S.liquid===false;save();const s=el.querySelector('small');if(s)s.textContent=S.liquid===false?'Off':'On';render()},true);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',h:'Liquid widgets',p:'Your water and coffee now fill their widgets. Tap to splash, tilt your phone to slosh, and go over your goal to see what happens.'},{i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Looks from nature',p:'Pick a look in Settings: Basalt, Tide pool, Matcha, Flamingo and more, with dark glass widgets.'})}
-
+/* ===== v87: Home rebuilt for the looks (day header, workout card, one big number per widget) ===== */
+// Research notes for this block:
+// - One main figure per widget, with a small quiet label: size is picked up before conscious search, so the number you
+//   need is found at a glance (Healey and Enns 2012, IEEE TVCG); Apple's widget guidance says the same, one key piece
+//   of information, readable in a second (Apple HIG, Widgets).
+// - The header leads with today's plan instead of a greeting. Seeing the "when and where" of a plan (push day, shop at
+//   5pm, bed by 10:30pm) works like an implementation intention, which roughly doubles follow-through in studies
+//   (Gollwitzer and Sheeran 2006, meta-analysis of 94 studies, d = 0.65).
+// - The workout card puts Start and the first sets on Home: fewer steps to begin raises the chance a behaviour happens
+//   (Fogg 2009, behaviour model, ability), and a cover you chose makes it feel like yours.
+// - Macros are bars on a shared scale, because length is read more accurately than arcs or angles (Cleveland and
+//   McGill 1984, JASA).
+// Only applies with a look picked (Settings > Look); Classic Swell is unchanged.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] #app>.hdr{margin:4px 2px 12px}
+html[data-look] .hdr .row{align-items:flex-end!important;flex-wrap:nowrap!important;gap:12px}
+html[data-look] .hdr .row>div:first-child{flex:1;min-width:0}
+html[data-look] .hdr .stkb{flex:none}
+html[data-look] .hdr .tl{font-family:'Archivo',system-ui,sans-serif;font-size:44px;font-weight:900;font-stretch:74%;letter-spacing:-.01em;line-height:.95}
+html[data-look] .hdr .tl::after{display:none}
+html[data-look] .hsub{display:block;margin-top:6px;font-size:14px;line-height:1.35;color:var(--dim)}
+html[data-ground=l] .hsub{color:#5E5B53}
+html[data-look] .hdr .stkb{flex-direction:column;align-items:flex-end!important;gap:0!important;padding:0 0 2px 10px!important}
+html[data-look] .hdr .stkb b{font-family:'Archivo',system-ui,sans-serif;font-size:30px;font-weight:900;font-stretch:70%;line-height:1;color:var(--ac)}
+html[data-look] .hdr .stkb small{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--dim)}
+html[data-ground=l] .hdr .stkb b{color:var(--p)}
+html[data-look] .hdr .stkb svg{display:none}
+html[data-look] #app>.card.cal{padding:8px 6px!important;border-radius:20px;margin-bottom:12px}
+html[data-look] #app>.card.cal>.row,html[data-look] #app>.card.cal>p.sm{display:none!important}
+html[data-look] .cal .cw7{margin:0;gap:4px}
+html[data-look] .cal .cday{min-height:0;padding:7px 0 8px;gap:4px;border-radius:13px;justify-content:flex-start}
+html[data-look] .cal .cday small{font-size:11px;font-weight:700;letter-spacing:.06em;color:rgba(243,241,236,.6)}
+html[data-look] .cal .cday b{font-family:'Archivo',system-ui,sans-serif;font-size:20px;font-weight:800;font-stretch:75%}
+html[data-look] .cal .cday .rest{display:none}
+html[data-look] .cal .cday .chipw{position:relative;margin:2px auto 0;width:16px;height:4px;padding:0;border-radius:2px;font-size:0;background:var(--ac);border:0}
+html[data-look] .cal .cday .chipw::before{content:"";position:absolute;inset:-12px -8px}
+html[data-look] .cal .cday .dts{padding-top:2px;height:6px}
+html[data-look] .cal .cday.now{background:#F3F1EC}
+html[data-look] .cal .cday.now small,html[data-look] .cal .cday.now b{color:#141412}
+html[data-look] .whero{position:relative;height:300px;border-radius:24px;overflow:hidden;margin:0 0 12px;isolation:isolate}
+html[data-look] .whero.nocv{height:214px}
+html[data-look] .whero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
+html[data-look] .whero .wbg{position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--ac) 38%,transparent),transparent 60%),radial-gradient(90% 80% at 0% 100%,color-mix(in srgb,var(--ac) 16%,transparent),transparent 65%),var(--cg)}
+html[data-look] .whero .wlb{position:absolute;top:13px;left:15px;font-size:10.5px;font-weight:700;letter-spacing:.12em;color:rgba(243,241,236,.75);text-transform:uppercase}
+html[data-look] .whp{position:absolute;left:10px;right:10px;bottom:10px;padding:14px;border-radius:17px;background:rgba(12,12,12,.55);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.14);color:#F3F1EC}
+html[data-look] .whp .top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+html[data-look] .whp .k{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--ac);text-transform:uppercase}
+html[data-look] .whp .n{display:block;font-family:'Archivo',system-ui,sans-serif;font-size:30px;font-weight:900;font-stretch:72%;line-height:1;text-transform:uppercase;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-look] .whp .go{flex:none;height:48px;padding:0 22px;border:0;border-radius:14px;background:var(--ac);color:var(--on-ac);font:inherit;font-size:15px;font-weight:800;letter-spacing:.04em}
+html[data-look] .whp .go.ghost{background:rgba(255,255,255,.12);color:#F3F1EC;font-weight:700;letter-spacing:0;font-size:14px}
+html[data-look] .whp .ex{margin-top:10px;font-size:13.5px}
+html[data-look] .whp .ex div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.10)}
+html[data-look] .whp .ex span+span{color:rgba(243,241,236,.66);white-space:nowrap}
+html[data-look] .whp p{margin:8px 0 0;font-size:13.5px;color:rgba(243,241,236,.72)}
+html[data-look] .grid{grid-auto-rows:156px}
+html[data-look] .wd{padding:13px 15px!important;border-radius:22px!important}
+html[data-look] .wd .wl{gap:0}
+html[data-look] .wd .wl svg{display:none}
+html[data-look] .wd .wl span{font-size:10.5px!important;color:rgba(243,241,236,.66)}
+html[data-look] .wd .wm{gap:2px}
+html[data-look] .wd .wm b,html[data-look] .wd .cyw .big{font-family:'Archivo',system-ui,sans-serif;font-size:34px!important;font-weight:900;font-stretch:70%;line-height:1;letter-spacing:-.005em}
+html[data-look] .wd .wm span,html[data-look] .wd .cyw .sm{font-size:12.5px!important;color:rgba(243,241,236,.66)!important}
+html[data-look] .wd .cyw .big span{font-family:system-ui,sans-serif;font-stretch:100%}
+html[data-look] .wd .wsb{height:4px;margin-top:8px;background:rgba(255,255,255,.10)}
+html[data-look] .wd .spd{gap:6px;margin:0 0 8px}
+html[data-look] .wd .spd i{width:20px;height:20px}
+html[data-look] .wd .fpw .wl{display:flex;justify-content:space-between;margin-bottom:4px}
+html[data-look] .wd .fpw .wi{display:flex;align-items:center;gap:12px;padding:7px 0;border-top:1px solid rgba(255,255,255,.09);font-size:15px}
+html[data-look] .wd .fpw .wi .ck{width:22px;height:22px}
+html[data-look] .wcal{display:flex;align-items:center;gap:16px;height:100%}
+html[data-look] .wcal .l{flex:none;display:flex;flex-direction:column;gap:2px;min-width:0}
+html[data-look] .wcal .l .wl{margin-bottom:auto}
+html[data-look] .wcal .big{font-family:'Archivo',system-ui,sans-serif;font-size:40px;font-weight:900;font-stretch:70%;line-height:1;margin-top:18px}
+html[data-look] .wcal small{font-size:12.5px;color:rgba(243,241,236,.66)}
+html[data-look] .wcal .r{flex:1;display:flex;flex-direction:column;gap:9px;min-width:0}
+html[data-look] .wcal .r div div:first-child{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+html[data-look] .wcal .r span+span{color:rgba(243,241,236,.66)}
+html[data-look] .wcal .tr{height:5px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden}
+html[data-look] .wcal .tr i{display:block;height:100%;border-radius:3px}
+html[data-look] .wcal1{display:flex;flex-direction:column;height:100%}
+html[data-look] .wcal1 .big{margin-top:auto;font-family:'Archivo',system-ui,sans-serif;font-size:34px;font-weight:900;font-stretch:70%;line-height:1}
+html[data-look] .wcal1 small{font-size:12.5px;color:rgba(243,241,236,.66)}
+html[data-look] .wcal1 .tr{height:4px;border-radius:2px;background:rgba(255,255,255,.10);margin-top:8px;overflow:hidden}
+html[data-look] .wcal1 .tr i{display:block;height:100%;background:var(--ac)}
+html[data-look] .nav button span,html[data-look] .nav button small{text-transform:uppercase;font-size:10.5px;font-weight:800;letter-spacing:.06em}
+html[data-look] #app>.card.motc{padding:12px 14px!important;display:flex;align-items:center;gap:12px;border-radius:20px}
+html[data-look] #app>.card.motc h2{font-size:15px;margin:0}
+html[data-look] #app>.card.motc p{display:none}
+html[data-look] #app>.card.motc>*:last-child{margin:0 0 0 auto;display:flex;gap:6px;flex:none}
+html[data-look] #app>.card.motc .btn{margin:0;padding:8px 13px;font-size:14px;width:auto;white-space:nowrap;min-height:0}
+html[data-look] .wd[data-id=supp] .wm b{font-size:24px!important;font-stretch:78%}
+html[data-look] .wd[data-id=supp] .wm span{-webkit-line-clamp:1}
+html[data-look] .wd .fpw .wl{width:100%}
+html[data-look] .wd .fpw .wl em{margin-left:auto;font-style:normal;font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;color:rgba(243,241,236,.66)}
+html[data-look] .wd[style*="grid-row:span 1"] .fpw .wi:nth-of-type(n+4){display:none}`;document.head.appendChild(st)})();
+// today's plan in a line: workout, shop day, period, bedtime
+function hdrLine(t){const r=realToday(),out=[],wd=new Date(t+'T12:00').getDay();
+ if(t!==r)out.push(new Date(t+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}));
+ try{const d=dayWork(t);if(d)out.push(/day$/i.test(d.name)?d.name:d.name+' day');else if(activePlan())out.push('Rest day')}catch(_){}
+ try{const sd=shopDay();if(sd!=null&&sd===wd)out.push('shop today');else if(sd!=null&&t===r&&sd===(wd+1)%7)out.push('shop tomorrow')}catch(_){}
+ try{if(typeof cycOn==='function'&&cycOn()){const c=cycNow(t);if(c&&c.ph==='period')out.push('period day '+c.day)}}catch(_){}
+ try{if(t===r){const b=bedEff();if(b!=null)out.push('bed by '+hm12f(Math.round(b/5)*5))}}catch(_){}
+ if(!out.length)out.push('Nothing planned');return out.map((x,i)=>i?x:x[0].toUpperCase()+x.slice(1)).join(' · ')}
+function hdrDress(){if(!S.nat||!NAT[S.nat]||tab!=='home')return;const H=$('#app>.hdr');if(!H||H.dataset.v87)return;H.dataset.v87=1;const t=today();
+ const tl=H.querySelector('.tl');if(tl&&tl.firstChild&&tl.firstChild.nodeType===3)tl.firstChild.nodeValue=WK7[new Date(t+'T12:00').getDay()];
+const row=H.querySelector('.row');if(row&&!H.querySelector('.hsub')){const L=row.firstElementChild;const w=document.createElement('div');row.insertBefore(w,L);w.appendChild(L);w.insertAdjacentHTML('beforeend',`<span class="hsub">${esc(hdrLine(t))}</span>`)}
+ const sb=H.querySelector('.stkb');if(sb){const n=(sb.textContent||'').trim();sb.innerHTML=`<b>${esc(n)}</b><small>DAY STREAK</small>`}}
+// the workout card that replaces the Start workout button
+function wHero(){const t=today();let p=null,d=null;try{p=activePlan();d=dayWork(t)}catch(_){}
+ if(!p)return`<div class="whero nocv"><div class="wbg"></div><span class="wlb">Workout</span><div class="whp"><div class="top"><div><span class="k">No plan yet</span><span class="n">Build a plan</span></div><button class="go" data-a="tab" data-i="plan">Create</button></div><p>Add your workout days once, and Swell fills your week.</p></div></div>`;
+ if(!d){let n=null;try{n=nextSession()}catch(_){}return`<div class="whero nocv"><div class="wbg"></div><span class="wlb">Workout</span><div class="whp"><div class="top"><div><span class="k">Recovery</span><span class="n">Rest day</span></div><button class="go ghost" data-a="wsel">Train anyway</button></div>${n?`<p>Next: ${esc(n.name)} ${n.d===addDays(t,1)?'tomorrow':'on '+wkName(n.d)}.</p>`:''}</div></div>`}
+ const ex=d.ex||[],sets=ex.reduce((a,e)=>a+(+e.s||3),0),min=Math.max(10,Math.round(sets*2.6/5)*5),img=typeof cvImg==='function'?cvImg(d):null;
+ const ln=e=>`<div><span>${esc(e.n)}</span><span>${e.s?e.s+' × ':''}${esc(String(e.v||''))}${e.t&&/Time/i.test(e.t)?' s':''}</span></div>`;
+ return`<div class="whero ${img?'':'nocv'}">${img?`<img src="${img}" alt="">`:'<div class="wbg"></div>'}<span class="wlb">Workout</span><div class="whp"><div class="top"><div style="min-width:0"><span class="k">${ex.length} exercise${ex.length===1?'':'s'} · ${min} min</span><span class="n">${esc(d.name)}</span></div><button class="go" data-a="wsel">START</button></div><div class="ex">${ex.slice(0,2).map(ln).join('')}</div></div></div>`}
+{const _h=home;home=function(){let h=_h.apply(this,arguments);if(!S.nat||!NAT[S.nat]||typeof ED!=='undefined'&&ED)return h;try{h=h.replace(/<button class="btn big on" data-a="wsel">[^<]*<\/button>/,wHero())}catch(_){}return h}}
+// calories with macro bars
+{const _wd=wd;wd=function(l){if(!l||l.id!=='macros'||!S.nat||!NAT[S.nat]||l.h===2)return _wd.apply(this,arguments);
+ const m=S.macros[today()]||{},g=S.setup||{},kc=Math.round(+m.k||0),gk=+g.k||0,left=Math.max(0,gk-kc),pc=(v,G)=>G>0?Math.min(100,v/G*100):0;
+ if(l.w===1)return`<div class="wcal1">${wlab('plate','Calories')}<span class="big">${kc.toLocaleString('en-GB')}</span><small>${gk?(left?left.toLocaleString('en-GB')+' left':'Goal reached'):'kcal today'}</small><div class="tr"><i style="width:${pc(kc,gk).toFixed(0)}%"></i></div></div>`;
+ const bar=(k,n,c)=>{const v=Math.round(+m[k]||0),G=+g[k]||0;return`<div><div><span>${n}</span><span>${v} / ${G||'-'} g</span></div><div class="tr"><i style="width:${pc(v,G).toFixed(0)}%;background:${c}"></i></div></div>`};
+ return`<div class="wcal"><div class="l">${wlab('plate','Calories')}<span class="big">${kc.toLocaleString('en-GB')}</span><small>${gk?(left?`${left.toLocaleString('en-GB')} left of ${gk.toLocaleString('en-GB')}`:'Goal reached'):'kcal today'}</small></div><div class="r">${bar('p','Protein','#F3F1EC')}${bar('f','Fat','rgba(243,241,236,.5)')}${bar('c','Carbs','var(--ac)')}</div></div>`}}
+// shopping: the count sits beside the label instead of a line at the bottom
+{const _wd=wd;wd=function(l){let h=_wd.apply(this,arguments);if(!l||l.id!=='shop'||!S.nat||!NAT[S.nat]||typeof h!=='string')return h;try{const vis=(h.match(/class="wi"/g)||[]).length,mm=h.match(/>and (\d+) more<\/span>/),n=vis+(mm?+mm[1]:0);
+ h=h.replace(/<span class="sm" style="margin:auto 0 0">and \d+ more<\/span>/,'');if(n)h=h.replace(/(<div class="fpw"><div class="wl">[\s\S]*?<\/span>)/,`$1<em>${n} to get</em>`)}catch(_){}return h}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{hdrDress()}catch(_){}return r}}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
@@ -6570,6 +6718,7 @@ if(PREVIEW){
   if(!(S.recipes||[]).length)S.recipes=[{id:'rdemo1',n:'Chicken burrito bowl',sv:4,items:[{q:'680 g chicken breast',nm:'Chicken breast',g:680,k:1027,p:211,f:21,c:0,ri:null},{q:'185 g basmati rice',nm:'Rice',g:185,k:650,p:14,f:2,c:145,ri:null},{q:'1 can black beans',nm:'Black beans',g:240,k:310,p:21,f:1,c:56,ri:null},{q:'2 peppers',nm:'Peppers',g:300,k:60,p:3,f:1,c:12,ri:null}],steps:['Cook the rice.','Grill the chicken and slice it.','Warm the beans and divide everything between four bowls.']},{id:'rdemo2',n:'Overnight oats',sv:1,items:[{q:'80 g oats',nm:'Oats',g:80,k:300,p:10,f:6,c:50,ri:null},{q:'200 ml semi-skimmed milk',nm:'Milk',g:200,k:94,p:7,f:3,c:9,ri:null},{q:'1 banana',nm:'Banana',g:120,k:107,p:1,f:0,c:27,ri:null}],steps:['Mix everything in a jar and leave it in the fridge overnight.']}];
   const D=SHD();if(!D.stores.length){D.stores.push({id:'sdemo',n:'Tesco',items:[]});D.cur='sdemo'}
   try{const ws=fpWs(0);FP().d[ws]=[{r:'rdemo2',sv:1},{r:'rdemo1',sv:1}];FP().d[addDays(ws,1)]=[{r:'rdemo2',sv:1},{r:'rdemo1',sv:1}];fpSync()}catch(_){}}
+ if(!S.prevW2){S.prevW2=1;try{ensureSched();const a=activePlan();if(a){S.sch[t]=0;a.days[0].ex=[{n:'Bench press',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Overhead press',eq:'Barbell',s:3,t:'Reps',v:8},{n:'Incline dumbbell press',eq:'Dumbbell',s:3,t:'Reps',v:10},{n:'Lateral raise',eq:'Dumbbell',s:3,t:'Reps',v:15},{n:'Tricep pushdown',eq:'Cable',s:3,t:'Reps',v:12}]}}catch(_){}}
  save();
 }
 
