@@ -8229,6 +8229,184 @@ window.addEventListener('click',e=>{const el=e.target.closest('#sheet [data-a=mn
 {const _n=natApply;natApply=function(){const r=_n.apply(this,arguments);try{const L=S.nat&&NAT[S.nat];if(L){const m=String(L.cg).match(/rgba\(([^)]+),\s*([\d.]+)\)/);if(m){const rgb=m[1].split(',').map(v=>Math.round(+v*.55));const a=L.g==='l'?.9:.8;document.documentElement.style.setProperty('--cgs',`rgba(${rgb.join(',')},${a})`)}}}catch(_){}return r}}
 try{natApply()}catch(_){}
 (function(){const st=document.createElement('style');st.textContent=`html[data-look] .card,html[data-look] .wd{background:var(--grain),linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.03) 30%,rgba(255,255,255,0) 55%,rgba(0,0,0,.18)),var(--cgs,var(--cg))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.5),inset 1px 0 0 rgba(255,255,255,.05),0 18px 36px -18px rgba(0,0,0,.7),0 2px 6px rgba(0,0,0,.25)!important;border-color:rgba(255,255,255,.09)!important}`;document.head.appendChild(st)})();
+/* ===== v108: cycle phases (including before your period), targets that follow your cycle, foods to have, and how you eat ===== */
+// Research notes for this block:
+// - Appetite does change across the cycle. A meta-analysis of 15 datasets (330 women) found people eat about 168 kcal a
+//   day more in the luteal phase than the follicular phase (Hazell et al. 2025, Nutrition Reviews 83(3):e866). Resting
+//   metabolism is a little higher in the luteal phase too, though the effect is small (Benton et al. 2020, PLoS ONE).
+//   Women with PMS report more hedonic hunger and eat more in the late luteal phase (J Nutritional Science, 150 women).
+// - So targets shift, they don't grow: up to +150 kcal in the 5 days before a period (the window ACOG uses to define
+//   PMS), +50 in the rest of the luteal phase, and the same amount taken back evenly over the period and follicular
+//   days (about 85 kcal on a 28-day cycle). The cycle adds up to the usual target, so goals stay on track. Never below
+//   1,200 kcal on any day (the floor calcEst already uses). Protein stays the same; the shift goes to carbs and fat.
+// - Wording is "a bit more room", never "stricter": flexible control of eating goes with lower weight and fewer binges,
+//   rigid control with more (Westenhoefer et al. 1999, Int J Eating Disorders).
+// - Hormonal contraception usually evens out or stops these hormone changes, so targets stay steady for people who use
+//   it; only the food ideas still follow the period.
+// - Foods by phase: iron is lost with blood (NHS: heavy periods are a common cause of iron deficiency), and vitamin C
+//   helps absorb it; calcium (1,200 mg a day cut PMS symptoms by 48% against 30% on placebo, Thys-Jacobs et al. 1998,
+//   AJOG); smaller meals every 2 to 3 hours, regular exercise and less alcohol for PMS (NHS 111 Wales self-help).
+//   Omega-3 from oily fish, walnuts or chia may ease period pain (several small trials), so it's included as a food idea.
+// - Diet preference: personalised advice changes diets more than general advice (Food4Me, Celis-Morales et al. 2017,
+//   Int J Epidemiology), and an idea someone can't eat is no idea at all. Vegan ideas follow the NHS vegan diet page
+//   (calcium-set tofu, fortified drinks and cereals, yeast extract for B12, iodine and vitamin D to plan for). Asked
+//   once as a card on the Diet page, never as a pop-up, and changeable in Settings. Allergies: ideas leave them out, but
+//   the copy says to check labels, since Swell can't promise a product is free of anything.
+(function(){const st=document.createElement('style');st.textContent=`
+.cyfood .cyph{margin:2px 2px 0}.cyfood .cyph b{display:block;font-size:17px;margin-bottom:3px}
+.cyfood .cyst2{margin:14px 0 0;padding:12px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
+.cyfood .cyst2 .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cyfood .cyst2 .top b{font-family:'Archivo',system-ui;font-size:26px;font-weight:900;font-stretch:72%;letter-spacing:-.01em}
+.cyfood .cyst2 .top span{font-size:12.5px;color:var(--dim);text-align:right}
+.cyfood svg.cyk{display:block;width:100%;height:58px;margin:10px 0 4px}
+.cyfood .cykl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim)}
+.cyfood h3{font-size:14px;margin:16px 2px 0}
+.cyfood .mnc2 button{flex-basis:40%}
+.cyfood .npr{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)}
+.cyfood .chips{padding:8px 0 0}
+.cyfood .gp{font-size:12.5px;color:var(--dim);margin:12px 2px 0}
+.cykc{display:inline-flex;align-items:center;gap:6px;margin:12px 0 0;padding:7px 12px;border-radius:999px;border:1px solid rgba(255,111,145,.45);background:rgba(255,111,145,.12);color:inherit;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+.cykc i{width:7px;height:7px;border-radius:50%;background:#ff6f91;flex:none}
+.dpc h2{margin-bottom:4px}.dpc .chips{padding:8px 0 2px}.dpc .row2{display:flex;gap:8px;margin-top:12px}.dpc .row2 .btn{flex:1;margin:0}
+.dps .lab2{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:16px 2px 6px}
+.dps .chips{padding:0}
+.dgrid{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;overflow:visible!important;flex-wrap:wrap}
+.dgrid .chip{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;margin:0;border-radius:16px;padding:10px 14px;text-align:left;white-space:normal;min-height:52px}
+.dgrid .chip small{display:block;font-size:11.5px;opacity:.7;font-weight:500}
+.dgrid .chip.on small{display:block!important;color:inherit!important;opacity:.65}
+.dpc .dgrid .chip{min-height:44px;font-size:14px}.dpc .row2 .btn{padding:11px 10px;font-size:14px;min-height:0}`;document.head.appendChild(st)})();
+
+/* ---------- 1. how you eat ---------- */
+const DIETS=[['omni','I eat everything','Meat, fish and plants'],['flexi','Flexitarian','Mostly plants'],['pesc','Pescatarian','Fish, no meat'],['veg','Vegetarian','No meat or fish'],['vegan','Vegan','No animal foods'],['carn','Carnivore','Animal foods only']];
+const DAVOID=[['pork','Pork'],['beef','Beef'],['dairy','Dairy'],['egg','Eggs'],['gluten','Gluten'],['nuts','Tree nuts'],['peanut','Peanuts'],['fish','Fish'],['shell','Shellfish'],['soya','Soya']];
+const DTAG=[['pork',/\bpork|bacon|\bham\b|gammon|sausage|chorizo/i],['beef',/beef|steak|\bmince\b/i],['meat',/\bpork|bacon|\bham\b|gammon|sausage|chorizo|beef|steak|\bmince\b|chicken|turkey|lamb|duck|liver|meat\b/i],
+ ['fish',/salmon|tuna|sardine|mackerel|\bcod\b|haddock|\bfish|anchov|trout|oily fish/i],['shell',/prawn|shrimp|mussel|\bcrab|lobster|scallop/i],
+ ['dairy',/(?<!oat |soya |almond |plant |coconut )\bmilk\b(?! chocolate)|yoghurt|yogurt|cheddar|cheese|\bbutter\b(?!nut| beans)|kefir|\bcream\b|hot chocolate made with milk/i],
+ ['egg',/\beggs?\b/i],['honey',/honey/i],['gluten',/bread|wheat|pasta|cereal|toast|couscous|barley|\brye\b|bagel|\bwrap|\boats?\b|porridge|marmite|yeast extract/i],
+ ['nuts',/almond|cashew|brazil|walnut|pistachio|hazelnut|pecan|macadamia|mixed nuts/i],['peanut',/peanut/i],['soya',/tofu|soya|\bsoy\b|edamame|tempeh/i]];
+const dTags=n=>{const t=new Set();DTAG.forEach(([k,r])=>{if(r.test(n))t.add(k)});if(t.has('pork')||t.has('beef'))t.add('meat');return t};
+const dietOf=()=>(S.setup&&S.setup.diet)||'omni';
+function dietBan(){const d=dietOf(),b=new Set((S.setup&&S.setup.avoid)||[]);if(d==='pesc'||d==='veg'||d==='vegan')b.add('meat');if(d==='veg'||d==='vegan'){b.add('fish');b.add('shell')}if(d==='vegan'){b.add('dairy');b.add('egg');b.add('honey')}return b}
+const ANIMAL=['meat','fish','shell','dairy','egg'];
+function dietOK(n){const t=dTags(n),b=dietBan();for(const x of t)if(b.has(x))return false;if(dietOf()==='carn'&&!ANIMAL.some(a=>t.has(a)))return false;return true}
+// keep what fits, top up from extra pools, plants first for flexitarians; never empty (falls back to the original list)
+function dietPick(L,...more){const seen=new Set(),out=[];[L,...more].forEach(A=>(A||[]).forEach(n=>{const k=n.toLowerCase();if(seen.has(k)||!dietOK(n))return;seen.add(k);out.push(n)}));
+ if(dietOf()==='flexi')out.sort((a,b)=>ANIMAL.some(x=>dTags(a).has(x))-ANIMAL.some(x=>dTags(b).has(x)));return out.length?out:L.slice()}
+const dietName=()=>{const d=DIETS.find(x=>x[0]===dietOf()),av=((S.setup&&S.setup.avoid)||[]).map(k=>(DAVOID.find(x=>x[0]===k)||[0,k])[1].toLowerCase());return(S.setup&&S.setup.diet?d[1]:'Not set')+(av.length?` · no ${av.join(', ')}`:'')};
+
+// nutrient picks, plant and animal top-ups
+const FOODXP={kp:['Butter beans','Dried apricots','Sweet potatoes'],ca:['Calcium-set tofu','Fortified soya drink','Tahini','Kale','Fortified oat milk','Chia seeds'],mg:['Brown rice','Edamame beans','Cashews'],
+ fe:['Kidney beans','Tofu','Pumpkin seeds','Quinoa','Watercress'],zn:['Lentils','Tofu','Quinoa','Hemp seeds'],se:['Mushrooms','Sunflower seeds','Wholemeal bread','Chia seeds'],
+ io:['Fortified plant drink (with iodine)','Iodised salt','Iodine tablets'],va:['Kale','Mango'],vd:['Mushrooms (UV)','Fortified cereal','Fortified soya drink','Vitamin D tablets'],
+ ve:['Hazelnuts','Rapeseed oil'],vk:['Spring greens'],b1:['Brown rice','Edamame beans'],b2:['Fortified cereal','Marmite','Fortified soya drink','Quinoa'],
+ b3:['Peanuts','Brown rice','Mushrooms','Marmite','Quinoa','Wholemeal bread'],b6:['Sunflower seeds','Avocados','Sweet potatoes'],b9:['Edamame beans','Kidney beans'],
+ b12:['Fortified oat milk','Nutritional yeast','Fortified cereal','Marmite','B12 tablets'],vc:['Blackcurrants','Mango']};
+const FOODXA={kp:['Salmon','Milk','Chicken'],ca:['Milk','Cheddar','Sardines','Greek yoghurt'],mg:['Mackerel','Milk','Salmon'],fe:['Beef mince','Lamb','Sardines','Eggs'],zn:['Beef mince','Lamb','Crab','Cheddar'],
+ se:['Tuna','Eggs','Sardines','Cod'],io:['Cod','Milk','Eggs','Haddock'],va:['Eggs','Cheddar','Butter'],vd:['Salmon','Mackerel','Eggs','Sardines'],ve:['Eggs','Salmon','Prawns'],vk:['Cheddar','Eggs','Chicken'],
+ b1:['Pork','Salmon','Trout'],b2:['Milk','Eggs','Greek yoghurt','Beef'],b3:['Chicken','Tuna','Turkey','Salmon'],b6:['Chicken','Salmon','Turkey','Pork'],b9:['Eggs','Cheddar'],b12:['Beef','Salmon','Eggs','Milk'],vc:[]};
+const FOODX0=JSON.parse(JSON.stringify(FOODX)),MNTIP0=JSON.parse(JSON.stringify(MNTIP)),SAVE0=SAVE.slice(),MNF0={};
+try{Object.keys(MN).forEach(k=>{MNF0[k]=MN[k][6]})}catch(_){}
+const SAVEP=['Tofu, tinned beans and lentils are protein for pennies.','Frozen soya beans and peas are a cheap protein top-up for any meal.'];
+function dietApply(){try{Object.keys(FOODX0).forEach(k=>{FOODX[k]=dietPick(FOODX0[k],FOODXP[k],FOODXA[k]).slice(0,6)});
+ Object.keys(MNTIP0).forEach(k=>{if(dietOK(MNTIP0[k][0]))MNTIP[k]=MNTIP0[k];else{const L=FOODX[k]||[];if(L.length)MNTIP[k]=[L[0],L.slice(0,2).join(' or ').toLowerCase()]}});
+ const sv=SAVE0.filter(t=>dietOK(t)||/frozen veg|own-brand|double batch|price per kilo|share ingredients/i.test(t)&&!dTags(t).size);SAVEP.forEach(t=>{if(dietOK(t)&&dietOf()!=='omni'&&dietOf()!=='carn')sv.push(t)});SAVE.splice(0,SAVE.length,...(sv.length?sv:SAVE0));
+ Object.keys(MNF0).forEach(k=>{const s=MNF0[k];if(typeof s!=='string')return;const parts=s.replace(/\.$/,'').split(/,\s*/),keep=parts.filter(dietOK);MN[k][6]=keep.length?keep.join(', ').replace(/^./,c=>c.toUpperCase())+'.':s})}catch(_){}}
+dietApply();
+
+function dietSheet(){const d=S.setup.diet||'',av=S.setup.avoid||[];
+ sheet(`<div class="dps"><h2>How do you eat?</h2><p class="sm" style="margin:4px 2px 0">Swell uses this for food ideas and tips, so it won’t suggest anything you don’t eat.</p>
+ <p class="lab2">Your diet</p><div class="chips dgrid">${DIETS.map(x=>`<button class="chip ${d===x[0]?'on':''}" data-a="dpsty" data-i="${x[0]}">${x[1]}${x[2]?`<small>${x[2]}</small>`:''}</button>`).join('')}</div>
+ <p class="lab2">Leave out (optional)</p><div class="chips">${DAVOID.map(x=>`<button class="chip ${av.includes(x[0])?'on':''}" data-a="dpav" data-i="${x[0]}">${x[1]}</button>`).join('')}</div>
+ <p class="sm" style="margin:12px 2px 0">If you have an allergy, always check the label too. Swell leaves these out of its ideas but can’t promise a product is free of them.</p>
+ <button class="btn big on" data-a="dpsave" style="margin-top:14px">Save</button></div>`)}
+let DPD=null;
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dietpref],[data-a=dpsty],[data-a=dpav],[data-a=dpsave],[data-a=dpskip]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a,i=el.dataset.i;
+ if(a==='dietpref'){DPD={diet:S.setup.diet||'',avoid:(S.setup.avoid||[]).slice()};dietSheet();return}
+ if(a==='dpskip'){S.dietAsk=1;save();render();return}
+ const inCard=!!el.closest('.dpc');if(!DPD||inCard&&!$('#sheet .dps'))DPD=DPD||{diet:S.setup.diet||'',avoid:(S.setup.avoid||[]).slice()};
+ if(a==='dpsty'){DPD.diet=i;el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===el));if(inCard){S.setup.diet=i;S.dietAsk=1;dietApply();save();render();toast('Saved. Food ideas now fit how you eat. Change it any time in Settings.')}return}
+ if(a==='dpav'){const k=DPD.avoid.indexOf(i);if(k>=0)DPD.avoid.splice(k,1);else DPD.avoid.push(i);el.classList.toggle('on',k<0);return}
+ if(a==='dpsave'){S.setup.diet=DPD.diet||'omni';S.setup.avoid=DPD.avoid;S.dietAsk=1;dietApply();save();sheet(null);render();toast('Saved. Food ideas now fit how you eat.');return}},true);
+// Settings row
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=dietpref]')){
+  L.insertAdjacentHTML('beforeend',`<button data-a="dietpref">${ico('<path d="M7 3v8a3 3 0 0 0 3 3v7"/><path d="M10 3v5M4 3v5a3 3 0 0 0 3 3"/><path d="M17 21V3c2.5 1.5 3.5 4 3.5 7s-1.5 4-3.5 4"/>')}<span>How you eat<small>${esc(dietName())}</small></span></button>`);setGroup();try{setDress()}catch(_){}}}catch(_){}return r}}
+try{const g=SETG.find(x=>x[0]==='Your plan and goals');if(g&&!g[1].includes('dietpref'))g[1].splice(Math.max(0,g[1].indexOf('trsheet')+1),0,'dietpref')}catch(_){}
+// asked once on the Diet page, as a card (never a pop-up)
+function dietCard(){return`<div class="card dpc"><h2>How do you eat?</h2><p class="sm" style="margin:0">So food ideas and tips fit you. Tap one.</p><div class="chips dgrid">${DIETS.map(x=>`<button class="chip" data-a="dpsty" data-i="${x[0]}">${x[1]}</button>`).join('')}</div><div class="row2"><button class="btn" data-a="dietpref">Allergies and more</button><button class="btn" data-a="dpskip">Not now</button></div></div>`}
+
+/* ---------- 2. phases, including before your period ---------- */
+CYPH.pms=['Before your period','Many people feel hungrier, more tired or more emotional in the days before a period. That’s hormones, not willpower. Train as you feel and keep meals regular.'];
+CYPH.luteal[0]='Second half of your cycle';
+{const _n=cycNow;cycNow=function(d){const n=_n.apply(this,arguments);if(n&&n.ph==='luteal'&&n.toNext>=0&&n.toNext<=5)n.ph='pms';return n}}
+
+/* ---------- 3. targets that follow your cycle ---------- */
+// one cycle, day by day: what each day adds or takes back, summing to zero
+function cyProfile(){const st=cycStats(),len=Math.max(21,Math.min(40,st.len||28)),pl=Math.max(1,st.pl||5),ovd=len-13,D=[];
+ for(let i=1;i<=len;i++){const toNext=len+1-i,ph=i<=pl?'period':Math.abs(i-ovd)<=1?'ovulation':i<ovd?'follicular':toNext<=5?'pms':'luteal';D.push({i,ph,a:ph==='pms'?150:ph==='luteal'?50:0})}
+ const base=+((S.cyT&&S.cyT.b&&S.cyT.b.k)||S.setup.k)||0,lo=D.filter(x=>x.ph==='period'||x.ph==='follicular'),pos=D.reduce((s,x)=>s+x.a,0);
+ let take=lo.length?pos/lo.length:0;take=Math.min(take,100,Math.max(0,base-1200));const scale=pos?take*lo.length/pos:0;
+ D.forEach(x=>{if(x.a>0)x.a=Math.round(x.a*scale/5)*5;else if(x.ph==='period'||x.ph==='follicular')x.a=-Math.round(take/5)*5});
+ // round-off goes to the first follicular day so the cycle sums to exactly zero
+ const off=D.reduce((s,x)=>s+x.a,0),f=D.find(x=>x.ph==='follicular')||D.find(x=>x.ph==='period');if(f)f.a-=off;return D}
+const cyFoodOn=()=>cycOn()&&!!(S.cyc&&S.cyc.fd)&&S.cyc.hc!=='y';
+function cyAdjToday(){if(!cyFoodOn())return null;const n=cycNow();if(!n||n.ph==='late'||n.day>(n.st.len||28)||!(+S.setup.k>0))return null;const P=cyProfile(),x=P[n.day-1];return x?{a:x.a,ph:x.ph,day:n.day,P}:null}
+function cyTApply(){try{if(!S.setup||!S.setup.done)return;const g=S.setup,T=S.cyT=S.cyT||{};const num=v=>+v||0;
+ if(!T.b)T.b={k:num(g.k),f:num(g.f),c:num(g.c)};if(!T.a)T.a={...T.b};
+ // a target changed somewhere else (Settings, an estimate): that's the new usual target
+ ['k','f','c'].forEach(x=>{if(num(g[x])!==num(T.a[x]))T.b[x]=num(g[x])});
+ const A=cyAdjToday(),a=A?A.a:0,nk=T.b.k+a,nc=T.b.c?Math.max(0,T.b.c+Math.round(a*2/3/4)):T.b.c,nf=T.b.f?Math.max(0,T.b.f+Math.round(a/3/9)):T.b.f;
+ T.adj=a;T.ph=A?A.ph:null;
+ if(num(g.k)!==nk||num(g.c)!==nc||num(g.f)!==nf){if(T.b.k)g.k=nk;if(T.b.c)g.c=nc;if(T.b.f)g.f=nf;T.a={k:num(g.k),f:num(g.f),c:num(g.c)};save()}}catch(_){}}
+{const _r=render;render=function(){cyTApply();return _r.apply(this,arguments)}}
+
+/* ---------- 4. foods to have, by phase ---------- */
+const CYFOOD={
+ period:['During your period','Iron goes out with blood, so iron-rich foods help, more so if your periods are heavy. Have them with vitamin C, like peppers or an orange, to absorb more. Oily fish, walnuts and chia may ease cramps.',
+  ['Red lentils','Spinach','Lean beef mince','Chickpeas','Fortified cereal','Salmon','Kidney beans','Walnuts','Oranges','Dried apricots','Eggs','Tofu','Chia seeds']],
+ follicular:['After your period','Many people feel their strongest now. Protein and fibre-rich carbs fuel harder sessions if you’re up for them.',
+  ['Chicken breast','Greek yoghurt','Eggs','Tofu','Lentils','Oats','Berries','Salmon','Edamame beans','Quinoa','Chickpeas']],
+ ovulation:['Around ovulation','Nothing special needed. Keep meals regular, eat your greens and drink plenty.',
+  ['Broccoli','Berries','Brown rice','Chickpeas','Salmon','Pumpkin seeds','Tofu','Eggs','Spinach']],
+ luteal:['Second half of your cycle','Your body burns a little more now and many people feel hungrier. Slow-release carbs and calcium-rich foods help keep you steady.',
+  ['Oats','Sweet potatoes','Wholemeal bread','Greek yoghurt','Milk','Fortified soya drink','Calcium-set tofu','Bananas','Pumpkin seeds','Brown rice','Kale']],
+ pms:['Before your period','Smaller meals every few hours, slow carbs and calcium can ease PMS. Going easy on salt, caffeine and alcohol helps some people with bloating and mood.',
+  ['Oats','Greek yoghurt','Fortified soya drink','Sweet potatoes','Bananas','Calcium-set tofu','Wholemeal toast','Almonds','Kidney beans','Milk','Pumpkin seeds','Brown rice']]};
+CYFOOD.late=CYFOOD.pms;
+const CYCRAVE=['Dark chocolate, a couple of squares','Greek yoghurt with berries','Popcorn','Toast with peanut butter','Frozen banana','Hot chocolate made with milk','Dates with almond butter','Hot chocolate made with soya drink','Rice cakes with peanut butter','Beef jerky','Cheddar and an apple'];
+function cyKSVG(P,day){const W=300,H=58,mid=30,bw=W/P.length,mx=Math.max(1,...P.map(x=>Math.abs(x.a)));
+ return`<svg class="cyk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>${P.map((x,j)=>{const h=Math.max(2,Math.abs(x.a)/mx*(mid-4)),y=x.a>=0?mid-h:mid,on=x.i===day,col=x.ph==='period'?'#ff6f91':x.a>0?'var(--ac,#ffb36b)':'currentColor';
+  return`<rect x="${(j*bw+bw*.18).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*.64).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${col}" fill-opacity="${on?1:x.a>0?.75:.35}"${on?' stroke="currentColor" stroke-width="1.5"':''}/>`}).join('')}</svg>`}
+function cyFoodCard(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.ph]||CYFOOD.follicular,foods=dietPick(ph[2]).slice(0,8),A=cyAdjToday(),T=S.cyT||{},base=(T.b&&T.b.k)||+S.setup.k||0,hc=c.hc==='y';
+ const crave=(n.ph==='pms'||n.ph==='late')?dietPick(CYCRAVE).slice(0,5):[];
+ let tgt='';
+ if(hc)tgt=`<p class="gp">Hormonal contraception usually evens out these hormone changes, so your targets stay steady. The food ideas still follow your period.</p>`;
+ else if(c.fd&&A){const a=A.a,P=A.P,lab=a>0?`+${a} kcal`:a<0?`${a} kcal`:'Usual target';
+  tgt=`<div class="cyst2"><div class="top"><b>${lab}</b><span>Today’s target ${(+S.setup.k||0).toLocaleString('en-GB')} kcal<br>Usually ${base.toLocaleString('en-GB')}</span></div>${cyKSVG(P,n.day)}<div class="cykl"><span>Period</span><span>Before your period</span></div>
+  <p class="sm" style="margin:10px 0 0">${a>0?'A bit more room today, mostly as carbs. ':a<0?'A little less today, so there’s room before your next period. ':''}Over the whole cycle it adds up to your usual target, so your goal stays on track.</p></div>`}
+ else if(!c.fd)tgt=`<div class="cyst2"><p class="sm" style="margin:0">People eat about 170 kcal a day more in the second half of the cycle, and that’s normal. Swell can give you more room before your period and take a little less on the other days, so the month still adds up to your usual target.</p><button class="btn on" data-a="cyfon" style="margin:12px 0 0;width:100%">Let my targets follow my cycle</button></div>`;
+ return`<div class="card cyfood"><h2>Food and your cycle</h2><div class="cyph"><b>${esc(ph[0])}</b><span class="sm">${esc(ph[1])}</span></div>${tgt}
+ <h3>Foods to have</h3><p class="sm" style="margin:2px 2px 0">Tap one to add it to your shopping list.</p><div class="mnc2">${foods.map(f=>`<button data-a="cyfadd" data-i="${esc(f)}"><b>${esc(f)}</b><small>Add to list</small></button>`).join('')}</div>
+ ${crave.length?`<h3>If cravings hit</h3><div class="mnc2">${crave.map(f=>`<button data-a="cyfadd" data-i="${esc(f.replace(/,.*$/,'').replace(/ made with.*$/,''))}"><b>${esc(f)}</b><small>Add to list</small></button>`).join('')}</div>`:''}
+ <div class="npr"><div><b>Targets follow my cycle</b><small>More room before your period, a little less after. Same total.</small></div><button class="tg ${c.fd?'on':''}" data-a="cyfd" role="switch" aria-checked="${!!c.fd}" aria-label="Targets follow my cycle"></button></div>
+ <p class="sm" style="margin:12px 2px 0">Do you use hormonal contraception (the pill, patch, ring, implant, injection or a hormonal coil)?</p><div class="chips">${[['n','No'],['y','Yes']].map(x=>`<button class="chip ${(c.hc||'n')===x[0]?'on':''}" data-a="cyhc" data-i="${x[0]}">${x[1]}</button>`).join('')}</div>
+ <p class="gp">If PMS or period pain gets in the way of everyday life, a GP can help.</p></div>`}
+{const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{const f=cyFoodCard();if(f)h=h.replace('<div class="card fset">',f+'<div class="card fset">')}catch(_){}return h};FSX.cyc=cycV}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cyfon],[data-a=cyfd],[data-a=cyhc],[data-a=cyfadd]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a,c=CYC();
+ if(a==='cyfon'||a==='cyfd'){c.fd=a==='cyfon'?1:c.fd?0:1;save();render();if(FS==='cyc')fsr();toast(c.fd?(c.hc==='y'?'Saved. With hormonal contraception your targets stay steady.':'Your targets now follow your cycle. Same total each cycle.'):'Your targets are back to the same every day.');return}
+ if(a==='cyhc'){c.hc=el.dataset.i;save();render();if(FS==='cyc')fsr();return}
+ if(a==='cyfadd'){const nm=el.dataset.i,D0=SHD();let st=shStore(D0.cur)||D0.stores[0];if(!st){st={id:'s'+Date.now().toString(36),n:'My shop',items:[]};D0.stores.push(st);D0.cur=st.id}shAdd(st,{n:nm,q:1});save();el.querySelector('small').textContent='Added';el.style.opacity='.6';toast(`${nm} added to your ${st.n} list.`);try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}}},true);
+
+/* ---------- 5. tie-ins: Diet page chip and the how-you-eat card ---------- */
+const CYKT={period:'During your period',follicular:'After your period',pms:'Before your period',luteal:'Second half of your cycle',ovulation:'Around ovulation'};
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&S.user&&S.setup.done){const A=$('#app');
+  const T=S.cyT||{};if(cyFoodOn()&&T.adj&&T.ph){const hero=A.querySelector('.dp');if(hero&&!hero.querySelector('.cykc'))hero.insertAdjacentHTML('beforeend',`<button class="cykc" data-a="cykc"><i></i>${esc(CYKT[T.ph]||'Your cycle')}: ${T.adj>0?'+':''}${T.adj} kcal today</button>`)}
+  if(!S.setup.diet&&!S.dietAsk&&!A.querySelector('.dpc')){const first=A.querySelector('.card.dp');if(first)first.insertAdjacentHTML('afterend',dietCard())}}}catch(_){}return r}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cykc]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();fsOpen('cyc');setTimeout(()=>{const f=$('#fs .cyfood');f&&f.scrollIntoView({block:'start',behavior:'smooth'})},120)},true);
+
+/* ---------- 6. what's new ---------- */
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/>',h:'Food and your cycle',p:'Cycle tracking now shows each phase, including the days before your period, with foods to have for each one. Turn on targets that follow your cycle for a bit more room before your period, balanced over the month.'});
+ R.items.push({i:'<path d="M7 3v8a3 3 0 0 0 3 3v7"/><path d="M10 3v5M4 3v5a3 3 0 0 0 3 3"/><path d="M17 21V3c2.5 1.5 3.5 4 3.5 7s-1.5 4-3.5 4"/>',h:'How you eat',p:'Tell Swell if you’re vegetarian, vegan, pescatarian or anything else, and what to leave out. Food ideas and tips then only suggest things you eat. It’s in Settings, under Your plan and goals.'})}}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
