@@ -9201,23 +9201,24 @@ function obEst(){const u=U(),sx=OB.sex==='f'?'Female':OB.sex==='m'?'Male':'';if(
 function obH(){const u=U(),hu=u==='lb'?'ft':'cm';if(hu==='cm')S.setup.h=+OB.h||S.setup.h||0;else{const t=(+OB.ft||0)*12+(+OB.inch||0);if(t)S.setup.h=Math.round(t*2.54)}S.setup.hu=hu}
 function obStep(){const u=U(),ch=(a,v,l,on)=>`<button class="chip ${on?'on':''}" data-a="${a}" data-i="${v}">${l}</button>`,prog=`<div class="obp">${[...Array(OBN)].map((_,i)=>`<i class="${i<=OB.i?'on':''}"></i>`).join('')}</div>`;
  const skip=`<button class="skip" data-a="obskip">Skip for now</button>`,next=l=>`<button class="btn big on" data-a="obnext">${l||'Next'}</button>`;
- if(OB.i===0)return`${prog}<h1>Hi ${esc(S.user||'')}. A bit about you</h1><p class="why">${LOCK}<span>Used to work out your calories, protein and water. It stays on this phone and is never uploaded.</span></p>
- <div class="card"><span class="lab3">Units</span><div class="chips">${ch('obu','kg','Kilograms',u==='kg')}${ch('obu','lb','Pounds',u==='lb')}</div>
- <span class="lab3">Sex</span><div class="chips">${ch('obsx','f','Female',OB.sex==='f')}${ch('obsx','m','Male',OB.sex==='m')}${ch('obsx','x','Prefer not to say',OB.sex==='x')}</div>
- <div class="two" style="margin-top:14px"><label>Age<input type="number" inputmode="numeric" data-ob="age" value="${esc(OB.age)}" placeholder="e.g. 30"></label><label>Weight (${u})<input type="number" inputmode="decimal" data-ob="w" value="${esc(OB.w)}" placeholder="${u==='lb'?'e.g. 160':'e.g. 70'}"></label></div>
- ${u==='lb'?`<div class="two" style="margin-top:10px"><label>Height (ft)<input type="number" inputmode="numeric" data-ob="ft" value="${esc(OB.ft)}"></label><label>(in)<input type="number" inputmode="numeric" data-ob="inch" value="${esc(OB.inch)}"></label></div>`:`<label style="display:block;margin-top:10px">Height (cm)<input type="number" inputmode="numeric" data-ob="h" value="${esc(OB.h)}" placeholder="e.g. 170"></label>`}</div>
- <div class="act">${next()}${skip}</div>`;
- if(OB.i===1){const r=obEst();return`${prog}<h1>What are you after?</h1><p class="why">${LOCK}<span>This sets your daily target. You can change it any time.</span></p>
+ if(OB.i===0){const seg=`<span class="obseg">${['kg','lb'].map(v=>`<button class="${u===v?'on':''}" data-a="obu" data-i="${v}">${v==='kg'?'kg / cm':'lb / ft'}</button>`).join('')}</span>`;
+ return`${prog}<span class="obey">Hi ${esc(S.user||'')}</span><h1>A bit about you</h1><p class="why">${LOCK}<span>Used to work out your calories, protein and water. It stays on this phone and is never uploaded.</span></p>
+ <div class="card"><div class="obr"><span class="lab3">Sex</span></div><div class="chips">${ch('obsx','f','Female',OB.sex==='f')}${ch('obsx','m','Male',OB.sex==='m')}${ch('obsx','x','Prefer not to say',OB.sex==='x')}</div>
+ <div class="obr"><span class="lab3">Age</span></div><input type="number" inputmode="numeric" data-ob="age" value="${esc(OB.age)}" placeholder="e.g. 30">
+ <div class="obr"><span class="lab3">Weight</span>${seg}</div><input type="number" inputmode="decimal" data-ob="w" value="${esc(OB.w)}" placeholder="${u==='lb'?'Pounds, e.g. 160':'Kilograms, e.g. 70'}">
+ <div class="obr"><span class="lab3">Height</span></div>${u==='lb'?`<div class="two"><input type="number" inputmode="numeric" data-ob="ft" value="${esc(OB.ft)}" placeholder="Feet"><input type="number" inputmode="numeric" data-ob="inch" value="${esc(OB.inch)}" placeholder="Inches"></div>`:`<input type="number" inputmode="numeric" data-ob="h" value="${esc(OB.h)}" placeholder="Centimetres, e.g. 170">`}</div>
+ <div class="act">${next()}${skip}</div>`}
+ if(OB.i===1){const r=obEst();return`${prog}<span class="obey">Step 2 of 4</span><h1>Your goal</h1><p class="why">${LOCK}<span>This sets your daily target. You can change it any time.</span></p>
  <div class="card"><div class="chips">${[['lose','Lose fat'],['maintain','Stay as I am'],['muscle','Build muscle'],['gain','Gain weight']].map(([v,l])=>ch('obg',v,l,OB.goal===v)).join('')}</div>
  <span class="lab3">How active are you?</span><div class="chips">${[[1,'Mostly sitting'],[2,'1 to 3 workouts a week'],[3,'3 to 5 a week'],[4,'6 or 7 a week'],[5,'Athlete or physical job']].map(([v,l])=>ch('oba',v,l,+OB.act===v)).join('')}</div>
  <div class="res">${r?`<span class="sm">Your daily target</span><b class="k">${r.k.toLocaleString('en-GB')} kcal</b><div class="mx"><div><b>${r.p} g</b>protein</div><div><b>${r.f} g</b>fat</div><div><b>${r.c} g</b>carbs</div></div>`:`<span class="sm">${OB.goal?'Add your age, weight and height to get a target made for you. Until then Swell uses 2,000 kcal.':'Pick a goal and Swell works out your daily target.'}</span>`}</div></div>
  <div class="act">${next()}${skip}</div>`}
- if(OB.i===2)return`${prog}<h1>How do you eat?</h1><p class="why">${LOCK}<span>So food ideas and tips only suggest things you eat.</span></p>
+ if(OB.i===2)return`${prog}<span class="obey">Step 3 of 4</span><h1>How you eat</h1><p class="why">${LOCK}<span>So food ideas and tips only suggest things you eat.</span></p>
  <div class="card"><div class="chips dgrid">${DIETS.map(x=>`<button class="chip ${OB.diet===x[0]?'on':''}" data-a="obd" data-i="${x[0]}">${x[1]}${x[2]?`<small>${x[2]}</small>`:''}</button>`).join('')}</div>
  <span class="lab3">Leave anything out? (optional)</span><div class="chips">${DAVOID.map(x=>ch('obav',x[0],x[1],OB.av.includes(x[0]))).join('')}</div></div>
  <div class="act">${next()}${skip}</div>`;
  const E=Object.entries(NAT).filter(([k])=>k!=='custom');
- return`${prog}<h1>Pick a look</h1><p class="why"><span>Each one comes from something in nature. Change it whenever you like.</span></p>
+ return`${prog}<span class="obey">Last step</span><h1>Pick a look</h1><p class="why"><span>Each one comes from something in nature. Change it whenever you like.</span></p>
  <div class="card"><div class="lkg">${E.map(([k,L])=>`<button class="${S.nat===k?'on':''}" data-a="obnat" data-i="${k}" aria-label="${esc(L.n)}">${typeof lkBig==='function'?lkBig(k,L):lkTile(k,L)}${esc(L.n)}</button>`).join('')}</div></div>
  <div class="act">${next('Start using Swell')}</div>`}
 {const _o=onb;onb=function(){if(!S.user||S.setup.done)return _o.apply(this,arguments);if(!S.nat){try{natSet(Object.keys(NAT)[0])}catch(_){}}return`<div class="obw">${obStep()}</div>`}}
@@ -9268,6 +9269,114 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=cu]');if
 // one prompt at a time on Home: the most useful first, the next one once that's answered
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='home'){const A=$('#app'),grid=A&&A.querySelector(':scope>.grid');if(grid){const P=[...A.querySelectorAll(':scope>.card')].filter(c=>c.compareDocumentPosition(grid)&Node.DOCUMENT_POSITION_FOLLOWING&&(c.classList.contains('cyoffer')||c.classList.contains('motc')||c.querySelector('[data-a=godiet]')));
   const rank=c=>c.classList.contains('cyoffer')?0:c.querySelector('[data-a=godiet]')?1:2;P.sort((a,b)=>rank(a)-rank(b)).forEach((c,i)=>{c.style.display=i?'none':''})}}}catch(_){}return r}}
+/* ===== v120: targets that learn your real metabolism, your own BMR if you know it, and medicines in Supplements ===== */
+// Research notes for this block:
+// - Formulas are averages. Mifflin-St Jeor, which Swell uses, predicts resting metabolic rate within 10% for only
+//   about 70 to 80% of non-obese adults, and errors are larger for individuals (Frankenfield et al. 2005, J Am Diet
+//   Assoc, systematic review). Activity multipliers add more error. So a target can genuinely feel too high.
+// - The fix used by the best-evidenced apps is to learn from the person: energy balance says intake minus the energy
+//   in weight change equals expenditure (about 7,700 kcal per kg of tissue, Hall 2008, Int J Obesity). With two or
+//   more weeks of logging and a few weigh-ins, Swell fits a trend line through the weights (so day-to-day water
+//   swings don't count) and offers the result. Because it uses intake as logged, it also absorbs any habitual
+//   under-logging, which is common (Schoeller 1995): it's the logged number that holds your weight steady.
+// - Cycle: resting metabolism is a little higher in the luteal phase (Benton et al. 2020) and water weight rises
+//   before and during a period, so for anyone tracking their cycle the window covers at least one full cycle and
+//   the cycle-aware targets (v108) handle the within-month shift.
+// - A measured BMR (from a metabolic test, or roughly from a smart scale) can replace the formula's starting point.
+// - Medicines: the same tick list works for both, so they live in Supplements with a "medicine" switch. Lock-screen
+//   reminders never show medicine names (privacy, NHS app guidance on discreet notifications). Doctors ask about
+//   adherence, so the report lists medicines and how often each was ticked off.
+(function(){const st=document.createElement('style');st.textContent=`
+.adb{margin:4px 0 14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.adb b.k{display:block;font-family:'Archivo',system-ui,sans-serif;font-size:34px;font-weight:900;font-stretch:72%;line-height:1;margin:4px 0}
+.adb .pg2{height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin:8px 0 4px}.adb .pg2 i{display:block;height:100%;background:var(--ac)}
+.adb .btn{margin:10px 0 0;width:100%}
+.adn{display:flex;align-items:center;gap:10px;margin:12px 0 0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:13.5px;line-height:1.35;cursor:pointer}
+.adn b{white-space:nowrap}.adn span{flex:1}
+.medt{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.04em;background:rgba(127,208,255,.16);color:#9fd8ff;vertical-align:1px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. your own BMR, if you know it ---------- */
+{const _c=calcEst;calcEst=function(E){const r=_c.apply(this,arguments);try{const m=+S.setup.bmrM;if(r&&m>500&&m<4000&&r.bmr>0){const f=r.tdee/r.bmr,nt=Math.round(m*f/10)*10,d=nt-r.tdee,floor=E&&E.sex==='Male'?1500:1200;
+  r.bmr=m;r.tdee=nt;r.k=Math.max(floor,Math.round((r.k+d)/10)*10);r.c=Math.max(0,Math.round((r.k-r.p*4-r.f*9)/4));r.own=1}}catch(_){}return r}}
+
+/* ---------- 2. learning your real maintenance from logs and weigh-ins ---------- */
+function adaptKcal(){const t=realToday(),cyc=typeof cycOn==='function'&&cycOn(),need=14,win=Math.max(28,cyc?Math.min(45,(cycStats().len||28)+7):28);
+ const from=addDays(t,-win+1),K=[],W=[];for(let d=from;d<t;d=addDays(d,1)){const m=(S.macros||{})[d];if(m&&+m.k>=600)K.push(+m.k);const b=(S.bm||{})[d];if(b&&+b.w>0)W.push([cyDD?cyDD(from,d):0,U()==='lb'?+b.w*.4536:+b.w])}
+ const st={days:K.length,need,wts:W.length,span:W.length?W[W.length-1][0]-W[0][0]:0,win};if(K.length<need||W.length<4||st.span<14)return st;
+ const n=W.length,mx=W.reduce((a,x)=>a+x[0],0)/n,my=W.reduce((a,x)=>a+x[1],0)/n,sl=W.reduce((a,x)=>a+(x[0]-mx)*(x[1]-my),0)/Math.max(1e-9,W.reduce((a,x)=>a+(x[0]-mx)**2,0));
+ const avg=K.reduce((a,b)=>a+b,0)/K.length,tdee=Math.round((avg-sl*7700)/10)*10;st.tdee=Math.max(1000,Math.min(5000,tdee));st.avg=Math.round(avg);st.kgwk=Math.round(sl*7*100)/100;return st}
+const AD_OF=()=>{try{return calcEst({...EST})}catch(_){return null}};
+function adaptBox(){const a=adaptKcal();if(!a.tdee){const p=Math.min(1,(a.days/a.need)*.6+(Math.min(a.wts,4)/4)*.4);return`<div class="adb"><span class="sm">Your real maintenance</span><p class="sm" style="margin:4px 0 0;color:inherit">Formulas are a starting point and can be out by 10% or more. Log your food most days and weigh in at least once a week, and after about two weeks Swell works out what actually holds your weight steady.</p><div class="pg2"><i style="width:${Math.round(p*100)}%"></i></div><span class="sm">${a.days} of ${a.need} days logged · ${Math.min(a.wts,4)} of 4 weigh-ins</span></div>`}
+ const g=+S.setup.k||0,diff=a.tdee-g;return`<div class="adb"><span class="sm">From your own logs (last ${a.win} days)</span><b class="k">${a.tdee.toLocaleString('en-GB')} kcal</b><p class="sm" style="margin:0;color:inherit">keeps your weight steady. You’ve eaten about ${a.avg.toLocaleString('en-GB')} a day and your weight moved ${a.kgwk>0?'+':''}${U()==='lb'?Math.round(a.kgwk/.4536*10)/10+' lb':a.kgwk+' kg'} a week.${typeof cycOn==='function'&&cycOn()?' This covers a full cycle, so period water weight evens out.':''}</p>
+ ${Math.abs(diff)>=100?`<button class="btn on" data-a="aduse">Base my target on this</button><p class="sm" style="margin:6px 2px 0">${(()=>{const gt=String((S.goal2&&S.goal2.type)||(typeof EST!=='undefined'&&EST&&EST.goal)||'');return/lose/i.test(gt)?'As you’re losing weight, your target will be 400 kcal under this (about 0.4 kg a week).':/gain|muscle/i.test(gt)?'As you’re building, your target will be 250 kcal over this.':'Your target becomes this number.'})()}</p>`:'<p class="sm" style="margin:8px 0 0">Your target already matches. Nothing to change.</p>'}</div>`}
+{const _e=estForm;estForm=function(){let h=_e.apply(this,arguments);try{h=h.replace(/(<h2>Work out my food goals<\/h2>)/,'$1'+adaptBox());
+  const own=+S.setup.bmrM||'';const fld=`<label style="display:block;margin-top:12px">Know your BMR? (optional)<input type="number" inputmode="numeric" data-bmrm="1" value="${own}" placeholder="e.g. 1350, from a metabolic test or smart scale"></label><p class="sm" style="margin:4px 2px 0">Replaces the formula’s starting point. A test is most accurate; smart scales estimate it too.</p>`;
+  h=h.replace(/(<button class="btn big on" data-a="estuse")/,fld+'$1')}catch(_){}return h}}
+document.addEventListener('change',e=>{const i=e.target.closest&&e.target.closest('[data-bmrm]');if(!i)return;const v=+i.value;S.setup.bmrM=v>500&&v<4000?v:undefined;save();try{sheet(estForm())}catch(_){}},true);
+window.addEventListener('click',e=>{const b=e.target.closest('[data-a=aduse],[data-a=adnudge]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();
+ if(b.dataset.a==='adnudge'){try{estOpen()}catch(_){}try{sheet(estForm())}catch(_){}return}
+ const a=adaptKcal();if(!a.tdee)return;const s=S.setup,gt=String((S.goal2&&S.goal2.type)||(typeof EST!=='undefined'&&EST&&EST.goal)||''),adj=/lose/i.test(gt)?-400:/gain|muscle/i.test(gt)?250:0,nk=Math.max(1200,Math.round((a.tdee+adj)/10)*10),p=+s.p||0;
+ s.k=nk;s.f=Math.round(nk*.27/9);s.c=Math.max(0,Math.round((nk-p*4-s.f*9)/4));S.adSeen=nk;save();sheet(null);render();toast(`Target updated to ${nk.toLocaleString('en-GB')} kcal.`)},true);
+// a gentle nudge on Diet when your logs say your target is off by 150 kcal or more
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&S.user&&S.setup.done){const hero=$('#app .card.dp');if(hero&&!hero.querySelector('.adn')){const a=adaptKcal();if(a.tdee&&Math.abs(a.tdee-(+S.setup.k||0))>=150&&S.adSeen!==a.tdee){
+  hero.insertAdjacentHTML('beforeend',`<div class="adn" data-a="adnudge"><span>Your logs suggest <b>${a.tdee.toLocaleString('en-GB')} kcal</b> holds your weight steady. Your target may need a tweak.</span><b>Review</b></div>`)}}}}catch(_){}return r}}
+
+/* ---------- 3. medicines, inside Supplements ---------- */
+{const _ss=seSheet;seSheet=function(){const r=_ss.apply(this,arguments);try{const x=SE.x,sv=$('#sheet [data-a=sesave]');if(sv&&!$('#sheet [data-a=semed]')){
+  const anc=$('#sheet .npr')||sv;anc.insertAdjacentHTML('beforebegin',`<div class="npr"><div><b>It’s a medicine</b><small>Reminders won’t show its name on your lock screen, and it’s listed in a doctor report.</small></div><button class="tg ${x.med?'on':''}" data-a="semed" role="switch" aria-checked="${!!x.med}" aria-label="It’s a medicine"></button></div>
+  ${x.med?`<div class="npr"><div><b>It’s my contraception</b><small>Swell then keeps cycle targets steady.</small></div><button class="tg ${x.hc?'on':''}" data-a="sehc" role="switch" aria-checked="${!!x.hc}" aria-label="It’s my contraception"></button></div>`:''}`);
+  const h2=$('#sheet h2');if(h2&&x.med)h2.textContent=SE.id?'Edit medicine':'Add a medicine';if(x.med){const rg=$('#sheet [data-a=rtgo]');rg&&rg.remove()}}}catch(_){}return r}}
+window.addEventListener('click',e=>{const b=e.target.closest('[data-a=semed],[data-a=sehc]');if(!b||!SE)return;e.stopImmediatePropagation();e.preventDefault();document.querySelectorAll('#sheet [data-se]').forEach(i=>{SE.x[i.dataset.se]=i.value});
+ if(b.dataset.a==='semed'){SE.x.med=SE.x.med?0:1;if(!SE.x.med)SE.x.hc=0}else{SE.x.hc=SE.x.hc?0:1}seSheet()},true);
+// contraception flag carries over to the cycle settings when saved
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=sesave]')||!SE)return;const hc=!!(SE.x.med&&SE.x.hc);setTimeout(()=>{try{if(hc){CYC().hc='y';save()}}catch(_){}},0)});
+// the list: a small tag; the button says what it does
+{const _v=suppV;suppV=function(){let h=_v.apply(this,arguments);try{SUP().list.forEach(x=>{if(x.med)h=h.replace(new RegExp(`(data-a="sped" data-i="${x.id}"><b>)([^<]*)(</b>)`),`$1$2<span class="medt">Medicine</span>$3`)});h=h.replace('>Add a supplement<','>Add a supplement or medicine<')}catch(_){}return h}}
+// lock screen: never a medicine's name
+{const _rp=remPlan;remPlan=function(){const L=_rp.apply(this,arguments);try{const meds=new Set(SUP().list.filter(x=>x.med).map(x=>x.n));if(meds.size)L.forEach(x=>{if(x.t==='supp'&&x.p&&x.p.n){const ns=String(x.k||'').split('|').slice(3).join('|').split(',').filter(Boolean);if(!ns.length)ns.push(...x.p.n.split(', '));const hasMed=ns.some(n=>meds.has(n)),keep=ns.filter(n=>!meds.has(n));x.p.n=(keep.length?keep.slice(0,3).join(', ')+(hasMed?' and your medicine':''):'your medicine')}})}catch(_){}return L}}
+// the doctor report: medicines and how often they were taken
+{const _h=rpHTML;rpHTML=function(o){let h=_h.apply(this,arguments);try{const t=realToday(),from=addDays(t,-Math.round(o.m*30.44)),M=SUP().list.filter(x=>x.med);if(!M.length)return h;
+  const row=x=>{let due=0,tk=0;for(let d=from;d<=t;d=addDays(d,1)){if(supDue(d).some(y=>y.id===x.id)){due++;if(((S.supl||{})[d]||[]).includes(x.id))tk++}}return`<tr><td>${esc(x.n)}</td><td>${esc(x.dose||'')}</td><td>${esc(hm12(toMin(supTime(x))))}${x.days&&x.days.length&&x.days.length<7?' · '+esc(daysTxt(x)):''}</td><td class="rpn">${due?Math.round(tk/due*100)+'%':'—'}</td><td class="rpn">${tk} of ${due}</td></tr>`};
+  const tbl=`<h2>Medicines</h2><table><tr><th>Medicine</th><th>Dose</th><th>When</th><th class="rpn">Taken</th><th class="rpn">Days</th></tr>${M.map(row).join('')}</table><p class="rpmut" style="margin-top:4px">“Taken” is days ticked off in the app out of days it was due in this period.</p>`;
+  h=h.replace('<h2>Bleeding pattern against FIGO 2018 normal limits</h2>',tbl+'<h2>Bleeding pattern against FIGO 2018 normal limits</h2>')}catch(_){}return h}}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<path d="M3 17l6-6 4 4 8-8"/>',h:'Targets that learn your metabolism',p:'After two weeks of logging and weigh-ins, Swell works out what really holds your weight steady and offers to update your target. You can also enter a measured BMR.'});
+ R.items.push({i:'<rect x="4" y="9" width="16" height="7" rx="3.5"/><path d="M12 9v7"/>',h:'Medicines in Supplements',p:'Add a medicine to your supplements list for a tick and a reminder that never shows its name. It appears in your doctor report too.'})}}
+
+
+/* ===== v121: sign-up and What's new in the current style ===== */
+// Research notes: same as v119. One typographic system across screens (one heading style, one label style, one input
+// height) so nothing reads as "old" (Nielsen's heuristic 4); short, single-line headings with a small eyebrow above
+// scan faster than two-line headings (NN/g, "Headings are pick-up lines"). Units sit as a small switch beside the
+// field they change, rather than as a separate question.
+(function(){const st=document.createElement('style');st.textContent=`
+.obw .obey{display:block;margin:0 2px 4px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ac,#E0643A)}
+.obw .obr{display:flex;align-items:center;justify-content:space-between;margin:16px 2px 8px}.obw .obr:first-child{margin-top:0}.obw .obr .lab3{margin:0}
+.obw .card input{height:52px;border-radius:14px;font-size:17px;margin:0}
+.obw .obseg{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+.obw .obseg button{all:unset;cursor:pointer;padding:5px 11px;border-radius:999px;font-size:12.5px;font-weight:700;color:rgba(243,241,236,.7)}.obw .obseg button.on{background:#F3F1EC;color:#141412}
+.obw .chips.g2>*{min-height:48px}
+.obw .lab3{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(243,241,236,.6)}
+.obw .why{font-size:14.5px}
+.obw .sgf{display:flex;flex-direction:column;gap:10px}
+.obw .rst{all:unset;cursor:pointer;display:block;text-align:center;margin:22px auto 0;color:rgba(243,241,236,.62);font-size:14.5px}.obw .rst b{color:#F3F1EC}
+#wn .mwc{padding:22px 20px 18px;border-radius:26px}
+#wn .wnbadge{display:inline-block;background:none!important;padding:0!important;color:var(--ac,#E0643A)!important;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin:0 0 4px}
+#wn h2{font-family:'Archivo',system-ui,sans-serif;font-size:38px!important;font-weight:900;font-stretch:72%;line-height:1;margin:0 0 14px!important;letter-spacing:-.01em}
+#wn .wni{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}#wn .wni:first-of-type{border-top:0}
+#wn .wni>span{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--ac,#E0643A)}
+#wn .wni>span svg{width:19px;height:19px}
+#wn .wni>div{font-size:14.5px;line-height:1.4;color:rgba(243,241,236,.72)}#wn .wni>div b{display:block;font-size:16px;color:#F3F1EC;margin-bottom:2px}
+#wn [data-a=wnx].btn{background:var(--ac,#E0643A)!important;color:var(--on-ac,#141412)!important;border:0!important}
+#wn [data-a=wntour].btn{background:rgba(255,255,255,.08)!important;color:#F3F1EC!important}`;document.head.appendChild(st)})();
+// page 1: the welcome, in the same style as the steps after it
+{const _o=onb;onb=function(){const h=_o.apply(this,arguments);if(S.user||!/class="card sgn"/.test(h))return h;
+ if(!S.nat){try{natSet(Object.keys(NAT)[0])}catch(_){}}
+ const sug=NS.sug?`<p class="why" style="margin-top:12px"><span>Are you <b style="color:#F3F1EC">${esc(NS.sug)}</b>?</span></p><div class="act"><button class="btn big on" data-a="nyes">Yes, that’s me</button><button class="btn big" data-a="snew">No, I’m new</button></div>`:`${NS.err?`<p class="err">${NS.err}</p>`:''}<div class="act"><button class="btn big on" data-a="sgo">Let’s go</button></div>`;
+ return`<div class="obw"><span class="obey">Welcome to Swell</span><h1>Your name</h1><p class="why">${LOCK}<span>No email, no password. Everything stays on this phone.</span></p>
+ <div class="card"><div class="obr"><span class="lab3">First name</span></div><input id="nmf" autocomplete="given-name" autocapitalize="words" autocorrect="off" spellcheck="false" value="${esc(NS.f||'')}" placeholder="First name">
+ <div class="obr"><span class="lab3">Last name (optional)</span></div><input id="nml" autocomplete="family-name" autocapitalize="words" autocorrect="off" spellcheck="false" value="${esc(NS.l||'')}" placeholder="Last name"></div>
+ ${sug}<button class="rst" data-a="rspick">Already use Swell? <b>Restore a backup</b></button></div>`}}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
