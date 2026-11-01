@@ -6485,7 +6485,7 @@ const LQV={};const lqV=k=>{const n=performance.now(),o=LQV[k];if(o&&n-o.t<400)re
 let LQRAF=0,LQLAST=0;
 function lqKick(){if(!LQRAF)LQRAF=requestAnimationFrame(lqFrame)}
 function lqFrame(now){LQRAF=0;const dt=Math.min(40,now-(LQLAST||now))/16.7;LQLAST=now;let busy=false;
- for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected||c._vis===false)continue;const V=lqV(k),target=Math.max(.04,Math.min(.97,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
+ for(const k in LQS){const s=LQS[k],c=s.c;if(!c||!c.isConnected||c._vis===false)continue;const V=lqV(k),target=Math.max(.04,V.v>=V.g?.985:Math.min(.95,V.v/Math.max(1,V.g)));if(s.lvl==null)s.lvl=target;s.lvl+=(target-s.lvl)*.08*dt;
   s.tilt+=(s.tt-s.tilt)*.08*dt;s.t+=dt;let e=Math.abs(target-s.lvl)*40+Math.abs(s.tt-s.tilt)*10;
   if(!LRM()){const n=s.n,st=Math.min(dt,1.5);for(let i=0;i<n;i++){s.v[i]+=(-.02*s.h[i]-.035*s.v[i])*st;s.h[i]+=s.v[i]*st;if(s.h[i]>10)s.h[i]=10;if(s.h[i]<-10)s.h[i]=-10}
    const L=s.L||(s.L=new Float32Array(n)),R=s.R||(s.R=new Float32Array(n));for(let p=0;p<3;p++){for(let i=0;i<n;i++){L[i]=i>0?.12*(s.h[i]-s.h[i-1]):0;R[i]=i<n-1?.12*(s.h[i]-s.h[i+1]):0}for(let i=0;i<n;i++){if(i>0){s.v[i-1]+=L[i]*st;s.h[i-1]+=L[i]*.5}if(i<n-1){s.v[i+1]+=R[i]*st;s.h[i+1]+=R[i]*.5}}}
@@ -7113,6 +7113,89 @@ function rtLabel(){if(!SCAN||!SCAN.cols)return;const c=SCAN.cols.find(x=>x.kind=
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&SCAN){const bx=$('.scbox');if(bx&&!bx.parentElement.querySelector('[data-a=rtlbl]'))bx.insertAdjacentHTML('afterend',`<button class="rtentry" data-a="rtlbl" style="margin:10px 0 0">${RTIC}<span><b>Check how good it is</b><small>A score out of 100 from this label.</small></span></button>`)}}catch(_){}return r}}
 window.addEventListener('click',e=>{if(!e.target.closest('[data-a=rtlbl]'))return;e.stopImmediatePropagation();e.preventDefault();rtLabel()},true);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/>',h:'Check a product',p:'Scan food, drinks, protein powder or supplements and get a score out of 100, with what’s good, what isn’t, the additives, and better choices.'})}
+/* ===== v91: richer, darker water; Edit Home dock; drag-to-resize grip; workout names on the week strip ===== */
+// Research notes for this block:
+// - What makes a liquid read as real is detail in the light, not physics: a moving web of caustics, soft shafts from the
+//   surface, depth getting darker, and things seen through it looking dimmer and wavier (Fleming 2014, "Visual
+//   perception of materials and their properties"; Kawabe et al. 2015, "Perceptual transparency from image
+//   deformation", PNAS, which found wobble plus reduced contrast is what makes something look underwater).
+// - A full tank fills to the brim, so there's no dry gap at the top.
+// - Edit controls sit in one dock at the bottom, within thumb reach on a big phone (Hoober 2013, "How do users really
+//   hold mobile devices?": most one-handed taps land in the lower half of the screen).
+// - Direct manipulation (drag the corner to resize) is faster to learn and feels more in control than a menu
+//   (Shneiderman 1983); the grip is drawn as a corner so it says what it does, and a tap on it still steps the size.
+// - The week strip shows each day's workout name, because a label you can read is what tells you what you're dragging
+//   (Nielsen's heuristic 1, visibility of system status).
+Object.assign(LQK.water,{top:[58,138,196],mid:[26,88,150],bot:[6,30,66]});Object.assign(LQK.caf,{top:[118,72,42],mid:[72,40,22],bot:[24,12,6]});
+(function(){const st=document.createElement('style');st.textContent=`
+.wd.lqon>.c{border-radius:inherit;overflow:hidden}
+.lq{-webkit-mask-image:-webkit-radial-gradient(white,black);mask-image:radial-gradient(white,black);transform:translateZ(0)}
+html[data-look] .shg{background:transparent!important;box-shadow:none!important}
+.edbar,.edlk{display:none!important}
+#app button[data-a=edone][style*=fixed]{display:none!important}
+.eddock{position:fixed;left:12px;right:12px;bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:60;padding:12px 12px 12px;border-radius:26px;background:rgba(14,14,14,.74);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 24px 50px -16px rgba(0,0,0,.75);color:#F3F1EC;animation:eddin .34s cubic-bezier(.3,1.3,.5,1)}
+@keyframes eddin{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.eddock .lk{display:flex;gap:12px;overflow-x:auto;padding:2px 4px 10px;scrollbar-width:none}.eddock .lk::-webkit-scrollbar{display:none}
+.eddock .lk button{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;color:rgba(243,241,236,.7);font:inherit;font-size:11px;font-weight:600;padding:0;min-width:48px}
+.eddock .lk i{position:relative;display:block;width:38px;height:38px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 10px rgba(0,0,0,.35);transition:transform .2s}
+.eddock .lk i::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.45),rgba(255,255,255,0) 42%)}
+.eddock .lk button.on{color:#fff}.eddock .lk button.on i{transform:scale(1.08);box-shadow:0 0 0 2px #141414,0 0 0 4px #fff,0 6px 14px rgba(0,0,0,.4)}
+.eddock .row{display:flex;gap:8px}.eddock .row .btn{flex:1;margin:0;min-height:0;padding:12px 10px;font-size:15px}
+.edit .wd .wsz{display:none!important}
+.edit .wd .hd{opacity:1!important}
+html[data-look] .edit .wd .hd{position:absolute;right:9px;bottom:9px;width:16px!important;height:16px!important;border:0!important;border-right:3.5px solid rgba(255,255,255,.95)!important;border-bottom:3.5px solid rgba(255,255,255,.95)!important;border-radius:0 0 7px 0!important;background:none!important;box-shadow:none!important;z-index:6;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+html[data-look] .edit .wd .hd::before{content:"";position:absolute;inset:-14px}
+.edit .wd .wl{padding-left:16px}
+#app:has(.grid.edit){padding-bottom:250px!important}
+html[data-look] .cal .cday{min-height:92px;padding:8px 0 7px}
+html[data-look] .cal .cday .chipw{width:calc(100% - 6px);height:auto;margin:5px auto 0;padding:4px 1px;border-radius:7px;font-size:9.5px;font-weight:800;letter-spacing:.02em;line-height:1.1;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:clip;background:color-mix(in srgb,var(--ac) 24%,transparent);color:color-mix(in srgb,var(--ac) 70%,#fff)}
+html[data-look] .cal .cday .chipw::before{inset:-6px -2px}
+html[data-look] .cal .cday.now .chipw{background:color-mix(in srgb,var(--ac) 90%,#000);color:var(--on-ac)}`;document.head.appendChild(st)})();
+// the tank, drawn again with more light in it
+const LQC={};
+function lqCaus(){if(LQC.t)return LQC.t;const N=128,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),im=x.createImageData(N,N),D=im.data,TP=Math.PI*2/N;
+ for(let j=0;j<N;j++)for(let i=0;i<N;i++){const a=Math.sin(i*TP*3+2*Math.sin(j*TP*2+1.3))*Math.sin(j*TP*3+2*Math.sin(i*TP*2+.4)),b=Math.sin((i+j)*TP*2+1.7*Math.sin((i-j)*TP*1));let v=Math.pow(1-Math.abs(a*.7+b*.3),7);const o=(j*N+i)*4;D[o]=D[o+1]=D[o+2]=255;D[o+3]=Math.min(255,v*255)}
+ x.putImageData(im,0,0);return LQC.t=c}
+lqDraw=function(k,s,V){const c=s.c,x=c.getContext('2d'),W=c.width,H=c.height,d=s.dpr,K=LQK[k],n=s.n,base=H*(1-s.lvl),t=s.t;
+ x.clearRect(0,0,W,H);const sy=i=>base+s.h[i]*d*2.2+(i/(n-1)-.5)*W*s.tilt*.55+(s.idle||0)*Math.sin(i/(n-1)*Math.PI*2.2+t*.06)*2.2*d;
+ const path=()=>{x.beginPath();x.moveTo(0,sy(0));for(let i=1;i<n;i++){const x0=(i-1)/(n-1)*W,x1=i/(n-1)*W;x.quadraticCurveTo(x0,sy(i-1),(x0+x1)/2,(sy(i-1)+sy(i))/2)}x.lineTo(W,sy(n-1))};
+ const body=()=>{path();x.lineTo(W,H);x.lineTo(0,H);x.closePath()};
+ let top=H;for(let i=0;i<n;i+=2)top=Math.min(top,sy(i));top=Math.max(0,top);
+ // body: lighter just under the surface, darker with depth
+ body();const g=x.createLinearGradient(0,top,0,H),T=K.top,M=K.mid||K.top,B=K.bot;g.addColorStop(0,`rgba(${T},.95)`);g.addColorStop(.45,`rgba(${M},.97)`);g.addColorStop(1,`rgba(${B},.99)`);x.fillStyle=g;x.fill();
+ x.save();body();x.clip();
+ // light shafts from the surface
+ if(!LRM()){x.globalCompositeOperation='lighter';for(let j=0;j<3;j++){const cx=W*(.2+j*.3)+Math.sin(t*.012+j*1.9)*W*.06,w=W*(.07+j*.02),lg=x.createLinearGradient(0,top,0,H);lg.addColorStop(0,'rgba(255,255,255,.10)');lg.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=lg;x.beginPath();x.moveTo(cx-w,top);x.lineTo(cx+w,top);x.lineTo(cx+w*2.2+W*.12,H);x.lineTo(cx-w*.4+W*.12,H);x.closePath();x.fill()}
+ // caustics: a moving web of light, strongest near the top
+  const C=lqCaus(),sc=1.6*d,ox=(t*.35)%(128*sc),oy=(t*.18)%(128*sc);x.globalAlpha=k==='caf'?.05:.13;const pat=x.createPattern(C,'repeat'),m=new DOMMatrix();
+  pat.setTransform(m.translate(-ox,-oy).scale(sc));x.fillStyle=pat;x.fillRect(0,top,W,(H-top)*.75);
+  const pat2=x.createPattern(C,'repeat');pat2.setTransform(new DOMMatrix().translate(ox*.6,-oy*.4).scale(sc*1.4).rotate(30));x.fillStyle=pat2;x.globalAlpha=k==='caf'?.03:.08;x.fillRect(0,top,W,(H-top)*.8);
+  x.globalAlpha=1;x.globalCompositeOperation='source-over'}
+ // a bright band just under the surface
+ const ub=x.createLinearGradient(0,top,0,top+12*d);ub.addColorStop(0,'rgba(255,255,255,.16)');ub.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=ub;x.fillRect(0,top,W,12*d);
+ // drifting specks and bubbles
+ s.sp=s.sp||[...Array(14)].map(()=>({x:Math.random(),y:Math.random(),r:.5+Math.random()*1.1,v:(Math.random()-.5)*.0006}));x.fillStyle='rgba(255,255,255,.22)';
+ s.sp.forEach(p=>{p.x=(p.x+p.v+1)%1;p.y=(p.y+Math.sin(t*.01+p.x*9)*.0003+1)%1;const py=top+p.y*(H-top);x.beginPath();x.arc(p.x*W,py,p.r*d,0,7);x.fill()});
+ s.bub.forEach(b=>{const bx=b.x*W,by=b.y*H;x.beginPath();x.arc(bx,by,b.r*d,0,7);x.strokeStyle='rgba(255,255,255,.5)';x.lineWidth=d*.8;x.stroke();x.beginPath();x.arc(bx-b.r*d*.35,by-b.r*d*.35,b.r*d*.3,0,7);x.fillStyle='rgba(255,255,255,.75)';x.fill()});
+ x.restore();
+ // crema, then the meniscus: a bright line with a darker edge under it
+ if(K.crema){x.save();path();x.lineTo(W,sy(n-1)+7*d);for(let i=n-1;i>=0;i--)x.lineTo(i/(n-1)*W,sy(i)+7*d);x.closePath();const cg=x.createLinearGradient(0,top,0,top+8*d);cg.addColorStop(0,`rgba(${K.crema},.95)`);cg.addColorStop(1,`rgba(${K.crema},.6)`);x.fillStyle=cg;x.fill();x.restore()}
+ x.save();x.translate(0,1.6*d);path();x.lineWidth=1.2*d;x.strokeStyle='rgba(0,20,40,.35)';x.stroke();x.restore();
+ path();x.lineWidth=1.6*d;x.strokeStyle='rgba(255,255,255,.8)';x.stroke();path();x.lineWidth=6*d;x.strokeStyle='rgba(255,255,255,.07)';x.stroke();
+ x.fillStyle='rgba(255,255,255,.85)';for(let j=0;j<2;j++){const i=((t*.15+j*13)|0)%n;x.beginPath();x.ellipse(i/(n-1)*W,sy(i)+2.5*d,5*d,1.1*d,0,0,7);x.fill()}
+ // the numbers: crisp above the surface; under it, dimmer and wavier, as if seen through the water
+ const off=lqText(k,V,W,H,d);x.save();path();x.lineTo(W,0);x.lineTo(0,0);x.closePath();x.clip();x.drawImage(off,0,0);x.restore();
+ x.save();body();x.clip();x.globalAlpha=.58;const step=2*d;for(let y=Math.max(0,(top|0)-step);y<H;y+=step){const dx=LRM()?0:(Math.sin(y*.085/d+t*.11)*1.6+Math.sin(y*.031/d-t*.07)*1.1)*d;x.drawImage(off,0,y,W,step,dx,y,W,step)}
+ x.globalAlpha=.10;x.fillStyle=`rgb(${M})`;x.fillRect(0,top,W,H-top);x.restore()};
+// the tank is filled right to the brim when you reach your goal
+// Edit Home: one dock at the bottom with your looks, Add widget and Done
+function edDock(){const L=[['','Classic','#120c2a','#7c3aed','#2f6bff']].concat(Object.entries(NAT).map(([k,v])=>[k,v.n,v.tone,v.p,v.s]));
+ return`<div class="eddock" role="toolbar" aria-label="Edit Home"><div class="lk">${L.map(([k,n,a,b,c])=>`<button class="${(S.nat||'')===k?'on':''}" data-a="edlook" data-i="${k}" aria-label="${esc(n)} look"><i style="background:radial-gradient(circle at 70% 72%,${b} 0 30%,transparent 31%),radial-gradient(circle at 30% 70%,${c} 0 15%,transparent 16%),${a}"></i>${esc(n)}</button>`).join('')}</div><div class="row"><button class="btn" data-a="wgal">Add widget</button><button class="btn on" data-a="edone">Done</button></div></div>`}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const dk=$('.eddock');if(ED&&tab==='home'){if(!dk)document.body.insertAdjacentHTML('beforeend',edDock());else{dk.querySelectorAll('.lk button').forEach(b=>b.classList.toggle('on',(S.nat||'')===b.dataset.i))}}else if(dk)dk.remove()}catch(_){}return r}}
+window.addEventListener('click',e=>{const el=e.target.closest('.eddock [data-a=edone]');if(!el)return;if(!ED){e.stopImmediatePropagation();const dk=$('.eddock');dk&&dk.remove()}},true);
+// a tap on the corner grip steps the size; dragging it still resizes
+{let G=null;window.addEventListener('pointerdown',e=>{const h=e.target.closest('.edit .wd .hd');G=h?{id:h.closest('.wd').dataset.id,x:e.clientX,y:e.clientY,t:Date.now()}:null},true);
+ window.addEventListener('pointerup',e=>{const g=G;G=null;if(!g||!ED||Math.hypot(e.clientX-g.x,e.clientY-g.y)>6||Date.now()-g.t>500)return;const L=S.lay.find(l=>l.id===g.id);if(!L)return;const i=WSZ.findIndex(z=>z.t===wszOf(L)),z=WSZ[(i+1)%3];L.w=z.w;L.h=z.h;save();render();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true)}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
