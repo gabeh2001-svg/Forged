@@ -7557,6 +7557,134 @@ RTDEMO['5000159459228']={product_name:'Greek style yoghurt',brands:'Sample (prev
 .smph.empty::after{content:"+";position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;background:var(--ac,#fff);color:var(--on-ac,#111);font-size:15px;font-weight:800;line-height:20px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}`;document.head.appendChild(st)})();
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{document.querySelectorAll('#app .smr .smph').forEach(p=>{if(!p.querySelector('img'))p.classList.add('empty');p.setAttribute('role','button');p.setAttribute('aria-label',p.querySelector('img')?'Change picture':'Add a picture')})}catch(_){}return r}}
 window.addEventListener('click',e=>{const ph=e.target.closest('#app .smr .smph');if(!ph)return;const b=ph.closest('.smr').querySelector('[data-a=smpic]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();b.click()},true);
+/* ===== v98: My foods, matches as you type, a rough guess for food you can't measure, and a scan button in reach ===== */
+// Research notes for this block:
+// - People stop food journalling mainly because searching for things they eat all the time is tedious, and because
+//   they don't know how to log food someone else made, or food eaten out (Cordeiro et al. 2015, CHI, "Barriers and
+//   negative nudges: exploring challenges in food journaling"). So everything you've logged is kept and offered back as
+//   you type, and there's a rough guess for meals you can't weigh or look up.
+// - Consistency of logging predicts results more than precision does (Burke, Wang and Sevick 2011, J Am Diet Assoc),
+//   so a quick rough entry, marked as rough, is better than a gap.
+// - One library (meals, recipes, products) instead of two overlapping lists: a single place to look is faster to learn
+//   and search (NN/g, "Information scent" and "Consistency"). Starring a meal pins it to the top.
+// - On a big phone the top of the screen is the hardest to reach one-handed (Hoober 2013), so once the scan tiles have
+//   scrolled away, a scan button sits just above the tab bar. Tap for the barcode scanner, hold for the other scanners.
+(function(){const st=document.createElement('style');st.textContent=`
+html[data-look] #app.dv>.card.rcl,html[data-look] #app.dv>.card.svd{display:none!important}
+html[data-look] .dadd [data-a=msv]{display:none!important}
+.mfc .mfh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.mfc .mfh>span{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(243,241,236,.62)}
+.mfr{all:unset;box-sizing:border-box;display:grid;grid-template-columns:42px 1fr auto auto;gap:2px 12px;align-items:center;width:100%;padding:9px 2px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}
+.mfr:first-of-type{border-top:0}
+.mfr .ph{grid-row:span 2;width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.08);display:grid;place-items:center;overflow:hidden;font-weight:800;font-size:16px;color:rgba(243,241,236,.7);position:relative}
+.mfr .ph img{width:100%;height:100%;object-fit:cover}.mfr .ph.add::after{content:"+";position:absolute;right:2px;bottom:2px;width:16px;height:16px;border-radius:50%;background:var(--ac,#fff);color:var(--on-ac,#111);font-size:12px;line-height:16px;text-align:center;font-weight:800}
+.mfr b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mfr small{grid-column:2;font-size:12.5px;color:rgba(243,241,236,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mfr em{grid-row:span 2;font-style:normal;font-family:'Archivo',system-ui,sans-serif;font-weight:800;font-stretch:80%;font-size:16px;text-align:right}.mfr em small{display:block;font-family:system-ui;font-size:10.5px;font-weight:600;opacity:.6}
+.mfr .st{grid-row:span 2;all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;color:rgba(243,241,236,.45)}.mfr .st.on{color:#F2C14E}.mfr .st svg{width:19px;height:19px}
+.mfe{font-size:13px;color:rgba(243,241,236,.6);margin:6px 2px 2px;line-height:1.45}
+.mfb{display:flex;gap:8px;margin-top:12px}.mfb .btn{flex:1;margin:0}
+.mfmore{all:unset;cursor:pointer;display:block;margin:10px 2px 0;font-size:13.5px;font-weight:700;color:var(--ac)}
+.dsug{margin:8px 0 2px;border-radius:16px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.dsug button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border-top:1px solid rgba(255,255,255,.06);font-size:14.5px}
+.dsug button:first-child{border-top:0}.dsug button span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dsug button small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(243,241,236,.5)}
+.dsug button em{font-style:normal;font-size:13px;color:rgba(243,241,236,.7)}.dsug button.act{color:var(--ac);font-weight:700}
+.dsug button svg{width:16px;height:16px;flex:none}
+.rgc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
+.rgc button{all:unset;box-sizing:border-box;cursor:pointer;padding:12px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:2px}
+.rgc button b{font-size:15px}.rgc button small{font-size:12px;color:var(--dim)}.rgc button.on{background:#F3F1EC;color:#141412;border-color:transparent}.rgc button.on small{color:#555}
+.rgt{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.12);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;vertical-align:2px}
+.fsc{position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:58;width:58px;height:58px;border-radius:50%;border:0;background:#F3F1EC;color:#141412;display:grid;place-items:center;box-shadow:0 12px 28px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.2);transform:scale(.6);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.3,1.4,.5,1),opacity .2s}
+.fsc.on{transform:none;opacity:1;pointer-events:auto}.fsc svg{width:26px;height:26px}
+.fscm{position:fixed;right:16px;bottom:calc(160px + env(safe-area-inset-bottom,0px));z-index:59;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.fscm button{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(16,16,16,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:#F3F1EC;font:inherit;font-size:15px;font-weight:700;box-shadow:0 10px 24px rgba(0,0,0,.4);animation:fscin .22s cubic-bezier(.3,1.3,.5,1) both}
+.fscm button svg{width:20px;height:20px}
+@keyframes fscin{from{opacity:0;transform:translateY(10px) scale(.95)}}`;document.head.appendChild(st)})();
+// the library
+const MFT={t:'meals',all:false};
+const nmk=s=>String(s||'').trim().toLowerCase();
+function mfMeals(){const map=new Map();(S.saved||[]).forEach((x,i)=>{if(x&&x.n)map.set(nmk(x.n),{n:x.n,k:+x.k||0,p:+x.p||0,f:+x.f||0,c:+x.c||0,img:x.img,si:i,star:1,cnt:0,last:''})});
+ Object.keys(S.meals||{}).sort().slice(-90).forEach(d=>((S.meals||{})[d]||[]).forEach(x=>{if(!x||!x.n||/^(meal|food)$/i.test(x.n))return;const k=nmk(x.n),o=map.get(k);if(o){o.cnt++;if(d>=o.last){o.last=d;if(!o.star)Object.assign(o,{k:+x.k||0,p:+x.p||0,f:+x.f||0,c:+x.c||0,rough:x.rough})}}else map.set(k,{n:x.n,k:+x.k||0,p:+x.p||0,f:+x.f||0,c:+x.c||0,cnt:1,last:d,rough:x.rough})}));
+ return[...map.values()].sort((a,b)=>(b.star||0)-(a.star||0)||String(b.last).localeCompare(String(a.last))||b.cnt-a.cnt)}
+function mfProds(){return Object.entries(S.bc||{}).filter(([c,p])=>p&&p.n&&(p.k100!=null||p.ks!=null)).sort((a,b)=>(b[1].at||0)-(a[1].at||0)).map(([code,p])=>({code,p}))}
+const STAR='<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',STARO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>';
+const ini=n=>esc((String(n||'?').trim()[0]||'?').toUpperCase());
+function mfCard(){const t=MFT.t,R=S.recipes||[],ML=mfMeals(),PL=mfProds();let rows='',n=0,more='';
+ const lim=MFT.all?60:6;
+ if(t==='meals'){n=ML.length;rows=ML.slice(0,lim).map((x,i)=>`<div class="mfr" data-a="mflog" data-i="m|${esc(x.n)}" role="button"><span class="ph ${x.star&&!x.img?'add':''}" ${x.star?`data-mfpic="${x.si}"`:''}>${x.img?`<img src="${x.img}" alt="">`:ini(x.n)}</span><b>${esc(x.n)}${x.rough?'<span class="rgt">rough</span>':''}</b><small>${Math.round(x.p)}g protein · ${Math.round(x.f)}g fat · ${Math.round(x.c)}g carbs</small><em>${Math.round(x.k)}<small>kcal</small></em><button class="st ${x.star?'on':''}" data-a="mfstar" data-i="${esc(x.n)}" aria-label="${x.star?'Unstar':'Star'} ${esc(x.n)}">${x.star?STAR:STARO}</button></div>`).join('')}
+ if(t==='rec'){n=R.length;rows=R.slice(0,lim).map((r,i)=>{const m=rcPer(r);return`<div class="mfr" data-a="mflog" data-i="r|${i}" role="button"><span class="ph">${ini(r.n)}</span><b>${esc(r.n)}</b><small>${(r.items||[]).length} ingredients · makes ${Math.max(1,+r.sv||1)}</small><em>${Math.round(m.k)}<small>a serving</small></em><span></span></div>`}).join('')}
+ if(t==='prod'){n=PL.length;rows=PL.slice(0,lim).map(({code,p})=>{const s=p.rt?rtScore({...p.rt}).score:null,[bn,bc]=s!=null?RTBAND(s):['',''];return`<div class="mfr" data-a="mflog" data-i="p|${code}" role="button"><span class="ph">${ini(p.n)}</span><b>${esc(p.n)}</b><small>${esc(p.b||'')}${p.k100!=null?`${p.b?' · ':''}${Math.round(p.k100)} kcal per 100 g`:''}</small>${s!=null?`<em style="color:${bc}">${s}<small>/100</small></em>`:'<em></em>'}<span></span></div>`}).join('')}
+ if(n>6&&!MFT.all)more=`<button class="mfmore" data-a="mfall">Show all ${n}</button>`;
+ const empty=t==='meals'?'Meals you log are kept here, so you can add them again in one tap. Star the ones you have often to keep them at the top.':t==='rec'?'Build a recipe from its ingredients and Swell works out the macros per serving. Recipes also go into your Food plan and shopping list.':'Products you scan by barcode are kept here, with their score.';
+ return`<div class="card mfc"><div class="mfh"><span>My foods</span><div class="seg"><button class="${t==='meals'?'on':''}" data-a="mft" data-i="meals">Meals</button><button class="${t==='rec'?'on':''}" data-a="mft" data-i="rec">Recipes</button><button class="${t==='prod'?'on':''}" data-a="mft" data-i="prod">Products</button></div></div>
+ ${rows||`<p class="mfe">${empty}</p>`}${more}${t==='rec'?'<div class="mfb"><button class="btn on" data-a="rcnew">New recipe</button><button class="btn" data-a="rcpaste">Paste a recipe</button></div>':''}${t==='prod'?'<div class="mfb"><button class="btn" data-a="bcgo">Scan a barcode</button></div>':''}</div>`}
+// put it on the page, in the new order
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&S.nat&&NAT[S.nat]){const A=$('#app');if(A&&!A.querySelector('.mfc')){const lc=A.querySelector(':scope>.logc')||A.querySelector('.dadd');[...A.querySelectorAll(':scope>.card')].forEach(c=>{const h=c.querySelector(':scope>h2');if(h&&h.textContent.trim()==='Saved meals')c.classList.add('svd')});
+ if(lc)lc.insertAdjacentHTML('afterend',mfCard());
+ // food plan before nutrients
+ const fp=A.querySelector(':scope>.fpc'),mn=A.querySelector(':scope>.mnc'),hs=[...A.querySelectorAll(':scope>.dsec')],hN=hs.find(h=>h.textContent==='Nutrition'),hP=hs.find(h=>h.textContent==='Plan ahead');
+ if(fp&&hP&&mn&&hN){A.insertBefore(hP,hN);A.insertBefore(fp,hN)}}}}catch(e){}return r}}
+function mfRe(){const c=$('#app .mfc');if(c)c.outerHTML=mfCard()}
+// logging from the library
+function logFood(x,msg){const t=today();S.meals=S.meals||{};(S.meals[t]=S.meals[t]||[]).push(x);addTot(x,1);save();render();try{evalDay()}catch(_){}toast(msg||`${x.n} added to ${dLbl(t)}.`)}
+let MFQ=null;
+function mfAsk(x){MFQ={x,q:1};sheet(`<h2>${esc(x.n)}</h2><p class="sm" style="margin:-2px 0 10px">${Math.round(x.k)} kcal, ${Math.round(x.p)}g protein for one portion${x.rough?' (a rough guess)':''}.</p><p class="sm" style="margin:0 2px 6px">How much did you have?</p><div class="chips">${[[.5,'Half'],[1,'One portion'],[1.5,'1½'],[2,'Double']].map(([q,l])=>`<button class="chip ${q===1?'on':''}" data-a="mfq" data-i="${q}">${l}</button>`).join('')}</div><button class="btn big on" data-a="mfadd">Add to ${esc(dLbl(today()))}</button><button class="btn big" data-a="shx">Cancel</button>`)}
+function mfLog(kind,id){if(kind==='m'){const x=mfMeals().find(m=>nmk(m.n)===nmk(id));if(x)mfAsk(x);return}
+ if(kind==='r'){rcLogSheet(+id);return}
+ if(kind==='p'){const p=(S.bc||{})[id];if(!p)return;BC={mode:'food',code:id};bcDone(p)}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mft],[data-a=mflog],[data-a=mfstar],[data-a=mfall],[data-a=mfq],[data-a=mfadd],[data-mfpic]');if(!el)return;
+ if(el.matches('[data-mfpic]')&&e.target.closest('.ph')){e.stopImmediatePropagation();e.preventDefault();const b=document.querySelector(`#app .svd [data-a=smpic][data-i="${el.dataset.mfpic}"]`);if(b){b.click()}return}
+ const a=el.dataset.a;if(!a)return;e.stopImmediatePropagation();e.preventDefault();
+ if(a==='mft'){MFT.t=el.dataset.i;MFT.all=false;return mfRe()}
+ if(a==='mfall'){MFT.all=true;return mfRe()}
+ if(a==='mfstar'){const n=el.dataset.i;S.saved=S.saved||[];const i=S.saved.findIndex(x=>nmk(x.n)===nmk(n));if(i>=0){S.saved.splice(i,1);toast(`${n} unstarred.`)}else{const x=mfMeals().find(m=>nmk(m.n)===nmk(n));if(x)S.saved.push({n:x.n,k:x.k,p:x.p,f:x.f,c:x.c});toast(`${n} starred.`)}save();return render()}
+ if(a==='mflog'){const [k,...rest]=el.dataset.i.split('|');return mfLog(k,rest.join('|'))}
+ if(a==='mfq'&&MFQ){MFQ.q=+el.dataset.i;document.querySelectorAll('#sheet [data-a=mfq]').forEach(b=>b.classList.toggle('on',b===el));return}
+ if(a==='mfadd'&&MFQ){const {x,q}=MFQ,r1=v=>Math.round(v*q*10)/10;MFQ=null;sheet(null);const y={n:x.n,k:Math.round(x.k*q),p:r1(x.p),f:r1(x.f),c:r1(x.c)};if(x.rough)y.rough=1;return logFood(y)}},true);
+// matches as you type in the describe box, then estimate or a rough guess
+function dsSuggest(q){const box=$('#app .dsug');const w=nmk(q).split(/\s+/).filter(Boolean);const hit=s=>w.every(t=>nmk(s).includes(t));
+ const all=[...mfMeals().map(x=>({k:'m',id:x.n,n:x.n,kc:x.k,lbl:x.star?'Starred':'Meal'})),...(S.recipes||[]).map((r,i)=>({k:'r',id:i,n:r.n,kc:rcPer(r).k,lbl:'Recipe'})),...mfProds().map(({code,p})=>({k:'p',id:code,n:[p.b,p.n].filter(Boolean).join(' '),kc:p.ks??p.k100,lbl:'Product'}))];
+ const L=(w.length?all.filter(x=>hit(x.n)):all.slice(0,3)).slice(0,4);
+ const rows=L.map(x=>`<button data-a="dsmf" data-i="${x.k}|${esc(String(x.id))}"><span>${esc(x.n)}</span><small>${x.lbl}</small><em>${x.kc!=null?Math.round(x.kc)+' kcal':''}</em></button>`).join('')+(w.length?`<button class="act" data-a="dsest">${ico('<path d="M4 12h16M12 4v16"/>')}<span>Estimate “${esc(q.trim().slice(0,40))}”</span></button>`:'')+`<button class="act" data-a="rgopen">${ico('<circle cx="12" cy="12" r="8"/><path d="M12 8v4"/><circle cx="12" cy="15.5" r=".6"/>')}<span>Not sure what’s in it? Rough guess</span></button>`;
+ const host=$('#app .dscw .dsc');if(!host)return;if(!box)host.insertAdjacentHTML('afterend',`<div class="dsug">${rows}</div>`);else box.innerHTML=rows}
+document.addEventListener('input',e=>{if(!e.target.matches||!e.target.matches('#app [data-dsc]')||!S.nat)return;dsSuggest(e.target.value)},true);
+document.addEventListener('focusin',e=>{if(!e.target.matches||!e.target.matches('#app [data-dsc]')||!S.nat)return;dsSuggest(e.target.value)},true);
+document.addEventListener('focusout',e=>{if(!e.target.matches||!e.target.matches('#app [data-dsc]'))return;setTimeout(()=>{const a=document.activeElement;if(!(a&&a.closest&&a.closest('.dsug'))){const b=$('#app .dsug');if(b&&!b.matches(':hover'))b.remove()}},250)},true);
+let RG=null;
+const RGS=[['snack','A snack',220],['light','A light meal',450],['meal','A normal meal',650],['big','A big meal',900],['feast','A feast',1250]];
+const RGK=[['mix','Mixed',.2,.35,.45],['carb','Mostly carbs',.15,.3,.55],['prot','Protein heavy',.35,.35,.3],['fried','Takeaway or fried',.14,.46,.4],['sweet','Sweet',.06,.36,.58]];
+function rgSheet(){const g=RG;sheet(`<h2>A rough guess</h2><p class="sm" style="margin:-2px 0 12px">For food someone else made, or anything you can’t weigh or look up. It’s marked as rough, so you know later.</p>
+ <label class="sm" style="display:block;margin:0 2px 10px">What was it?<input data-rgn value="${esc(g.n)}" placeholder="e.g. Dinner at Oscar’s"></label>
+ <p class="sm" style="margin:0 2px 6px">How much?</p><div class="rgc">${RGS.map(([k,l,kc])=>`<button class="${g.s===k?'on':''}" data-a="rgs" data-i="${k}"><b>${l}</b><small>about ${kc} kcal</small></button>`).join('')}</div>
+ <p class="sm" style="margin:0 2px 6px">What was it like?</p><div class="chips" style="flex-wrap:wrap">${RGK.map(([k,l])=>`<button class="chip ${g.k===k?'on':''}" data-a="rgk" data-i="${k}">${l}</button>`).join('')}</div>
+ <button class="btn big on" data-a="rgadd" style="margin-top:14px">Log it</button><button class="btn big" data-a="shx">Cancel</button>`)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dsmf],[data-a=dsest],[data-a=rgopen],[data-a=rgs],[data-a=rgk],[data-a=rgadd]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a,inp=$('#app [data-dsc]');
+ if(a==='dsmf'){const [k,...r]=el.dataset.i.split('|');const b=$('#app .dsug');b&&b.remove();if(inp)inp.value='';return mfLog(k,r.join('|'))}
+ if(a==='dsest'){const b=$('#app .dsug');b&&b.remove();return dscRun(inp?inp.value:'')}
+ if(a==='rgopen'){RG={n:inp&&inp.value.trim()||'',s:'meal',k:'mix'};const b=$('#app .dsug');b&&b.remove();return rgSheet()}
+ if(a==='rgs'){RG.s=el.dataset.i;return rgSheet()}
+ if(a==='rgk'){RG.k=el.dataset.i;return rgSheet()}
+ if(a==='rgadd'){const n=($('#sheet [data-rgn]')||{}).value||RG.n||'A meal',S0=RGS.find(x=>x[0]===RG.s),K0=RGK.find(x=>x[0]===RG.k),kc=S0[2];
+  const x={n:n.trim().slice(0,40)||'A meal',k:kc,p:Math.round(kc*K0[2]/4),f:Math.round(kc*K0[3]/9),c:Math.round(kc*K0[4]/4),rough:1};sheet(null);if(inp)inp.value='';RG=null;return logFood(x,`${x.n} logged as a rough guess.`)}},true);
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('#sheet [data-rgn]')&&RG)RG.n=e.target.value},true);
+// the meal list marks rough guesses
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'){const L=(S.meals||{})[today()]||[];document.querySelectorAll('#app .logc .sr').forEach((row,i)=>{const x=L[i];const b=row.querySelector('.in b');if(x&&x.rough&&b&&!b.querySelector('.rgt'))b.insertAdjacentHTML('beforeend','<span class="rgt">rough</span>')})}}catch(_){}return r}}
+// "Type it in yourself" becomes a small "Enter numbers"
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const s=$('#app .dman>summary');if(s&&s.textContent!=='Enter numbers')s.textContent='Enter numbers'}catch(_){}return r}}
+// a scan button in reach once the tiles have scrolled away
+const FSCI={bc:'<path d="M4 6v12M7 6v12M10.5 6v12M14 6v12M16.5 6v12M20 6v12"/>',lb:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',rt:'<circle cx="12" cy="12" r="8.5" opacity=".35"/><path d="M12 3.5a8.5 8.5 0 0 1 7.6 12.3"/>'};
+let FSCO=null;
+function fscSync(){let b=$('.fsc');const want=tab==='diet'&&S.nat&&NAT[S.nat]&&!$('#fs')&&!$('#bcs')&&!$('#rt');if(!want){if(b)b.remove();const m=$('.fscm');m&&m.remove();if(FSCO){FSCO.disconnect();FSCO=null}return}
+ if(!b){document.body.insertAdjacentHTML('beforeend',`<button class="fsc" aria-label="Scan a barcode. Hold for more scanners">${ico(FSCI.bc)}</button>`);b=$('.fsc')}
+ const t=$('#app .dtiles');if(FSCO)FSCO.disconnect();if(!t){b.classList.add('on');return}FSCO=new IntersectionObserver(es=>{const e=es[0];b.classList.toggle('on',!e.isIntersecting&&e.boundingClientRect.top<0)});FSCO.observe(t)}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{fscSync()}catch(_){}return r}}
+{let H=null,held=false;
+ window.addEventListener('pointerdown',e=>{const b=e.target.closest('.fsc');if(!b)return;held=false;H=setTimeout(()=>{held=true;try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}const m=$('.fscm');m&&m.remove();document.body.insertAdjacentHTML('beforeend',`<div class="fscm"><button data-fs="rt">${ico(FSCI.rt)}Rate a product</button><button data-fs="lb">${ico(FSCI.lb)}Scan label</button><button data-fs="bc">${ico(FSCI.bc)}Scan barcode</button></div>`)},450)},true);
+ window.addEventListener('pointerup',e=>{clearTimeout(H)},true);
+ window.addEventListener('click',e=>{const b=e.target.closest('.fsc'),m=e.target.closest('.fscm [data-fs]');
+  if(b){e.stopImmediatePropagation();e.preventDefault();if(held){held=false;return}const mm=$('.fscm');mm&&mm.remove();return bcOpen('food')}
+  if(m){e.stopImmediatePropagation();e.preventDefault();$('.fscm').remove();const k=m.dataset.fs;if(k==='bc')return bcOpen('food');if(k==='rt')return bcOpen('rate');const s=$('#app .dtiles [data-a=scan]');return s&&s.click()}
+  const mm=$('.fscm');if(mm&&!e.target.closest('.fscm'))mm.remove()},true)}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',h:'My foods',p:'Everything you log is kept in My foods, with your recipes and scanned products. Start typing in the describe box and your foods come up first. For food you can’t weigh, log a rough guess.'})}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
