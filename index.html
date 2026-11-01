@@ -8919,6 +8919,79 @@ function tmDress(){const A=$('#app');if(!A)return;A.classList.toggle('tmv',tab==
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=tmpre]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const s=+el.dataset.i,set=(k,v)=>{const i=document.querySelector(`[data-rt=${k}]`);if(i)i.value=v};
  set('m',Math.floor(s/60));set('s',s%60);set('ms',0);const i=document.querySelector('[data-rt=s]');if(i)i.dispatchEvent(new Event('change',{bubbles:true}));else{T.r.ms=s*1e3;T.r.run=false;T.r.left=undefined;render()}},true);
 
+/* ===== v114: two-column choices everywhere, Nutrients gets its own page, tidier actions, electrolytes and shops ===== */
+// Research notes for this block:
+// - Choices laid on a grid are scanned faster and look settled; ragged rows of different widths make people re-read
+//   each line (NN/g, "Using grids in interface design"; Gestalt alignment). At most two per row keeps each target wide
+//   and easy to hit (Fitts 1954; Apple HIG minimum 44 pt), and an odd one out spans the row so nothing hangs alone.
+//   Tiny labels (weekdays, numbers) stay in one row, where a grid would just make the list long.
+// - Actions of the same kind should look the same: "another drink" is as much a main action as coffee, so it gets a
+//   full button, not a smaller link (NN/g, "Visual hierarchy": unequal styling implies unequal importance).
+// - Electrolytes: sodium in a drink helps the body hold on to the fluid instead of passing it straight out (Maughan et
+//   al. 2016, Am J Clin Nutr, beverage hydration index; ACSM fluid replacement position stand 2007). One line says
+//   that; the rest was guidance people don't need every day.
+// - Nutrients works like the other widgets: tap it to open its own page, with the gaps first (what's worth acting on),
+//   then everything (progressive disclosure). Reference values are the UK RNIs used in v77.
+(function(){const st=document.createElement('style');st.textContent=`
+.chips.g2{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;overflow:visible!important;flex-wrap:nowrap}
+.chips.g2>*{margin:0!important;width:100%;min-height:46px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.2;padding:10px 12px}
+.chips.g2>:last-child:nth-child(odd){grid-column:1/-1}
+.chips.g2>.chip small{display:block}
+.fha .rowm{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}.fha .rowm>.btn{margin:0;width:100%;min-height:52px;white-space:nowrap;padding:12px 10px;font-size:16px}
+.fha .rowm>.mbtn{display:none}
+.fha .glink.as-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;border-radius:999px;margin-top:8px!important;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font-weight:700;font-size:16px;text-align:center}
+.wd .mrows{margin-bottom:14px}
+#fs .fset2 .fg input,#fs .fset2 .fg select,#fs .fset2 .fg .inl{margin-top:10px}
+#fs .fset2 .fg p.sm{margin-bottom:2px!important}
+#fs .chips+p.sm,#fs .chips+label,#fs .chips+.inl,#sheet .chips+p.sm{margin-top:16px!important}#fs .fset2 .fg label{display:block;margin-top:14px}
+.fpst,.shc .chips{display:flex!important;gap:8px;align-items:center;overflow-x:auto;scrollbar-width:none}
+.fpst>.chip,.shc .chips>.chip{margin:0;flex:1 1 0;min-width:0;min-height:46px;display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fpst>.chip.addst,.shc .chips>.chip.addst{flex:none;padding:0 16px;min-height:38px;font-size:14px;background:transparent;border:1.5px dashed rgba(255,255,255,.28)}
+.elc2 .elx{margin:2px 2px 12px;font-size:15px;line-height:1.4}.elc2 .row2{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}.elc2 .row2 .btn{margin:0;white-space:nowrap;min-height:50px}
+.elc2 .row2 .btn svg{display:none}
+.nul .r{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:11px 0;border-top:1px solid rgba(255,255,255,.08);cursor:pointer}
+.nul .r:first-of-type{border-top:0}.nul .r b{font-size:15px}.nul .r em{font-style:normal;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.nul .r small{grid-column:1/-1;color:var(--dim);font-size:12px;margin-top:-2px}
+.nul .bar3{grid-column:1/-1;height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}.nul .bar3 i{display:block;height:100%;border-radius:99px}
+.mnseg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:rgba(255,255,255,.06);border-radius:999px;padding:4px;margin:0 0 12px}
+.mnseg button{all:unset;cursor:pointer;text-align:center;padding:9px 0;border-radius:999px;font-weight:700;font-size:14px}.mnseg button.on{background:#F3F1EC;color:#141412}`;document.head.appendChild(st)})();
+
+/* ---------- 1. choices: at most two a row, odd one spans ---------- */
+function chipGrid(root){(root||document).querySelectorAll('.chips:not([data-g2])').forEach(c=>{c.dataset.g2=1;const k=[...c.children].filter(x=>x.matches('button,.chip,label,a'));if(k.length<2)return;
+ if(c.closest('.tmpre,.dgrid,.fpst,.shc,.cym,.mnc2,.fptray,.wd,.nav,.hdr,.cal'))return;
+ if(c.classList.contains('dgrid'))return;const short=k.every(x=>(x.textContent||'').trim().length<=4);if(short&&k.length>3)return;
+ c.classList.add('g2')})}
+{let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;try{chipGrid()}catch(_){}})}).observe(document.body,{childList:true,subtree:true})}
+
+/* ---------- 2. hero actions: equal buttons; water and caffeine ---------- */
+{const _d=fsDress;fsDress=function(){const r=_d.apply(this,arguments);try{const w=$('#fs .fsw');if(!w)return r;
+ if(FS==='water'){const A=w.querySelector('.fhero .fha'),ch=A&&A.querySelector('.chips'),mb=A&&A.querySelector('.mbtn');if(ch&&mb&&!ch.querySelector('[data-tk1]')){const b=document.createElement('button');b.className='chip';b.dataset.a=mb.dataset.a;b.dataset.i=mb.dataset.i;b.dataset.tk1=1;b.textContent='Take one off';const em=ch.querySelector('[data-a=wempty]');em?ch.insertBefore(b,em):ch.appendChild(b)}
+  const el=w.querySelector('.card.elc');if(el&&!el.classList.contains('elc2')){el.classList.add('elc2');el.querySelectorAll(':scope>p.sm').forEach(p=>p.remove());const h=el.querySelector('h2');h&&h.insertAdjacentHTML('afterend','<p class="elx">Long or sweaty session, or a hot day? A little salt in your drink helps your body hold on to the water.</p>');const sb=el.querySelector('[data-a=elxscan]');if(sb){sb.textContent='Scan a pack'}}}
+ if(FS==='caf'){const A=w.querySelector('.fhero .fha'),gl=A&&A.querySelector('.glink'),mb=A&&A.querySelector('.mbtn');if(gl&&!gl.classList.contains('as-btn')){gl.classList.add('as-btn');gl.textContent='+ Tea, pre-workout or other'}
+  if(mb&&!A.querySelector('[data-rmlast]')){A.insertAdjacentHTML('beforeend',`<button class="glink" data-rmlast="1" data-a="${mb.dataset.a}" style="display:block;margin:10px auto 0;font-size:14px">Remove the last drink</button>`)}}
+ chipGrid(w)}catch(e){console.warn(e)}return r}}
+
+/* ---------- 3. shops: one wide bar, a small add pill ---------- */
+{const fix=()=>{document.querySelectorAll('.fpst [data-a=shnew],.shc [data-a=shnew]').forEach(b=>{if(!b.classList.contains('addst')){b.classList.add('addst');b.textContent='+ Add shop'}})};new MutationObserver(()=>{try{fix()}catch(_){}}).observe(document.body,{childList:true,subtree:true})}
+
+/* ---------- 4. Nutrients, its own page ---------- */
+let NUV='d',NUP=0;
+function nutrV(){const t=today(),wk=[...Array(7)].map((_,i)=>addDays(t,-i)).filter(d=>d<=realToday()),R=NUV==='w'?miRange(wk):miRange([t]),rows=mnRows(R.per),pc=k=>miPct(k,R.per[k]||0),ok=rows.filter(([k])=>pc(k)>=67).length,low=rows.filter(([k])=>pc(k)<67);
+ const col=p=>p>=100?'#7FD8A0':p>=67?'#F2C14E':'rgba(243,241,236,.45)',nm=k=>MN[k][0].replace(/ \(.*\)/,'');
+ const row=([k,v])=>{const p=pc(k),L=FOODX[k]||[];return`<div class="r" data-a="mninfo" data-i="${k}"><b>${esc(nm(k))}</b><em style="color:${col(p)}">${p}%</em><div class="bar3"><i style="width:${Math.min(100,p)}%;background:${col(p)}"></i></div>${p<67&&L.length?`<small>Try ${esc(L.slice(0,2).join(' or ').toLowerCase())}</small>`:''}</div>`};
+ const W=NUV==='d'?watchList(t):[];NUP=rows.length?ok/rows.length:0;
+ return`<h1>Nutrients</h1><div class="mnseg"><button class="${NUV==='d'?'on':''}" data-a="nuv" data-i="d">Today</button><button class="${NUV==='w'?'on':''}" data-a="nuv" data-i="w">This week</button></div>
+ ${fhero('micro',rows.length?ok/rows.length:0,{liq:0,c1:'#7FD8A0',arc:'#7FD8A0',mid:`${ok}/${rows.length}`},`${ok}<small>of ${rows.length}</small>`,`at a good level${NUV==='w'?' this week':' today'}.`+(low.length?` Lowest: ${esc(low.slice(0,3).map(([k])=>nm(k)).join(', '))}.`:''),R.n?`From ${R.have} of ${R.n} foods with nutrient data${NUV==='w'?', a day on average':''}`:'Log a meal to see your nutrients.').replace('<div class="fha"></div>','')}
+ ${W.length?`<div class="card"><h2>Worth watching</h2>${W.map(([a,b])=>`<p class="sm" style="margin:8px 0 0"><b style="color:inherit">${esc(a)}.</b> ${esc(b)}</p>`).join('')}</div>`:''}
+ ${low.length?`<div class="card nul"><h2>Top these up</h2>${low.map(row).join('')}</div>`:''}
+ <div class="card nul"><h2>${low.length?'Everything else':'All nutrients'}</h2>${rows.filter(([k])=>pc(k)>=67||!low.length).map(row).join('')}</div>
+ <p class="sm" style="margin:12px 4px 0">Compared with UK reference intakes. Tap any nutrient for what it does and foods that have it.</p>`}
+FSX.micro=()=>{const h=nutrV();setTimeout(()=>{try{gzGo('micro',NUP)}catch(_){}},0);return h};
+NM.micro=NM.micro||'Nutrients';
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=nuv]');if(el){e.stopImmediatePropagation();e.preventDefault();NUV=el.dataset.i;fsr();return}
+ const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=micro]');if(!w||ED||e.target.closest('button,input,a'))return;if(typeof WTD!=='undefined'&&Date.now()-WTD>450)return;e.stopImmediatePropagation();e.preventDefault();NUV='d';fsOpen('micro')},true);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M5 19c8 0 14-6 14-14C11 5 5 11 5 19z"/><path d="M5 19l7-7"/>',h:'Nutrients has its own page',p:'Tap the Nutrients widget to see what to top up today or this week, with foods that help.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
