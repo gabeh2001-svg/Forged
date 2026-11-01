@@ -8291,7 +8291,7 @@ const ANIMAL=['meat','fish','shell','dairy','egg'];
 function dietOK(n){const t=dTags(n),b=dietBan();for(const x of t)if(b.has(x))return false;if(dietOf()==='carn'&&!ANIMAL.some(a=>t.has(a)))return false;return true}
 // keep what fits, top up from extra pools, plants first for flexitarians; never empty (falls back to the original list)
 function dietPick(L,...more){const seen=new Set(),out=[];[L,...more].forEach(A=>(A||[]).forEach(n=>{const k=n.toLowerCase();if(seen.has(k)||!dietOK(n))return;seen.add(k);out.push(n)}));
- if(dietOf()==='flexi')out.sort((a,b)=>ANIMAL.some(x=>dTags(a).has(x))-ANIMAL.some(x=>dTags(b).has(x)));return out.length?out:L.slice()}
+ if(dietOf()==='flexi')out.sort((a,b)=>ANIMAL.some(x=>dTags(a).has(x))-ANIMAL.some(x=>dTags(b).has(x)));return out}
 const dietName=()=>{const d=DIETS.find(x=>x[0]===dietOf()),av=((S.setup&&S.setup.avoid)||[]).map(k=>(DAVOID.find(x=>x[0]===k)||[0,k])[1].toLowerCase());return(S.setup&&S.setup.diet?d[1]:'Not set')+(av.length?` · no ${av.join(', ')}`:'')};
 
 // nutrient picks, plant and animal top-ups
@@ -8307,8 +8307,10 @@ const FOODXA={kp:['Salmon','Milk','Chicken'],ca:['Milk','Cheddar','Sardines','Gr
 const FOODX0=JSON.parse(JSON.stringify(FOODX)),MNTIP0=JSON.parse(JSON.stringify(MNTIP)),SAVE0=SAVE.slice(),MNF0={};
 try{Object.keys(MN).forEach(k=>{MNF0[k]=MN[k][6]})}catch(_){}
 const SAVEP=['Tofu, tinned beans and lentils are protein for pennies.','Frozen soya beans and peas are a cheap protein top-up for any meal.'];
-function dietApply(){try{Object.keys(FOODX0).forEach(k=>{FOODX[k]=dietPick(FOODX0[k],FOODXP[k],FOODXA[k]).slice(0,6)});
- Object.keys(MNTIP0).forEach(k=>{if(dietOK(MNTIP0[k][0]))MNTIP[k]=MNTIP0[k];else{const L=FOODX[k]||[];if(L.length)MNTIP[k]=[L[0],L.slice(0,2).join(' or ').toLowerCase()]}});
+// when a diet rules out most food sources of a nutrient, offer the supplement instead of food they don't eat
+const SUPPX={kp:null,ca:'Calcium tablets',mg:'Magnesium tablets',fe:'Iron tablets (ask a pharmacist)',zn:'Zinc tablets',se:'Selenium tablets',io:'Iodine tablets',va:'Vitamin A in a multivitamin',vd:'Vitamin D tablets',ve:'Vitamin E in a multivitamin',vk:'Vitamin K in a multivitamin',b1:'B-complex tablets',b2:'B-complex tablets',b3:'B-complex tablets',b6:'B-complex tablets',b9:'Folic acid tablets',b12:'B12 tablets',vc:'Vitamin C tablets'};
+function dietApply(){try{Object.keys(FOODX0).forEach(k=>{const L=dietPick(FOODX0[k],FOODXP[k],FOODXA[k]).slice(0,6);if(L.length<3&&SUPPX[k]&&!L.includes(SUPPX[k]))L.push(SUPPX[k]);FOODX[k]=L.length?L:[SUPPX[k]||FOODX0[k][0]]});
+ Object.keys(MNTIP0).forEach(k=>{if(dietOK(MNTIP0[k][0]))MNTIP[k]=MNTIP0[k];else{const L=FOODX[k]||[];if(L.length)MNTIP[k]=[L[0],L.slice(0,2).map(x=>x.replace(/^./,c=>c.toLowerCase())).join(' or ')]}});
  const sv=SAVE0.filter(t=>dietOK(t)||/frozen veg|own-brand|double batch|price per kilo|share ingredients/i.test(t)&&!dTags(t).size);SAVEP.forEach(t=>{if(dietOK(t)&&dietOf()!=='omni'&&dietOf()!=='carn')sv.push(t)});SAVE.splice(0,SAVE.length,...(sv.length?sv:SAVE0));
  Object.keys(MNF0).forEach(k=>{const s=MNF0[k];if(typeof s!=='string')return;const parts=s.replace(/\.$/,'').split(/,\s*/),keep=parts.filter(dietOK);MN[k][6]=keep.length?keep.join(', ').replace(/^./,c=>c.toUpperCase())+'.':s})}catch(_){}}
 dietApply();
@@ -8342,7 +8344,7 @@ CYPH.luteal[0]='Second half of your cycle';
 /* ---------- 3. targets that follow your cycle ---------- */
 // one cycle, day by day: what each day adds or takes back, summing to zero
 function cyProfile(){const st=cycStats(),len=Math.max(21,Math.min(40,st.len||28)),pl=Math.max(1,st.pl||5),ovd=len-13,D=[];
- for(let i=1;i<=len;i++){const toNext=len+1-i,ph=i<=pl?'period':Math.abs(i-ovd)<=1?'ovulation':i<ovd?'follicular':toNext<=5?'pms':'luteal';D.push({i,ph,a:ph==='pms'?150:ph==='luteal'?50:0})}
+ for(let i=1;i<=len;i++){const toNext=len+1-i,ph=i<=pl?'period':Math.abs(i-ovd)<=1?'ovulation':i<ovd?'follicular':toNext<=pmsLen()?'pms':'luteal';D.push({i,ph,a:ph==='pms'?150:ph==='luteal'?50:0})}
  const base=+((S.cyT&&S.cyT.b&&S.cyT.b.k)||S.setup.k)||0,lo=D.filter(x=>x.ph==='period'||x.ph==='follicular'),pos=D.reduce((s,x)=>s+x.a,0);
  let take=lo.length?pos/lo.length:0;take=Math.min(take,100,Math.max(0,base-1200));const scale=pos?take*lo.length/pos:0;
  D.forEach(x=>{if(x.a>0)x.a=Math.round(x.a*scale/5)*5;else if(x.ph==='period'||x.ph==='follicular')x.a=-Math.round(take/5)*5});
@@ -8376,7 +8378,7 @@ const CYCRAVE=['Dark chocolate, a couple of squares','Greek yoghurt with berries
 function cyKSVG(P,day){const W=300,H=58,mid=30,bw=W/P.length,mx=Math.max(1,...P.map(x=>Math.abs(x.a)));
  return`<svg class="cyk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${W}" y1="${mid}" y2="${mid}" stroke="currentColor" stroke-opacity=".25" stroke-width="1"/>${P.map((x,j)=>{const h=Math.max(2,Math.abs(x.a)/mx*(mid-4)),y=x.a>=0?mid-h:mid,on=x.i===day,col=x.ph==='period'?'#ff6f91':x.a>0?'var(--ac,#ffb36b)':'currentColor';
   return`<rect x="${(j*bw+bw*.18).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw*.64).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${col}" fill-opacity="${on?1:x.a>0?.75:.35}"${on?' stroke="currentColor" stroke-width="1.5"':''}/>`}).join('')}</svg>`}
-function cyFoodCard(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.ph]||CYFOOD.follicular,foods=dietPick(ph[2]).slice(0,8),A=cyAdjToday(),T=S.cyT||{},base=(T.b&&T.b.k)||+S.setup.k||0,hc=c.hc==='y';
+function cyFoodCard(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.ph]||CYFOOD.follicular,foods=(()=>{const f=dietPick(ph[2]).slice(0,8);if(f.length<3){const sp={period:['Iron tablets (ask a pharmacist)'],pms:['Calcium tablets','Magnesium tablets'],luteal:['Calcium tablets']}[n.ph]||[];sp.forEach(s=>f.push(s))}return f})(),A=cyAdjToday(),T=S.cyT||{},base=(T.b&&T.b.k)||+S.setup.k||0,hc=c.hc==='y';
  const crave=(n.ph==='pms'||n.ph==='late')?dietPick(CYCRAVE).slice(0,5):[];
  let tgt='';
  if(hc)tgt=`<p class="gp">Hormonal contraception usually evens out these hormone changes, so your targets stay steady. The food ideas still follow your period.</p>`;
@@ -8386,7 +8388,7 @@ function cyFoodCard(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.
  else if(!c.fd)tgt=`<div class="cyst2"><p class="sm" style="margin:0">People eat about 170 kcal a day more in the second half of the cycle, and that’s normal. Swell can give you more room before your period and take a little less on the other days, so the month still adds up to your usual target.</p><button class="btn on" data-a="cyfon" style="margin:12px 0 0;width:100%">Let my targets follow my cycle</button></div>`;
  return`<div class="card cyfood"><h2>Food and your cycle</h2><div class="cyph"><b>${esc(ph[0])}</b><span class="sm">${esc(ph[1])}</span></div>${tgt}
  <h3>Foods to have</h3><p class="sm" style="margin:2px 2px 0">Tap one to add it to your shopping list.</p><div class="mnc2">${foods.map(f=>`<button data-a="cyfadd" data-i="${esc(f)}"><b>${esc(f)}</b><small>Add to list</small></button>`).join('')}</div>
- ${crave.length?`<h3>If cravings hit</h3><div class="mnc2">${crave.map(f=>`<button data-a="cyfadd" data-i="${esc(f.replace(/,.*$/,'').replace(/ made with.*$/,''))}"><b>${esc(f)}</b><small>Add to list</small></button>`).join('')}</div>`:''}
+ ${foods.length?'':'<p class="sm" style="margin:8px 2px 0">Nothing to add for how you eat right now.</p>'}${crave.length?`<h3>If cravings hit</h3><div class="mnc2">${crave.map(f=>`<button data-a="cyfadd" data-i="${esc(f.replace(/,.*$/,'').replace(/ made with.*$/,''))}"><b>${esc(f)}</b><small>Add to list</small></button>`).join('')}</div>`:''}
  <div class="npr"><div><b>Targets follow my cycle</b><small>More room before your period, a little less after. Same total.</small></div><button class="tg ${c.fd?'on':''}" data-a="cyfd" role="switch" aria-checked="${!!c.fd}" aria-label="Targets follow my cycle"></button></div>
  <p class="sm" style="margin:12px 2px 0">Do you use hormonal contraception (the pill, patch, ring, implant, injection or a hormonal coil)?</p><div class="chips">${[['n','No'],['y','Yes']].map(x=>`<button class="chip ${(c.hc||'n')===x[0]?'on':''}" data-a="cyhc" data-i="${x[0]}">${x[1]}</button>`).join('')}</div>
  <p class="gp">If PMS or period pain gets in the way of everyday life, a GP can help.</p></div>`}
@@ -8495,6 +8497,239 @@ window.addEventListener('click',e=>{const el=e.target.closest('#app .wd[data-id=
 let DRG2=0;
 // taps: pick a recipe (tap again to put it back); a day takes it and lets go
 window.addEventListener('click',e=>{const b=e.target.closest('#fs .fptray [data-a=fphold2]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();if(Date.now()-DRG2<450)return;FPH=FPH===b.dataset.i?null:b.dataset.i;fsr()},true);
+
+/* ===== v110: a cycle report to take to a doctor ===== */
+// Research notes for this block:
+// - What a GP looks at first is the FIGO 2018 bleeding pattern (Munro et al., Int J Gynaecol Obstet 143:393): frequency
+//   (normal 24 to 38 days), regularity (shortest to longest cycle within 7 to 9 days), duration (8 days or fewer) and
+//   volume, plus bleeding between periods. The summary table shows each against its range, and absent periods for
+//   90 days or more are flagged (FIGO's definition of amenorrhoea).
+// - NICE quality standard QS47 (heavy menstrual bleeding): the history should cover how heavy the bleeding is, pain and
+//   irregularity, the effect on daily life (leaking onto clothes or bedding, needing double protection, not going
+//   out, missing work or school) and anything that affects treatment (other conditions, medicines). Those are the
+//   optional questions asked before the report is made; flooding and clots over 2.5 cm are signs of heavy bleeding
+//   (MSD Manual, from FIGO).
+// - PMS is diagnosed from symptoms recorded day by day over at least two cycles, since recall is unreliable: the GP
+//   checks they're cyclical, ease once a period starts and leave a symptom-free week (RCOG Green-top 48, via GP
+//   Notebook). So the report shows when each symptom falls (week before, during, rest of cycle), whether the week
+//   after a period was clear, and how many cycles there are.
+// - Food, weight, training and sleep are optional pages: low energy availability and heavy training can stop or
+//   upset periods (functional hypothalamic amenorrhoea, Endocrine Society guideline 2017), and iron intake matters
+//   with heavy bleeding. Shown as logged, with blanks left blank, never filled in or judged.
+// - It's a record, not a diagnosis, and says so. Made on the phone; nothing is uploaded. Save as PDF uses the phone's
+//   print sheet; Share sends the same report as a file.
+(function(){const st=document.createElement('style');st.textContent=`
+#rpt{position:fixed;inset:0;z-index:300;background:#e9e7e2;overflow:auto;-webkit-overflow-scrolling:touch;color:#1b1b1b}
+#rpt .rpbar{position:sticky;top:0;z-index:2;display:flex;gap:8px;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:rgba(20,20,20,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#rpt .rpbar b{flex:1;color:#f3f1ec;font-size:15px}#rpt .rpbar button{border:0;border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;font-weight:700;background:rgba(255,255,255,.12);color:#f3f1ec}#rpt .rpbar button.on{background:var(--ac,#f3f1ec);color:var(--on-ac,#141412)}
+.rp{font-family:-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;font-size:11px;line-height:1.45;color:#1b1b1b}
+.rp .rppg{background:#fff;width:min(210mm,100%);margin:14px auto;padding:14mm 13mm;box-sizing:border-box;box-shadow:0 4px 24px rgba(0,0,0,.12)}
+.rp h1{font-size:20px;margin:0;letter-spacing:-.01em}.rp h2{font-size:13px;margin:18px 0 6px;padding-bottom:4px;border-bottom:1.5px solid #1b1b1b;text-transform:uppercase;letter-spacing:.06em}
+.rp h3{font-size:11.5px;margin:12px 0 4px}.rp .rpmut{color:#666}.rp p{margin:4px 0}
+.rp .rphd{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;padding-bottom:10px;border-bottom:3px solid #b3123c}
+.rp .rphd .rpwho{text-align:right;font-size:11px}
+.rp .rpmeta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 0}.rp .rpmeta div{background:#f6f4f1;border-radius:6px;padding:6px 8px}.rp .rpmeta small{display:block;color:#666;font-size:9px;text-transform:uppercase;letter-spacing:.05em}.rp .rpmeta b{font-size:12px}
+.rp table{width:100%;border-collapse:collapse;margin:4px 0}.rp th,.rp td{text-align:left;padding:4px 6px;border-bottom:1px solid #e3e0da;vertical-align:top}.rp th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:#555;border-bottom:1.5px solid #bbb}
+.rp td.rpn,.rp th.rpn{text-align:right;font-variant-numeric:tabular-nums}
+.rp .rpfl{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9.5px;font-weight:700}.rp .rpfl.rpok{background:#e5f3ea;color:#1c6b3a}.rp .rpfl.rpout{background:#fbe3e8;color:#9b1033}.rp .rpfl.rpna{background:#eee;color:#666}
+.rp .rpnt{background:#f6f4f1;border-left:3px solid #b3123c;padding:8px 10px;border-radius:4px;margin:8px 0}
+.rp svg{display:block;width:100%!important;max-width:100%!important;height:auto!important}
+.rp .rplg{display:flex;flex-wrap:wrap;gap:10px;font-size:9.5px;color:#444;margin:4px 0}.rp .rplg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.rp .rpdl td,.rp .rpdl th{padding:2.5px 4px;font-size:9.5px}.rp .rpdl tr.rppd td{background:#fdf1f4}
+.rp .rpft{margin-top:14px;padding-top:8px;border-top:1px solid #ddd;font-size:9px;color:#777}
+.rp .rptwo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:600px){.rp .rppg{padding:18px 14px;margin:10px 0}.rp .rpmeta{grid-template-columns:1fr 1fr}.rp .rptwo{grid-template-columns:1fr}}
+@media print{@page{size:A4;margin:12mm}html,body{background:#fff!important}body>*:not(#rpt){display:none!important}#rpt{position:static;overflow:visible;background:#fff}#rpt .rpbar{display:none}
+ .rp .rppg{box-shadow:none;margin:0;padding:0;width:auto;page-break-after:always}.rp .rppg:last-child{page-break-after:auto}.rp tr{page-break-inside:avoid}.rp h2{page-break-after:avoid}
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.rps .lab2{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:16px 2px 6px}
+.rps .chips{padding:0;flex-wrap:wrap;overflow:visible}.rps textarea{width:100%;min-height:70px;box-sizing:border-box;border-radius:14px;padding:10px 12px;font:inherit;font-size:15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:inherit;resize:vertical}`;document.head.appendChild(st)})();
+
+let RPO=null;
+const rpDef=()=>({m:6,food:1,body:1,imp:'',q:[],note:''});
+const RPQ=[['leak','Leaking onto clothes or bedding'],['dbl','Needing two products at once (like a pad and a tampon)'],['hr','Changing protection every hour or two'],['clot','Clots bigger than a 10p coin (2.5 cm)'],['miss','Missing work, school or plans'],['pain','Pain that painkillers don’t help'],['sex','Bleeding after sex'],['meno','Hot flushes or night sweats']];
+function rpSheet(){RPO=RPO||rpDef();const o=RPO,ch=(a,v,l,on)=>`<button class="chip ${on?'on':''}" data-a="${a}" data-i="${v}">${l}</button>`;
+ sheet(`<div class="rps"><h2>Report for a doctor</h2><p class="sm" style="margin:4px 2px 0">A clear summary of your cycles and symptoms to show a GP or nurse. Made on your phone; nothing is sent anywhere unless you share it.</p>
+ <p class="lab2">How far back</p><div class="chips">${[[3,'3 months'],[6,'6 months'],[12,'12 months']].map(([v,l])=>ch('rpm',v,l,o.m===v)).join('')}</div>
+ <p class="lab2">Include</p><div class="chips">${ch('rpinc','food','Food and drink each day',o.food)}${ch('rpinc','body','Weight, training and sleep',o.body)}</div>
+ <p class="lab2">How much do your periods affect daily life? (optional)</p><div class="chips">${['Not at all','A little','Quite a lot','A lot'].map(l=>ch('rpimp',l,l,o.imp===l)).join('')}</div>
+ <p class="lab2">Any of these? (optional)</p><div class="chips">${RPQ.map(([k,l])=>ch('rpq',k,l,o.q.includes(k))).join('')}</div>
+ <p class="lab2">Anything else for the doctor (optional)</p><textarea id="rpnote" placeholder="Medicines, other conditions, what you’d like to ask">${esc(o.note)}</textarea>
+ <button class="btn big on" data-a="rpgo" style="margin-top:14px">Make the report</button></div>`)}
+
+const rpF=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+const rpS=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+const rpMed=a=>{if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+function rpData(o){const c=CYC(),t=realToday(),from=addDays(t,-Math.round(o.m*30.44)),st=cycStats();
+ const P=c.p.slice().sort((a,b)=>a.s<b.s?-1:1),inR=P.filter(x=>x.s>=from||(x.e||t)>=from);
+ const pEnd=x=>x.e||(cyDD(x.s,t)<10?t:addDays(x.s,st.pl-1));
+ const per=new Set();P.forEach(x=>{for(let d=x.s;d<=pEnd(x);d=addDays(d,1))per.add(d)});
+ const cyc=[];for(let i=0;i<P.length;i++){const x=P[i],nx=P[i+1];if(pEnd(x)<from&&!(nx&&nx.s>=from))continue;const len=nx?cyDD(x.s,nx.s):null,pl=cyDD(x.s,pEnd(x))+1;
+  const fl=[];for(let k=0;k<pl;k++){const d=addDays(x.s,k);fl.push((c.d[d]||{}).fl||'p')}
+  const imb=[];if(nx)for(let d=addDays(pEnd(x),1);d<nx.s;d=addDays(d,1)){const v=c.d[d];if(v&&v.fl)imb.push(d)}
+  cyc.push({s:x.s,e:pEnd(x),len,pl,fl,imb,ongoing:!nx,sofar:nx?null:cyDD(x.s,t)+1})}
+ const L=cyc.filter(x=>x.len).map(x=>x.len),PL=cyc.filter(x=>!x.ongoing||x.e<t).map(x=>x.pl);
+ const gaps=[];for(let i=1;i<P.length;i++)gaps.push(cyDD(P[i-1].s,P[i].s));const last=P[P.length-1],since=last?cyDD(last.s,t):null;
+ const heavy=cyc.map(x=>x.fl.filter(f=>f==='h').length);
+ // symptoms by timing: week before a period, during, the week after (the "symptom-free" week), other days
+ const starts=P.map(x=>x.s),sy={},days=[];let wkAfterSym=0,wkAfterDays=0;
+ for(let d=from;d<=t;d=addDays(d,1)){const v=c.d[d]||{},nx=starts.find(s=>s>d),pv=[...starts].reverse().find(s=>s<=d),toN=nx?cyDD(d,nx):null,cd=pv?cyDD(pv,d)+1:null;
+  const zone=per.has(d)?'dur':toN!=null&&toN<=7?'pre':cd!=null&&cd>=6&&cd<=12&&!per.has(d)?'post':'oth';
+  (v.sy||[]).forEach(s=>{const o2=sy[s]=sy[s]||{n:0,pre:0,dur:0,post:0,oth:0};o2.n++;o2[zone]++});
+  if(zone==='post'){wkAfterDays++;if((v.sy||[]).filter(s=>s!=='Good energy').length)wkAfterSym++}
+  days.push({d,cd,per:per.has(d),fl:v.fl,sy:v.sy||[]})}
+ return{c,t,from,P,cyc,L,PL,gaps,since,heavy,sy,days,wkAfterSym,wkAfterDays,st}}
+
+function rpBar(cyc){const rows=cyc.slice().reverse().slice(0,14),W=520,lh=17,top=18,lw=78,mx=Math.max(40,...rows.map(r=>r.len||r.sofar||0)),sc=(W-lw-8)/mx,H=top+rows.length*lh+6;
+ const col={h:'#9b1033',m:'#d64a6e',l:'#f0a3b6',s:'#f7d4dd',p:'#e07a95'};
+ let g=`<svg viewBox="0 0 ${W} ${H}" font-family="-apple-system,system-ui,sans-serif"><rect x="${lw+23*sc}" y="${top-4}" width="${(38-23)*sc}" height="${rows.length*lh+4}" fill="#e5f3ea"/>`;
+ [1,7,14,21,28,35,42,49,56].filter(d=>d<=mx).forEach(d=>{g+=`<line x1="${lw+(d-.5)*sc}" x2="${lw+(d-.5)*sc}" y1="${top-4}" y2="${H-4}" stroke="#ddd" stroke-width=".6"/><text x="${lw+(d-.5)*sc}" y="${top-7}" font-size="8" text-anchor="middle" fill="#777">${d}</text>`});
+ rows.forEach((r,i)=>{const y=top+i*lh;g+=`<text x="0" y="${y+11}" font-size="8.5" fill="#333">${rpS(r.s)}</text><text x="${lw-4}" y="${y+11}" font-size="8.5" text-anchor="end" fill="#333" font-weight="700">${r.len?r.len+'d':'now'}</text>`;
+  const n=r.len||r.sofar||r.pl;g+=`<rect x="${lw}" y="${y+3}" width="${n*sc}" height="${lh-7}" rx="2" fill="#f1efeb"/>`;
+  r.fl.forEach((f,k)=>{g+=`<rect x="${lw+k*sc+.4}" y="${y+3}" width="${sc-.8}" height="${lh-7}" rx="1.5" fill="${col[f]||col.p}"/>`});
+  r.imb.forEach(d=>{const k=cyDD(r.s,d);g+=`<circle cx="${lw+(k+.5)*sc}" cy="${y+lh/2-.5}" r="2.6" fill="#7a0b28"/>`})});
+ return g+'</svg>'}
+function rpLen(cyc){const R=cyc.filter(x=>x.len).slice(-14),W=520,H=120,l=26,b=18,mx=Math.max(45,...R.map(r=>r.len)),y=v=>H-b-(v/mx)*(H-b-8),bw=(W-l)/Math.max(R.length,1);
+ let g=`<svg viewBox="0 0 ${W} ${H}" font-family="-apple-system,system-ui,sans-serif"><rect x="${l}" y="${y(38)}" width="${W-l}" height="${y(24)-y(38)}" fill="#e5f3ea"/><text x="${W-2}" y="${y(38)-3}" font-size="8" text-anchor="end" fill="#1c6b3a">Usual range 24 to 38 days</text>`;
+ [0,20,40].filter(v=>v<=mx).forEach(v=>{g+=`<text x="${l-4}" y="${y(v)+3}" font-size="8" text-anchor="end" fill="#777">${v}</text><line x1="${l}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e5e5" stroke-width=".6"/>`});
+ R.forEach((r,i)=>{const x=l+i*bw+bw*.2,out=r.len<24||r.len>38;g+=`<rect x="${x}" y="${y(r.len)}" width="${bw*.6}" height="${y(0)-y(r.len)}" rx="2" fill="${out?'#b3123c':'#6b6b6b'}"/><text x="${x+bw*.3}" y="${y(r.len)-3}" font-size="8" text-anchor="middle" fill="#333">${r.len}</text><text x="${x+bw*.3}" y="${H-5}" font-size="7.5" text-anchor="middle" fill="#777">${rpS(r.s)}</text>`});
+ return g+'</svg>'}
+
+function rpHTML(o){const D=rpData(o),c=D.c,g=S.setup||{},u=U(),fl={h:'Heavy',m:'Medium',l:'Light',s:'Spotting'};
+ const med=rpMed(D.L),mn=D.L.length?Math.min(...D.L):null,mxx=D.L.length?Math.max(...D.L):null,vr=D.L.length>1?mxx-mn:null,pm=rpMed(D.PL),pmx=D.PL.length?Math.max(...D.PL):null,imbN=D.cyc.reduce((s,x)=>s+x.imb.length,0),gap90=D.gaps.some(x=>x>=90)||(D.since!=null&&D.since>=90);
+ const flag=(ok,txt)=>ok==null?'<span class="rpfl rpna">Not enough data</span>':ok?'<span class="rpfl rpok">Within range</span>':`<span class="rpfl rpout">${txt}</span>`;
+ const rows=[['Cycle length (start to start)',med!=null?`${med} days typical; ${mn} to ${mxx} days`:'Not enough cycles yet','24 to 38 days',med==null?null:(mn>=24&&mxx<=38),mn!=null&&mn<24?'Shorter than usual':'Longer than usual'],
+  ['Regularity (longest minus shortest)',vr!=null?`${vr} days`:'Needs two or more cycles','7 to 9 days or less',vr==null?null:vr<=9,'Irregular'],
+  ['Period length',pm!=null?`${pm} days typical; longest ${pmx}`:'Not logged','8 days or fewer',pm==null?null:pmx<=8,'Prolonged'],
+  ['Bleeding between periods',imbN?`${imbN} day${imbN===1?'':'s'} logged`:'None logged','None',D.cyc.length?imbN===0:null,'Present'],
+  ['Days with heavy flow per period',D.heavy.length?`${(D.heavy.reduce((a,b)=>a+b,0)/D.heavy.length).toFixed(1)} on average`:'Not logged','Patient-defined',null,''],
+  ['Longest gap without a period',D.gaps.length||D.since!=null?`${Math.max(...D.gaps,D.since||0)} days`:'—','Under 90 days',D.gaps.length||D.since!=null?!gap90:null,'90 days or more']];
+ const age=+g.age||null,hc=c.hc==='y'?'Yes':c.hc==='n'?'No':'Not recorded',bmi=(()=>{const w=Object.entries(S.bm||{}).filter(x=>+x[1].w).sort().pop(),h=+g.h;if(!w||!h)return null;const kg=u==='lb'?w[1].w*.4536:+w[1].w;return(kg/((h/100)**2)).toFixed(1)})();
+ const supL=((S.sup&&S.sup.list)||[]).map(x=>x.n+(x.dose?` (${x.dose})`:'')).join(', ');
+ // page 1
+ let h=`<div class="rp"><div class="rppg"><div class="rphd"><div><h1>Menstrual cycle report</h1><p class="rpmut" style="margin:2px 0 0">${rpF(D.from)} to ${rpF(D.t)} · recorded day by day in the Swell app</p></div><div class="rpwho"><b>${esc(S.user||'')}</b><br>${age?`Age ${age}<br>`:''}Made ${rpF(D.t)}</div></div>
+ <div class="rpmeta"><div><small>Cycles recorded</small><b>${D.cyc.filter(x=>x.len).length} complete</b></div><div><small>Last period started</small><b>${D.P.length?rpF(D.P[D.P.length-1].s):'—'}</b></div><div><small>Hormonal contraception</small><b>${hc}</b></div><div><small>${bmi?'BMI (latest weight)':'Day of cycle today'}</small><b>${bmi||(D.since!=null?D.since+1:'—')}</b></div></div>
+ ${o.imp||o.q.length||o.note?`<div class="rpnt">${o.imp?`<p><b>Effect on daily life:</b> ${esc(o.imp)}</p>`:''}${o.q.length?`<p><b>Also reports:</b> ${o.q.map(k=>esc((RPQ.find(x=>x[0]===k)||[0,k])[1].toLowerCase())).join('; ')}.</p>`:''}${o.note?`<p><b>In their words:</b> ${esc(o.note)}</p>`:''}</div>`:''}
+ <h2>Bleeding pattern against FIGO 2018 normal limits</h2><table><tr><th>Measure</th><th>From the log</th><th>Normal range</th><th>Result</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="rpmut">${r[2]}</td><td>${r[3]===null&&r[0].startsWith('Days with heavy')?'<span class="rpfl rpna">For discussion</span>':flag(r[3],r[4])}</td></tr>`).join('')}</table>
+ <h2>Each cycle, day by day</h2><div class="rplg"><span><i style="background:#9b1033"></i>Heavy</span><span><i style="background:#d64a6e"></i>Medium</span><span><i style="background:#f0a3b6"></i>Light</span><span><i style="background:#f7d4dd"></i>Spotting</span><span><i style="background:#e07a95"></i>Period, flow not logged</span><span><i style="background:#7a0b28;border-radius:50%"></i>Bleeding between periods</span><span><i style="background:#e5f3ea"></i>Next period usually due (day 24 to 38)</span></div>${D.cyc.length?rpBar(D.cyc):'<p class="rpmut">No periods logged in this time.</p>'}
+ ${D.L.length?`<h2>Cycle lengths</h2>${rpLen(D.cyc)}`:''}
+ <div class="rpft">This is a record of what was logged in the app, not a diagnosis. Days with nothing logged are left blank. Normal limits: Munro MG et al. FIGO systems for normal and abnormal uterine bleeding, 2018 revisions. Int J Gynaecol Obstet 2018;143:393–408.</div></div>`;
+ // page 2: symptoms
+ const S2=Object.entries(D.sy).sort((a,b)=>b[1].n-a[1].n),cyN=D.cyc.filter(x=>x.len).length;
+ h+=`<div class="rppg"><h2>Symptoms and when they happen</h2><p class="rpmut">Logged on the day. “Week before” is the 7 days before a period starts; “Week after” is cycle days 6 to 12, the week a premenstrual disorder would usually be symptom-free.</p>
+ ${S2.length?`<table><tr><th>Symptom</th><th class="rpn">Days</th><th class="rpn">Week before</th><th class="rpn">During period</th><th class="rpn">Week after</th><th class="rpn">Other days</th></tr>${S2.map(([k,v])=>`<tr><td>${esc(k)}</td><td class="rpn">${v.n}</td><td class="rpn">${v.pre}</td><td class="rpn">${v.dur}</td><td class="rpn">${v.post}</td><td class="rpn">${v.oth}</td></tr>`).join('')}</table>
+ <p style="margin-top:8px"><b>Week after a period:</b> ${D.wkAfterDays?`${D.wkAfterSym} of ${D.wkAfterDays} days had a symptom logged.`:'no days in range yet.'} <b>Complete cycles logged:</b> ${cyN}${cyN<2?' (two or more are needed to judge a premenstrual pattern)':''}.</p>`:'<p class="rpmut">No symptoms logged in this time.</p>'}
+ <h2>Day-by-day log</h2><table class="rpdl"><tr><th>Date</th><th class="rpn">Cycle day</th><th>Bleeding</th><th>Symptoms</th></tr>${D.days.filter(x=>x.per||x.fl||x.sy.length).map(x=>`<tr class="${x.per?'rppd':''}"><td>${rpS(x.d)}</td><td class="rpn">${x.cd||''}</td><td>${x.fl?fl[x.fl]:x.per?'Period':''}</td><td>${esc(x.sy.join(', '))}</td></tr>`).join('')||'<tr><td colspan="4" class="rpmut">Nothing logged.</td></tr>'}</table>
+ <div class="rpft">Premenstrual disorders are assessed from symptoms recorded prospectively over at least two cycles (RCOG Green-top Guideline 48).</div></div>`;
+ // page 3: food, weight, training, sleep
+ if(o.food||o.body){const mi=(m,k)=>{const x=m&&m.mi;if(!x)return 0;if(Array.isArray(x))return +x[MK.indexOf(k)]||0;return +x[k]||0};
+  const R=D.days.map(x=>{const ms=(S.meals||{})[x.d]||[],mc=(S.macros||{})[x.d]||{},k=+mc.k||ms.reduce((a,m)=>a+(+m.k||0),0),p=+mc.p||ms.reduce((a,m)=>a+(+m.p||0),0),fe=ms.reduce((a,m)=>a+mi(m,'fe'),0),w=(S.water||{})[x.d],sl=(S.sleep||{})[x.d],bm=(S.bm||{})[x.d],tr=(S.fd||{})[x.d];
+   return{...x,k,p,fe,w,sl:sl&&sl.b>sl.a?(sl.b-sl.a)/60:null,wt:bm&&+bm.w?+bm.w:null,tr:!!tr,has:k||w||sl||(bm&&bm.w)||tr}}).filter(x=>x.has);
+  const av=f=>{const v=R.map(f).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null},fmt=(v,dp=0)=>v==null?'—':(+v).toFixed(dp);
+  const ak=av(x=>x.k),ap=av(x=>x.p),afe=av(x=>x.fe),asl=av(x=>x.sl),trw=R.filter(x=>x.tr).length/Math.max(1,o.m*4.35),W=R.filter(x=>x.wt);
+  h+=`<div class="rppg"><h2>Food, body and training</h2><p class="rpmut">Averages are over days that have something logged. Targets set in the app: ${g.k?`${g.k} kcal and ${g.p||'—'} g protein a day`:'none set'}.</p>
+  <div class="rpmeta">${o.food?`<div><small>Average intake</small><b>${fmt(ak)} kcal</b></div><div><small>Average protein</small><b>${fmt(ap)} g</b></div><div><small>Average iron (from foods logged)</small><b>${afe?fmt(afe,1)+' mg':'—'}</b></div>`:''}${o.body?`<div><small>Training</small><b>${trw.toFixed(1)} sessions a week</b></div><div><small>Average sleep</small><b>${asl?fmt(asl,1)+' h':'—'}</b></div><div><small>Weight</small><b>${W.length?`${W[0].wt} to ${W[W.length-1].wt} ${u}`:'—'}</b></div>`:''}</div>
+  ${supL?`<p style="margin-top:8px"><b>Supplements taken:</b> ${esc(supL)}.</p>`:''}
+  <h3>Each day</h3><table class="rpdl"><tr><th>Date</th><th class="rpn">Cycle day</th>${o.food?'<th class="rpn">kcal</th><th class="rpn">Protein g</th><th class="rpn">Iron mg</th><th class="rpn">Water L</th>':''}${o.body?'<th class="rpn">Sleep h</th><th>Trained</th><th class="rpn">Weight</th>':''}</tr>
+  ${R.map(x=>`<tr class="${x.per?'rppd':''}"><td>${rpS(x.d)}</td><td class="rpn">${x.cd||''}</td>${o.food?`<td class="rpn">${x.k?Math.round(x.k):''}</td><td class="rpn">${x.p?Math.round(x.p):''}</td><td class="rpn">${x.fe?x.fe.toFixed(1):''}</td><td class="rpn">${x.w?(x.w/1000).toFixed(1):''}</td>`:''}${o.body?`<td class="rpn">${x.sl?x.sl.toFixed(1):''}</td><td>${x.tr?'Yes':''}</td><td class="rpn">${x.wt||''}</td>`:''}</tr>`).join('')||'<tr><td colspan="9" class="rpmut">Nothing logged.</td></tr>'}</table>
+  <div class="rpft">Shaded rows are period days. Low energy intake and heavy training can affect periods (Gordon CM et al. Functional hypothalamic amenorrhea: an Endocrine Society clinical practice guideline, 2017). Intake is only what was logged.</div></div>`}
+ return h+'</div>'}
+
+function rpOpen(){const o=RPO||rpDef();let el=$('#rpt');if(!el){el=document.createElement('div');el.id='rpt';document.body.appendChild(el)}
+ el.innerHTML=`<div class="rpbar"><button data-a="rpx">Close</button><b>Report for a doctor</b><button data-a="rpshare">Share</button><button class="on" data-a="rppdf">Save as PDF</button></div>${rpHTML(o)}`;el.scrollTop=0}
+function rpFile(){const css=[...document.head.querySelectorAll('style')].map(s=>s.textContent).filter(t=>t.includes('.rp ')).join('\n');
+ return`<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Menstrual cycle report</title><style>body{margin:0;background:#e9e7e2}${css}</style></head><body>${rpHTML(RPO||rpDef())}</body></html>`}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=rp]');if(!el)return;const a=el.dataset.a;if(!/^(rpopen|rpm|rpinc|rpimp|rpq|rpgo|rpx|rppdf|rpshare)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();const o=RPO=RPO||rpDef(),i=el.dataset.i;
+ const keep=()=>{const t=$('#rpnote');if(t)o.note=t.value.slice(0,600)};
+ if(a==='rpopen')return rpSheet();
+ if(a==='rpm'){keep();o.m=+i;return rpSheet()}
+ if(a==='rpinc'){keep();o[i]=o[i]?0:1;return rpSheet()}
+ if(a==='rpimp'){keep();o.imp=o.imp===i?'':i;return rpSheet()}
+ if(a==='rpq'){keep();const k=o.q.indexOf(i);if(k>=0)o.q.splice(k,1);else o.q.push(i);el.classList.toggle('on',k<0);return}
+ if(a==='rpgo'){keep();sheet(null);return rpOpen()}
+ if(a==='rpx'){const r=$('#rpt');r&&r.remove();return}
+ if(a==='rppdf'){try{window.print()}catch(_){toast('Printing isn’t available here. Try Share instead.')}return}
+ if(a==='rpshare'){const f=new File([rpFile()],`cycle-report-${realToday()}.html`,{type:'text/html'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:'Menstrual cycle report'}).catch(()=>{});else toast('Sharing isn’t available here. Use Save as PDF.');return}},true);
+// the way in, on the cycle page
+{const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{if(CYC().p.length)h=h.replace('<div class="card fset">',`<div class="card"><h2>Seeing a doctor?</h2><p class="sm" style="margin:0 0 10px">Make a report of your cycles, flow and symptoms against the ranges doctors use. You can add food, weight, training and sleep too.</p><button class="btn on" data-a="rpopen" style="width:100%;margin:0">Make a report</button></div><div class="card fset">`)}catch(_){}return h};FSX.cyc=cycV}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',h:'Report for a doctor',p:'From the cycle page, make a clear report of your cycles, flow and symptoms to show a GP, with food, weight, training and sleep if you want. Save it as a PDF or share it.'})}
+// preview: a few cycles with symptoms so the report has something to show
+setTimeout(()=>{try{if(typeof PREVIEW!=='undefined'&&PREVIEW&&S.cyc&&S.cyc.p&&!S.cyc.rpSeed){S.cyc.rpSeed=1;const c=S.cyc;c.p.forEach(x=>{if(!x.e)return;['h','h','m','l','s'].forEach((f,k)=>{const d=addDays(x.s,k);if(d<=x.e){c.d[d]=c.d[d]||{};c.d[d].fl=c.d[d].fl||f;if(k<2)c.d[d].sy=[...new Set([...(c.d[d].sy||[]),'Cramps'])]}});
+  [-5,-4,-3,-2,-1].forEach(k=>{const d=addDays(x.s,k);c.d[d]=c.d[d]||{};c.d[d].sy=[...new Set([...(c.d[d].sy||[]),...(k>-3?['Bloating','Irritable']:['Cravings','Tired'])])]})});save()}}catch(_){}},0);
+/* ===== v111: every phase on the calendar, a heads-up before PMS, and a shorter cycle food card ===== */
+// Research notes for this block:
+// - People skim on phones: they read the first words of a line and move on, and cutting words roughly doubles how much
+//   of a page gets read (NN/g, "How users read on the web" and "Concise, scannable, objective"). Each phase now says one
+//   line; the reasons sit behind "Why?" for anyone who wants them (progressive disclosure, NN/g).
+// - Showing where you are in the cycle and what's next helps people prepare rather than be caught out; seeing a
+//   pattern ahead is the main reason people track (Epstein et al. 2017, CHI, "Examining menstrual tracking to inform
+//   the design of personal informatics tools"). Each phase gets its own tint on the calendar.
+// - PMS timing differs between people: symptoms start anywhere from about 2 to 14 days before a period (RCOG Green-top
+//   48). Swell starts at 5 days (the ACOG window) and, once two or more cycles have symptoms logged, uses the median
+//   day your own symptoms usually begin (kept between 3 and 10).
+// - The heads-up is worded discreetly for the lock screen, like the period heads-up (v77), and can be turned off.
+(function(){const st=document.createElement('style');st.textContent=`
+.cym button.ph-f{background:rgba(127,214,160,.13)}.cym button.ph-o{background:rgba(127,208,255,.3)}.cym button.ph-l{background:rgba(255,192,98,.13)}.cym button.ph-pms{background:rgba(255,138,92,.32)}
+.cym button.ph-pms.fut,.cym button.ph-l.fut,.cym button.ph-f.fut,.cym button.ph-o.fut{opacity:.8}
+.cylg .lgt{display:inline-block;width:10px;height:10px;border-radius:50%}
+.cyfood .cyln{margin:2px 2px 0;font-size:15px;line-height:1.4}
+.cyfood details{margin:12px 2px 0}.cyfood summary{cursor:pointer;color:var(--dim);font-size:13px;font-weight:600;list-style:none}.cyfood summary::-webkit-details-marker{display:none}
+.cyfood details p{font-size:13px;color:var(--dim);margin:8px 0 0;line-height:1.45}
+.cyfood .mnc2 button{flex-basis:auto;min-width:34%;padding:10px 12px}.cyfood .mnc2 button small{font-size:11.5px}
+.cyfood .hcr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)}
+.cyfood .hcr b{font-size:15px}.cyfood .hcr .chips{padding:0;flex:none}
+.cyfood .cyst2 .top span{font-size:12px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. when PMS usually starts, from your own logs ---------- */
+let PMSL=null;
+function pmsLen(){if(PMSL&&PMSL.t===S.cyc?.d&&PMSL.n===Object.keys(S.cyc?.d||{}).length)return PMSL.v;let v=5;
+ try{const c=CYC(),P=c.p.map(x=>x.s).sort(),B=[];for(let i=1;i<P.length;i++){let first=null;for(let k=10;k>=1;k--){const d=addDays(P[i],-k),x=c.d[d];if(x&&(x.sy||[]).some(s=>s!=='Good energy')){first=k;break}}if(first)B.push(first)}
+  if(B.length>=2){const s=B.sort((a,b)=>a-b),m=s.length>>1;v=Math.max(3,Math.min(10,Math.round(s.length%2?s[m]:(s[m-1]+s[m])/2)))}}catch(_){}
+ PMSL={t:S.cyc?.d,n:Object.keys(S.cyc?.d||{}).length,v};return v}
+{const _n=cycNow;cycNow=function(d){const n=_n.apply(this,arguments);if(n&&(n.ph==='luteal'||n.ph==='pms')){const L=pmsLen();n.ph=n.toNext>=0&&n.toNext<=L?'pms':'luteal'}return n}}
+
+/* ---------- 2. every phase on the calendar ---------- */
+function cyPhaseOf(d){const st=cycStats(),n=cycNow(),t=realToday(),len=st.len||28,pl=st.pl||5,S0=st.P.map(x=>x.s);if(!S0.length)return null;
+ if(n)for(let k=0;k<4;k++)S0.push(addDays(n.next,k*len));const starts=[...new Set(S0)].sort();
+ let s=null,nx=null;for(const x of starts){if(x<=d)s=x;else{nx=x;break}}if(!s)return null;if(!nx)nx=addDays(s,len);
+ const day=cyDD(s,d)+1,toN=cyDD(d,nx);if(cyDD(s,nx)>45)return null;
+ if(day<=pl)return'period';if(Math.abs(toN-14)<=1)return'o';if(toN<=pmsLen())return'pms';if(toN<14)return'l';return'f'}
+{const _m=cycMonth;cycMonth=function(ym){let h=_m.apply(this,arguments);const t=realToday();
+ return h.replace(/<button class="([^"]*)" data-a="cyday" data-i="(\d{4}-\d\d-\d\d)" aria-label="([^"]*)"/g,(m,cl,d,al)=>{if(/\b(p|pr)\b/.test(cl))return m;const ph=cyPhaseOf(d);if(!ph||ph==='period')return m;
+  const nm={f:'after your period',o:'around ovulation',l:'second half of your cycle',pms:'before your period'}[ph];return`<button class="${cl} ph-${ph}${d>t?' fut':''}" data-a="cyday" data-i="${d}" aria-label="${al}, ${nm}"`})}}
+const CYLG=`<div class="cylg"><span><i style="background:#ff6f91"></i>Period</span><span><i style="box-shadow:inset 0 0 0 1.5px #ff6f91"></i>Period forecast</span><span><i class="lgt" style="background:rgba(127,214,160,.5)"></i>After period (follicular)</span><span><i class="lgt" style="background:rgba(127,208,255,.6)"></i>Ovulation (estimate)</span><span><i class="lgt" style="background:rgba(255,192,98,.45)"></i>Second half (luteal)</span><span><i class="lgt" style="background:rgba(255,138,92,.75)"></i>Before your period (PMS)</span></div>`;
+
+/* ---------- 3. a heads-up before PMS ---------- */
+{const _rp=remPlan;remPlan=function(){const L=_rp.apply(this,arguments);try{const c=CYC();if(cycOn()&&c.pmsr!==false){const n=cycNow();if(n&&n.ph!=='period'&&n.ph!=='late'){const d=addDays(n.next,-pmsLen()),x=at(d,'09:00');if(d>realToday()&&x.getTime()>Date.now())L.push({k:'pms|'+d,t:'pms',at:x,p:{}})}}}catch(_){}return L}}
+{const _rs=remSig;remSig=function(){let v='';try{v=JSON.stringify([S.cyc&&S.cyc.pmsr,cycOn()?pmsLen():0])}catch(_){}return _rs.apply(this,arguments)+v}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=cypmsr]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const c=CYC();c.pmsr=c.pmsr===false;save();fsr();try{remSync&&remSync()}catch(_){}},true);
+
+/* ---------- 4. the cycle page, shorter ---------- */
+CYPH.period[1]='Train as you feel. Skipping isn’t needed if you’re up for it.';
+CYPH.follicular[1]='Often the best time for harder sessions.';
+CYPH.ovulation[1]='Energy is usually good. Easy days are fine too.';
+CYPH.luteal[1]='You might feel hungrier or more tired. Drink a bit more water.';
+CYPH.pms[1]='Hunger, tiredness and mood can shift now. That’s hormones, not willpower.';
+// what the hormones are doing, in a line (NHS 'Periods' and the standard four-phase model: menstrual, follicular, ovulation, luteal)
+const CYHORM={period:'Oestrogen and progesterone are at their lowest, so the womb lining sheds. That’s day 1.',follicular:'FSH grows a follicle and rising oestrogen rebuilds the lining. This phase starts on day 1 and overlaps your period.',ovulation:'An LH surge releases an egg. It can be fertilised for about a day.',luteal:'Progesterone rises to keep the lining ready, and your body runs slightly warmer.',pms:'Progesterone and oestrogen fall before a period, which is what brings on PMS symptoms.',late:'Stress, illness, travel or training can all delay ovulation, which pushes a period back.'};
+const CYFS={period:'Iron-rich foods help replace what you lose.',follicular:'Protein and slow carbs fuel harder sessions.',ovulation:'Nothing special. Regular meals and plenty of water.',luteal:'Slow carbs and calcium help keep hunger steady.',pms:'Smaller, regular meals, slow carbs and calcium can ease PMS.',late:'Smaller, regular meals, slow carbs and calcium can ease PMS.'};
+cyFoodCard=function(){const c=CYC(),n=cycNow();if(!n)return'';const ph=CYFOOD[n.ph]||CYFOOD.follicular,A=cyAdjToday(),T=S.cyT||{},base=(T.b&&T.b.k)||+S.setup.k||0,hc=c.hc==='y';
+ const foods=(()=>{const f=dietPick(ph[2]).slice(0,8);if(f.length<3)({period:['Iron tablets (ask a pharmacist)'],pms:['Calcium tablets','Magnesium tablets'],luteal:['Calcium tablets']}[n.ph]||[]).forEach(s=>f.push(s));return f})();
+ const crave=(n.ph==='pms'||n.ph==='late')?dietPick(CYCRAVE).slice(0,5):[];
+ const chips=L=>`<div class="mnc2">${L.map(f=>`<button data-a="cyfadd" data-i="${esc(f.replace(/,.*$/,'').replace(/ made with.*$/,''))}"><b>${esc(f)}</b><small>+ Add to list</small></button>`).join('')}</div>`;
+ let tgt='';if(!hc&&c.fd&&A){const a=A.a;tgt=`<div class="cyst2"><div class="top"><b>${a>0?'+'+a:a<0?a:'±0'} kcal</b><span>Today ${(+S.setup.k||0).toLocaleString('en-GB')} · usually ${base.toLocaleString('en-GB')}</span></div>${cyKSVG(A.P,n.day)}<div class="cykl"><span>Period</span><span>Before your period</span></div></div>`}
+ return`<div class="card cyfood"><h2>Food and your cycle</h2><p class="cyln"><b>${esc(ph[0])}.</b> ${esc(CYFS[n.ph]||ph[1])}</p>${tgt}
+ ${foods.length?`<h3>Foods to have</h3>${chips(foods)}`:''}${crave.length?`<h3>If cravings hit</h3>${chips(crave)}`:''}
+ <div class="npr"><div><b>Targets follow my cycle</b><small>More room before your period, less after. Same monthly total.</small></div><button class="tg ${c.fd?'on':''}" data-a="cyfd" role="switch" aria-checked="${!!c.fd}" aria-label="Targets follow my cycle"></button></div>
+ <div class="hcr"><b>Hormonal contraception?</b><div class="chips">${[['n','No'],['y','Yes']].map(x=>`<button class="chip ${(c.hc||'n')===x[0]?'on':''}" data-a="cyhc" data-i="${x[0]}">${x[1]}</button>`).join('')}</div></div>
+ ${hc?'<p class="sm" style="margin:8px 2px 0">With hormonal contraception your targets stay steady.</p>':''}
+ <details><summary>Why?</summary><p>${esc(CYHORM[n.ph]||'')}</p><p>${esc(ph[1])}</p><p>People eat about 170 kcal a day more in the second half of the cycle. With targets following your cycle you get that room before your period, taken back a little on other days, so your goal stays on track.</p><p>The pill, patch, ring, implant, injection and hormonal coil usually even out these hormone changes, so targets stay steady with them.</p><p>If PMS or period pain gets in the way of everyday life, a GP can help.</p></details></div>`};
+{const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{h=h.replace(/<div class="cylg">[\s\S]*?<\/div>/,CYLG)
+  .replace('<p class="sm" style="margin:8px 2px 0">Tap any day to log your period, flow or how you feel.</p>','<p class="sm" style="margin:8px 2px 0">Tap a day to log it.</p>')
+  .replace(/<p class="sm" style="margin:0 0 10px">Make a report of your cycles[^<]*<\/p>/,'<p class="sm" style="margin:0 0 10px">A summary of your cycles and symptoms for a GP.</p>')
+  .replace('<div class="npr"><div><b>Heads-up before my period</b>',`<div class="npr"><div><b>Heads-up before PMS</b><small>Around ${pmsLen()} days before your period${(()=>{try{return Object.values(CYC().d).filter(v=>(v.sy||[]).length).length>3?', from your logs':''}catch(_){return''}})()}.</small></div><button class="tg ${CYC().pmsr!==false?'on':''}" data-a="cypmsr" role="switch" aria-checked="${CYC().pmsr!==false}" aria-label="Heads-up before PMS"></button></div><div class="npr"><div><b>Heads-up before my period</b>`)}catch(_){}return h};FSX.cyc=cycV}
+// the report questions, shorter
+{const _s=rpSheet;rpSheet=function(){const r=_s.apply(this,arguments);try{const p=$('#sheet .rps>p.sm');if(p)p.textContent='Your cycles and symptoms in one page for a GP. Stays on your phone unless you share it.'}catch(_){}return r}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
