@@ -9377,6 +9377,105 @@ window.addEventListener('click',e=>{if(!e.target.closest('[data-a=sesave]')||!SE
  <div class="obr"><span class="lab3">Last name (optional)</span></div><input id="nml" autocomplete="family-name" autocapitalize="words" autocorrect="off" spellcheck="false" value="${esc(NS.l||'')}" placeholder="Last name"></div>
  ${sug}<button class="rst" data-a="rspick">Already use Swell? <b>Restore a backup</b></button></div>`}}
 
+/* ===== v122: allergies done properly, a sharper first calorie estimate, and a tidy session picker ===== */
+// Research notes for this block:
+// - Allergens: UK law names 14 that must be declared on food (Food Standards Agency, "Allergen guidance for food
+//   businesses": celery, cereals with gluten, crustaceans, eggs, fish, lupin, milk, molluscs, mustard, tree nuts,
+//   peanuts, sesame, soya, sulphites). Those are the list, grouped apart from things people leave out by choice (pork,
+//   beef, alcohol...), plus "add your own" for anything else. Scanned products show a warning when Open Food Facts
+//   lists one of yours. Copy still says to check the label, since allergen data can be incomplete.
+// - A better first estimate: rather than one activity multiplier, Swell builds daily burn from parts (the FAO/WHO/UNU
+//   2004 factorial method): resting burn (Mifflin-St Jeor, or Katch-McArdle from lean mass when body fat is known,
+//   which is more accurate for lean or very muscular people; or a measured BMR), plus steps (about 0.5 kcal per kg per
+//   1,000 steps above rest, from walking energy cost, ACSM), plus job, plus training (minutes x MET, Ainsworth
+//   Compendium 2011), plus about 10% for digesting food. Multipliers tend to overestimate for people who train but
+//   otherwise sit (Westerterp 2013, doubly labelled water), which is the "1,900 feels high" case. Daily steps are
+//   something most phones already show, so it's an easy, accurate question. The learned estimate (v120) still takes
+//   over once there are two weeks of logs.
+// - The session picker: a custom chevron with the label vertically centred, and long names trimmed with an ellipsis
+//   inside a fixed-height box (the full name is in the picker itself).
+(function(){const st=document.createElement('style');st.textContent=`
+.wkst>label{min-height:44px}
+.wkst>label select{-webkit-appearance:none;appearance:none;height:42px;line-height:42px;padding:0 34px 0 14px!important;min-width:110px;max-width:60%!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box;
+ background:rgba(255,255,255,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F3F1EC' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 10l4-4 4 4M8 14l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 11px center/15px 15px!important;border:1px solid rgba(255,255,255,.12)!important;color:#F3F1EC;font-weight:600}
+.algw{margin-top:4px}.algw .lab4{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(243,241,236,.6);margin:16px 2px 8px}
+.algw .lab4 small{font-size:11px;letter-spacing:0;text-transform:none;font-weight:600}
+.algw .algs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.algw .algs .chip{margin:0;min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.2}
+.algw .algs .chip{flex-direction:column!important;gap:1px}.algw .algs .chip small{display:block;font-size:10.5px;opacity:.65;font-weight:500;line-height:1.2}
+.algw .own{display:flex;gap:8px;margin-top:10px}.algw .own input{flex:1;margin:0}.algw .own .btn{margin:0;flex:none}
+.algw .owl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.algw .owl button{all:unset;cursor:pointer;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.1);font-size:13px}
+.algsum{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:15px}
+.algsum span{color:rgba(243,241,236,.62);font-size:13.5px;text-align:right;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rtalg{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(255,90,90,.14);border:1px solid rgba(255,120,120,.35);font-size:14px}
+.obw .obq{margin-top:14px}.obw .obq .lab3{margin:0 2px 8px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. allergies and things to leave out ---------- */
+const ALG14=[['gluten','Gluten','wheat, barley, rye'],['crust','Crustaceans','prawns, crab, lobster'],['egg','Eggs',''],['fish','Fish',''],['peanut','Peanuts',''],['soya','Soya',''],['dairy','Milk','incl. lactose'],['nuts','Tree nuts','almonds, cashews'],['celery','Celery',''],['mustard','Mustard',''],['sesame','Sesame',''],['sulph','Sulphites','dried fruit, wine'],['lupin','Lupin',''],['mollusc','Molluscs','mussels, squid']];
+const ALGOTH=[['pork','Pork'],['beef','Beef'],['alcohol','Alcohol'],['lactose','Lactose only'],['caffeine','Caffeine'],['mushroom','Mushrooms']];
+// map the new tags onto the food matcher (crustaceans and molluscs replace the old single shellfish tag)
+try{DTAG.push(['crust',/prawn|shrimp|\bcrab|lobster|langoustine|crayfish/i],['mollusc',/mussel|oyster|scallop|squid|calamari|octopus|clam|cockle|whelk/i],['celery',/celery|celeriac/i],['mustard',/mustard/i],['sesame',/sesame|tahini|houmous|hummus/i],['sulph',/dried apricot|dried fruit|raisin|sultana|\bwine\b|vinegar/i],['lupin',/lupin/i],['alcohol',/\bwine\b|beer|lager|spirit|cider|alcohol/i],['lactose',/(?<!oat |soya |almond |plant |coconut )\bmilk\b|yoghurt|yogurt|cream\b|soft cheese|ice cream/i],['caffeine',/coffee|espresso|\btea\b|cola|energy drink|matcha/i],['mushroom',/mushroom/i])}catch(_){}
+{const _b=dietBan;dietBan=function(){const b=_b.apply(this,arguments);if(b.has('shell')){b.add('crust');b.add('mollusc')}if(b.has('crust')&&b.has('mollusc'))b.add('shell');return b}}
+// your own words: anything containing them is left out too
+{const _ok=dietOK;dietOK=function(n){if(!_ok.apply(this,arguments))return false;const own=(S.setup&&S.setup.avoidOwn)||[];return!own.some(w=>w&&new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(n))}}
+const algName=k=>((ALG14.find(x=>x[0]===k)||ALGOTH.find(x=>x[0]===k)||[0,k])[1]);
+function algPanel(sel,own,pre){const ch=(k,l,s)=>`<button class="chip ${sel.includes(k)?'on':''}" data-a="${pre}av" data-i="${k}">${l}${s?`<small>${s}</small>`:''}</button>`;
+ return`<div class="algw"><p class="lab4">Allergies <small>the UK’s 14 allergens</small></p><div class="algs">${ALG14.map(([k,l,s])=>ch(k,l,s)).join('')}</div>
+ <p class="lab4">Other things to leave out</p><div class="algs">${ALGOTH.map(([k,l])=>ch(k,l)).join('')}</div>
+ <p class="lab4">Anything else</p><div class="own"><input data-algown="${pre}" placeholder="e.g. coriander, kiwi" maxlength="30"><button class="btn" data-a="${pre}own">Add</button></div>
+ ${own.length?`<div class="owl">${own.map(w=>`<button data-a="${pre}ownx" data-i="${esc(w)}">${esc(w)} ✕</button>`).join('')}</div>`:''}
+ <p class="sm" style="margin:12px 2px 0">Swell leaves these out of its ideas and warns you on products you scan. Always check the label too.</p></div>`}
+const algSummary=(sel,own)=>{const n=[...sel.map(algName),...own];return n.length?n.join(', '):'None'};
+// Settings sheet: replace the old short list with the full panel
+{const _ds=dietSheet;dietSheet=function(){_ds.apply(this,arguments);try{const L=[...document.querySelectorAll('#sheet .dps .lab2')].find(p=>/Leave out/i.test(p.textContent));if(!L)return;const old=L.nextElementSibling;
+  DPD.own=DPD.own||((S.setup.avoidOwn)||[]).slice();const w=document.createElement('div');w.innerHTML=algPanel(DPD.avoid,DPD.own,'dp');L.textContent='Allergies and things to leave out';old.replaceWith(w.firstElementChild);
+  const p=[...document.querySelectorAll('#sheet .dps>p.sm')].find(x=>/allergy/i.test(x.textContent));p&&p.remove()}catch(_){}}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=dpown],[data-a=dpownx],[data-a=dpsave]');if(!el||!DPD)return;const a=el.dataset.a;DPD.own=DPD.own||[];
+ if(a==='dpsave'){S.setup.avoidOwn=DPD.own.slice();return}
+ e.stopImmediatePropagation();e.preventDefault();if(a==='dpown'){const i=$('#sheet [data-algown=dp]'),v=(i&&i.value||'').trim().toLowerCase();if(v&&!DPD.own.includes(v))DPD.own.push(v)}else{DPD.own=DPD.own.filter(x=>x!==el.dataset.i)}
+ DPD.avoid=DPD.avoid||[];dietSheet()},true);
+// sign-up: the list sits behind one row, so step 3 stays short
+{const _s=obStep;obStep=function(){let h=_s.apply(this,arguments);if(OB.i!==2)return h;OB.own=OB.own||[];
+ const i0=h.indexOf('<span class="lab3">Leave anything out? (optional)</span>'),i1=h.indexOf('</div></div>',i0);if(i0<0||i1<0)return h;
+ const block=OB.algOpen?algPanel(OB.av,OB.own,'ob'):`<button class="algsum" data-a="obalg"><b>Allergies or foods to avoid</b><span>${esc(algSummary(OB.av,OB.own))}</span></button>`;
+ return h.slice(0,i0)+block+h.slice(i1+6)}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=obalg],[data-a=obown],[data-a=obownx]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();OB.own=OB.own||[];const a=el.dataset.a;
+ if(a==='obalg')OB.algOpen=1;else if(a==='obown'){const i=$('[data-algown=ob]'),v=(i&&i.value||'').trim().toLowerCase();if(v&&!OB.own.includes(v))OB.own.push(v)}else OB.own=OB.own.filter(x=>x!==el.dataset.i);render()},true);
+{const _f=obFinish;obFinish=function(){S.setup.avoidOwn=(OB.own||[]).slice();if(OB.av.length||(OB.own||[]).length){S.setup.avoid=OB.av.slice()}return _f.apply(this,arguments)}}
+// scanned products: a clear warning when one of yours is listed
+{const OFFMAP={gluten:'gluten',crustaceans:'crust',eggs:'egg',fish:'fish',peanuts:'peanut',soybeans:'soya',milk:'dairy',nuts:'nuts',celery:'celery',mustard:'mustard','sesame-seeds':'sesame','sulphur-dioxide-and-sulphites':'sulph',lupin:'lupin',molluscs:'mollusc'};
+ const _bp=bcProd;bcProd=function(j){const p=_bp.apply(this,arguments);try{const P=j.product||{},T=[...(P.allergens_tags||[]),...(P.traces_tags||[]).map(x=>x+'#t')];p.alg=T.map(t=>{const tr=/#t$/.test(t),k=OFFMAP[t.replace(/#t$/,'').replace(/^en:/,'')];return k?(tr?'~':'')+k:null}).filter(Boolean)}catch(_){}return p}}
+function algHit(p){const mine=new Set([...(S.setup.avoid||[])]);if(mine.has('lactose'))mine.add('dairy');const has=(p&&p.alg)||[],c=[],t=[];has.forEach(x=>{const tr=x[0]==='~',k=tr?x.slice(1):x;if(mine.has(k))(tr?t:c).push(algName(k))});return{c:[...new Set(c)],t:[...new Set(t)]}}
+new MutationObserver(()=>{try{const box=document.querySelector('#bcs .bpc, #bcs [data-a=bpadd]');if(!box||typeof BPD==='undefined'||!BPD||!BPD.p)return;const host=box.closest('#bcs');if(!host||host.querySelector('.rtalg'))return;const H=algHit(BPD.p);if(!H.c.length&&!H.t.length)return;
+ const at=host.querySelector('[data-a=bpadd]')||box;at.insertAdjacentHTML('beforebegin',`<div class="rtalg"><b>${H.c.length?'Contains '+esc(H.c.join(', ').toLowerCase()):'May contain '+esc(H.t.join(', ').toLowerCase())}.</b> You’ve said to leave ${H.c.length+H.t.length>1?'these':'this'} out.</div>`)}catch(_){}}).observe(document.body,{childList:true,subtree:true});
+
+/* ---------- 2. a sharper first estimate: burn built from parts ---------- */
+function burnParts(E){const s=S.setup||{},X=s.est||{},u=U(),kg=u==='lb'?+E.w*.4536:+E.w,h=+s.h,age=+E.age;if(!(kg>0&&h>0&&age>0))return null;
+ const sx=E.sex==='Male'?'m':'f',bf=+X.bf;let bmr=+s.bmrM>500?+s.bmrM:bf>3&&bf<60?370+21.6*kg*(1-bf/100):10*kg+6.25*h-5*age+(sx==='m'?5:-161);
+ const steps=+X.steps||0,job=X.job==='phys'?.15:X.job==='feet'?.075:0,met=X.type==='cardio'?7.5:X.type==='mixed'?6:5,wk=+X.wk||0,min=+X.min||45;
+ const stepK=steps*kg*.0005,jobK=bmr*job,exK=wk*min*(met-1)*3.5*kg/200/7,tdee=(bmr+stepK+jobK+exK)/.9;return{bmr:Math.round(bmr),stepK:Math.round(stepK),jobK:Math.round(jobK),exK:Math.round(exK),tef:Math.round(tdee*.1),tdee:Math.round(tdee/10)*10}}
+{const _c=calcEst;calcEst=function(E){const r=_c.apply(this,arguments);try{const X=(S.setup||{}).est;if(r&&X&&X.steps!=null){const b=burnParts(E);if(b){const d=b.tdee-r.tdee,floor=E&&E.sex==='Male'?1500:1200;r.tdee=b.tdee;r.bmr=b.bmr;if(r.lo!=null)r.lo=Math.round((r.lo+d)/10)*10;if(r.hi!=null)r.hi=Math.round((r.hi+d)/10)*10;r.k=Math.max(floor,Math.round((r.k+d)/10)*10);r.c=Math.max(0,Math.round((r.k-r.p*4-r.f*9)/4));r.parts=b}}}catch(_){}return r}}
+// sign-up step 2: steps, job and training instead of one activity guess
+const STEPQ=[[3000,'Under 5,000'],[6500,'5,000 to 8,000'],[10000,'8,000 to 12,000'],[14000,'Over 12,000']],JOBQ=[['desk','Mostly sitting'],['feet','On my feet a lot'],['phys','Physical work']],WKQ=[[0,'None'],[2,'1 or 2'],[3.5,'3 or 4'],[5.5,'5 or more']],TYQ=[['weights','Weights'],['cardio','Cardio'],['mixed','Both']];
+{const _s=obStep;obStep=function(){let h=_s.apply(this,arguments);if(OB.i!==1)return h;const X=S.setup.est=S.setup.est||{},ch=(a,v,l)=>`<button class="chip ${String(X[a])===String(v)?'on':''}" data-a="obx" data-k="${a}" data-i="${v}">${l}</button>`;
+ const i0=h.indexOf('<span class="lab3">How active are you?</span>'),i1=h.indexOf('<div class="res">');if(i0<0||i1<0)return h;
+ const q=`<div class="obq"><span class="lab3">Steps on a normal day <small style="text-transform:none;letter-spacing:0;font-weight:500">(your phone’s Health app shows this)</small></span><div class="chips">${STEPQ.map(([v,l])=>ch('steps',v,l)).join('')}</div></div>
+ <div class="obq"><span class="lab3">Your job or day</span><div class="chips">${JOBQ.map(([v,l])=>ch('job',v,l)).join('')}</div></div>
+ <div class="obq"><span class="lab3">Workouts a week</span><div class="chips">${WKQ.map(([v,l])=>ch('wk',v,l)).join('')}</div></div>
+ ${+X.wk>0?`<div class="obq"><span class="lab3">Mostly</span><div class="chips">${TYQ.map(([v,l])=>ch('type',v,l)).join('')}</div></div><div class="obq"><span class="lab3">About how long?</span><div class="chips">${[[30,'30 min'],[45,'45 min'],[60,'1 hour'],[90,'90 min']].map(([v,l])=>ch('min',v,l)).join('')}</div></div>`:''}`;
+ h=h.slice(0,i0)+q+h.slice(i1);
+ const r=obEst();if(r&&r.parts){const b=r.parts;h=h.replace('<div class="mx">',`<p class="sm" style="margin:6px 0 0">Resting ${b.bmr} + steps ${b.stepK} + ${b.jobK?'job '+b.jobK+' + ':''}training ${b.exK} + digestion ${b.tef} = ${b.tdee.toLocaleString('en-GB')} kcal to stay the same.</p><div class="mx">`)}
+ return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=obx]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const X=S.setup.est=S.setup.est||{},k=el.dataset.k,v=el.dataset.i;X[k]=isNaN(+v)?v:+v;
+ OB.act=X.wk>=5.5?4:X.wk>=3.5?3:X.wk>=2?2:1;if(X.job==='phys')OB.act=5;render()},true);
+// body fat, optional, on step 1
+{const _s=obStep;obStep=function(){let h=_s.apply(this,arguments);if(OB.i!==0)return h;const bf=(S.setup.est||{}).bf||'';
+ return h.replace('</div>\n <div class="act">',`<div class="obr"><span class="lab3">Body fat % <small style="text-transform:none;letter-spacing:0;font-weight:500">(optional, from a smart scale)</small></span></div><input type="number" inputmode="decimal" data-obbf="1" value="${bf}" placeholder="Leave blank if you don’t know"></div>\n <div class="act">`)}}
+document.addEventListener('input',e=>{if(!e.target.dataset||!e.target.dataset.obbf)return;const v=+e.target.value;S.setup.est=S.setup.est||{};S.setup.est.bf=v>3&&v<60?v:undefined},true);
+// existing users: the estimate sheet asks for steps too
+{const _e=estForm;estForm=function(){let h=_e.apply(this,arguments);try{const X=S.setup.est=S.setup.est||{};const q=`<p class="sm" style="margin:14px 2px 6px">Steps on a normal day (your phone’s Health app shows this)</p><div class="chips">${STEPQ.map(([v,l])=>`<button class="chip ${+X.steps===v?'on':''}" data-a="esst" data-i="${v}">${l}</button>`).join('')}</div>`;
+  h=h.replace(/(<label style="display:block;margin-top:12px">Know your BMR\?)/,q+'$1')}catch(_){}return h}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=esst]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const X=S.setup.est=S.setup.est||{};X.steps=+el.dataset.i;save();sheet(estForm())},true);
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
