@@ -7541,9 +7541,9 @@ RTDEMO['5000159459228']={product_name:'Greek style yoghurt',brands:'Sample (prev
  awr=function(){const o=$('#aw'),k=key(),args=arguments,self=this;
   if(busy)return;if(!o||!AW||!o.dataset.k||o.dataset.k===k||MRM())return _w.apply(self,args);
   busy=true;const K=kids(o);K.forEach(c=>c.getAnimations().forEach(a=>a.cancel()));
-  const out=K.map(c=>c.animate([{opacity:1},{opacity:0}],{duration:90,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}));
+  const out=K.map(c=>c.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateX(-12px)'}],{duration:200,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}));
   const go=()=>{busy=false;const cur=$('#aw');if(cur)cur.dataset.k=key();_w.apply(self,args);const n=$('#aw');if(!n)return;n.dataset.k=key();
-   kids(n).forEach(c=>{c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:0},{opacity:1}],{duration:160,easing:'cubic-bezier(0,0,.2,1)'})})};
+   kids(n).forEach((c,i)=>{c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:0,transform:'translateX(16px)'},{opacity:1,transform:'none'}],{duration:320,delay:Math.min(i,5)*35,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'})})};
   Promise.all(out.map(a=>a.finished)).then(go,go)}}
 /* ===== v97: no "Not this week", and the picture square on a saved meal is the button ===== */
 // Research notes for this block:
@@ -8991,6 +8991,89 @@ NM.micro=NM.micro||'Nutrients';
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=nuv]');if(el){e.stopImmediatePropagation();e.preventDefault();NUV=el.dataset.i;fsr();return}
  const w=e.target.closest('#app .grid:not(.edit) .wd[data-id=micro]');if(!w||ED||e.target.closest('button,input,a'))return;if(typeof WTD!=='undefined'&&Date.now()-WTD>450)return;e.stopImmediatePropagation();e.preventDefault();NUV='d';fsOpen('micro')},true);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M5 19c8 0 14-6 14-14C11 5 5 11 5 19z"/><path d="M5 19l7-7"/>',h:'Nutrients has its own page',p:'Tap the Nutrients widget to see what to top up today or this week, with foods that help.'})}
+
+/* ===== v115: pages fold back into their widget, calmer week and exercise changes, balanced shops, fuller widgets ===== */
+// Research notes for this block:
+// - A page that grows out of a widget should shrink back into it: the spatial link tells people where the content
+//   lives and how to get back (Material motion, "container transform"; Apple HIG, "zoom" transitions). v102 had swapped
+//   this for a plain fade to stop a flash; Home is now drawn underneath first, so the fold-back can return.
+// - Transitions between exercises: under about 100 ms motion reads as a flicker, and 200 to 400 ms reads as a
+//   deliberate change for screen-sized content (NN/g, "Executing UX animations: duration and motion characteristics";
+//   Material: 250 to 300 ms for large areas). Out 200 ms, in 320 ms with a short slide and a small stagger.
+// - Changing week: the strip already slides, so moving the whole page as well doubled the motion and read as a jolt.
+//   Now only the content below the strip cross-fades, once (one motion per change; Material "choreography").
+// - Widgets: empty space with no purpose reads as broken, and nested cards inside cards add noise (NN/g, "Cards:
+//   UI-design definition"; Gestalt common region). Each size now uses its space for the next most useful thing:
+//   more exercises, what's coming up, quick goal types.
+(function(){const st=document.createElement('style');st.textContent=`
+.fpst.multi{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;overflow:visible}
+.fpst.multi>.chip{flex:none;width:100%}.fpst.multi>:last-child:nth-child(odd){grid-column:1/-1}
+.fpst.multi>.chip.addst{min-height:46px;padding:0 16px}
+.fpst:not(.multi)>.chip:not(.addst){flex:1 1 auto}
+.mfh{flex-direction:column;align-items:stretch!important;gap:10px!important}
+.mfh .seg{display:grid!important;grid-template-columns:repeat(3,1fr);width:100%}
+.mfh .seg button{text-align:center}
+.wkL{display:flex;flex-direction:column;height:100%;min-height:0}
+.wkL .k{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ac);margin-top:10px}
+.wkL .nm{font-family:'Archivo',system-ui,sans-serif;font-size:40px;font-weight:900;font-stretch:72%;line-height:.95;text-transform:uppercase;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wkL .sb{font-size:13.5px;color:rgba(243,241,236,.66);margin-top:4px}
+.wkL .ls{flex:1;min-height:0;overflow:hidden;margin-top:10px;font-size:14px}
+.wkL .ls div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.09)}
+.wkL .ls div span+span{color:rgba(243,241,236,.62);white-space:nowrap}
+.wkL .ls .more{color:rgba(243,241,236,.5);border-top:0;padding-top:4px}
+.wkL .go{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:100%;height:46px;border-radius:14px;background:var(--ac);color:var(--on-ac);font-weight:800;font-size:15px;letter-spacing:.04em;margin-top:10px;flex:none}
+.wkL .go.ghost{background:rgba(255,255,255,.1);color:#F3F1EC;letter-spacing:0}
+.fp1{display:flex;flex-direction:column;height:100%;min-height:0;cursor:pointer}
+.fp1 .when{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);margin-top:10px;line-height:1.35}
+.fp1 b{font-size:19px;line-height:1.2;margin-top:4px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fp1 .m{margin-top:auto;font-size:12.5px;color:rgba(243,241,236,.62)}
+.gq{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:4px}
+.gq button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09)}
+.gq button b{font-size:14.5px}.gq button small{font-size:11.5px;color:rgba(243,241,236,.6)}
+.wv2.lg .art:has(.gq){display:block;margin-top:auto}`;document.head.appendChild(st)})();
+
+/* ---------- 1. guided workout: softer, slightly slower change between exercises ---------- */
+// (edited in place in the v96 block: 200 ms out with a short slide, 320 ms in with a 35 ms stagger)
+
+/* ---------- 2. closing a page folds it back into its widget ---------- */
+{const _prev=fsClose;fsClose=function(){const o=$('#fs');if(!o||MRM()||!S.nat||!NAT[S.nat])return _prev.apply(this,arguments);
+ const k=FS,wid=k==='food'&&!$('#app .grid .wd[data-id="food"]')?'shop':k;FS=null;FSLAST=null;try{FXQ=Date.now()}catch(_){}o.style.pointerEvents='none';o.id='fsout';
+ try{render();document.querySelectorAll('#app .fx-in').forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.style.animation='none'})}catch(_){}
+ o.getAnimations().forEach(a=>a.cancel());const wr=o.querySelector('.fsw');wr&&wr.getAnimations().forEach(a=>a.cancel());
+ const w=$(`#app .grid .wd[data-id="${wid}"]`),r=w&&w.getBoundingClientRect(),vis=r&&r.width&&r.bottom>0&&r.top<innerHeight;
+ const done=()=>{o.remove();try{lockOff()}catch(_){}};
+ if(!vis){o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.985)'}],{duration:220,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}).onfinish=done;return}
+ const D=420;try{fsCT(o,'inset(0px 0px 0px 0px round 0px)',fsClip(r),D,done)}catch(_){setTimeout(done,D)}
+ if(wr){wr.style.transformOrigin='0 0';wr.animate([{transform:'none',opacity:1},{opacity:1,offset:.3},{transform:fsMap(o,r),opacity:0}],{duration:D,easing:FSE,fill:'forwards'})}
+ o.animate([{opacity:1},{opacity:1,offset:.78},{opacity:0}],{duration:D,fill:'forwards'});
+ w.style.visibility='hidden';setTimeout(()=>{w.style.visibility='';w.animate([{opacity:0,transform:'scale(.97)'},{opacity:1,transform:'scale(1.012)',offset:.6},{opacity:1,transform:'none'}],{duration:380,easing:'cubic-bezier(.3,1.2,.5,1)'})},D-120)}}
+
+/* ---------- 3. changing week: one motion, not two ---------- */
+{const _fa=fxApply;fxApply=function(root,pre,same){if(root&&root.id==='app'&&VDFROM!=null&&Date.now()-VDT<800&&!same){VDFROM=null;const r=_fa.apply(this,arguments);
+  if(!MRM())[...root.children].forEach(c=>{if(c.classList.contains('nav')||c.classList.contains('hdr')||c.classList.contains('cal')||c.querySelector&&c.querySelector(':scope>.cal')||getComputedStyle(c).position==='fixed')return;
+   c.getAnimations().forEach(a=>{if(!(a instanceof CSSAnimation))a.cancel()});c.animate([{opacity:.45},{opacity:1}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})});return r}
+ return _fa.apply(this,arguments)}}
+
+/* ---------- 4. shops: balanced rows ---------- */
+new MutationObserver(()=>{document.querySelectorAll('.fpst').forEach(f=>{const n=f.querySelectorAll('[data-a=fpstore]').length;f.classList.toggle('multi',n>1)})}).observe(document.body,{childList:true,subtree:true});
+
+/* ---------- 5. widgets that use their space ---------- */
+{const _wd=wd;wd=function(l){
+ // workout, large, with no cover photo: no empty top, more of the session
+ if(l&&l.id==='work'&&l.w===2&&l.h===2&&S.nat&&NAT[S.nat]&&!ED){try{const t=today(),p=activePlan(),d=dayWork(t),img=d&&typeof cvImg==='function'?cvImg(d):null;
+  if(p&&!img){if(d){const ex=d.ex||[],sets=ex.reduce((a,e)=>a+(+e.s||3),0),min=Math.max(10,Math.round(sets*2.6/5)*5),sh=ex.slice(0,5);
+    return`<div class="wkL">${wlab('','Workout')}<span class="k">${ex.length} exercise${ex.length===1?'':'s'} · ${min} min</span><span class="nm">${esc(d.name)}</span><div class="ls">${sh.map(e=>`<div><span>${esc(e.n)}</span><span>${e.s?e.s+' × ':''}${esc(String(e.v||''))}</span></div>`).join('')}${ex.length>sh.length?`<div class="more">and ${ex.length-sh.length} more</div>`:''}</div><button class="go" data-a="wsel">START</button></div>`}
+   const up=[];try{ensureSched();for(let k=1;k<=10&&up.length<4;k++){const dd=addDays(t,k),v=S.sch&&S.sch[dd];if(v!=null){const day=p.days[v%p.days.length];up.push([k===1?'Tomorrow':new Date(dd+'T12:00').toLocaleDateString('en-GB',{weekday:'long'}),day.name])}}}catch(_){}
+   return`<div class="wkL">${wlab('','Workout')}<span class="k">Recovery</span><span class="nm">Rest day</span><span class="sb">Rest is when the muscle gets built.</span><div class="ls">${up.map(([a,b])=>`<div><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('')}</div><button class="go ghost" data-a="wsel">Train anyway</button></div>`}}catch(_){}}
+ // food plan, small: no box in a box
+ if(l&&l.id==='food'&&l.w===1&&!ED){try{const N=fpNext(),head=`<div class="wl">${WIS.cal7||''}<span>Food plan</span></div>`;
+  if(N){const m=rcPer(N.r),f=+N.e.sv||1;return`<div class="fp1" data-a="fpopen" data-i="plan">${head}<span class="when">${esc(dayWord(N.d))} · ${esc(N.s.lbl)}</span><b>${esc(N.r.n)}</b><span class="m">${Math.round(m.k*f)} kcal · ${Math.round(m.p*f)} g protein</span></div>`}
+  return`<div class="fp1" data-a="fpopen" data-i="plan">${head}<span class="when">Nothing planned</span><b>${(S.recipes||[]).length?'Plan your week':'Add a recipe'}</b><span class="m">Tap to open</span></div>`}catch(_){}}
+ // goal, large, none set: quick ways to start
+ if(l&&l.id==='goal'&&!S.goal2&&l.w===2&&l.h===2){const Q=[['Lose weight','At a steady pace'],['Gain muscle','Lean, with strength'],['Maintain weight','Hold where you are'],['Develop','A skill or habit']];
+  return W2(l,{lab:'Goal',icon:'flag',big:'No goal',sub:'A goal with a date keeps you going. Pick one to start.',artL:`<div class="gq">${Q.map(([t,s])=>`<button data-a="gq" data-i="${t}"><b>${t==='Develop'?'Something else':t}</b><small>${s}</small></button>`).join('')}</div>`})}
+ return _wd.apply(this,arguments)}}
+window.addEventListener('click',e=>{const b=e.target.closest('[data-a=gq]');if(!b)return;e.stopImmediatePropagation();e.preventDefault();GF={type:b.dataset.i};sheet(gForm())},true);
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
