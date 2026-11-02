@@ -9585,6 +9585,110 @@ window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awn]'
  setTimeout(()=>{try{const h=xHist(ex),s=h[h.length-1];if(had==null&&s&&s.d===today()&&s.s.length){s.s.pop();if(!s.s.length)h.pop();save()}c.fr=null;c.r=0}catch(_){}},0)},true);
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M4 12h3l3-7 4 14 3-7h3"/>',h:'Until failure, tracked',p:'Log how many reps you managed on “Until failure” sets if you want, add a range to aim for, and Swell shows what to beat each set.'})}
 
+/* ===== v126: meal prep days on the Home calendar, with a cook list worked out from your food plan ===== */
+// Research notes for this block:
+// - People who plan meals ahead eat a more varied, better-quality diet and are less likely to be obese (Ducrot et al.
+//   2017, Int J Behav Nutr Phys Act, NutriNet-Santé, 40,554 adults). A fixed prep day is an implementation intention
+//   ("on Sunday I cook for Mon to Wed"), which makes follow-through much more likely than a vague plan (Gollwitzer &
+//   Sheeran 2006 meta-analysis, from memory).
+// - Food safety (Food Standards Agency, "Leftovers"): cool and refrigerate within two hours, eat leftovers within 48
+//   hours or freeze them, defrost in the fridge and use within 24 hours of defrosting. Cooked rice keeps one day in the
+//   fridge (NHS, "Can reheating rice cause food poisoning?", from memory). So the cook list splits each recipe into
+//   fridge portions (up to two days after cooking, one day for rice) and freezer portions for later days.
+// - One clear marker per day on the calendar, labelled in words as well as colour (WCAG 1.4.1 Use of Color), and set
+//   by holding a day, the same gesture that moves a workout (consistency, Nielsen heuristic 4).
+(function(){const st=document.createElement('style');st.textContent=`
+.cal .cday{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.cal .cday .mpc{margin:4px auto 0;width:calc(100% - 6px);box-sizing:border-box;padding:3px 1px;border-radius:7px;font-size:9.5px;font-weight:800;letter-spacing:.04em;line-height:1.1;text-transform:uppercase;color:#7FD6A0;border:1.5px solid rgba(127,214,160,.75);background:rgba(127,214,160,.08)}
+.cal .cday.now .mpc{color:#1f6b40;border-color:#3f9a64;background:rgba(127,214,160,.25)}
+.cal .cday.mplp{transform:scale(.94);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.mprep .mph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.mprep .mph small{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7FD6A0;margin-bottom:4px}
+.mprep .mph h2{margin:0;font-size:21px}.mprep .mph .n{text-align:right;flex:none}.mprep .mph .n b{display:block;font-size:22px;font-weight:800;line-height:1}.mprep .mph .n span{font-size:12px;color:var(--dim)}
+.mprep .mpr{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
+.mprep .mpr:first-of-type{border-top:0;margin-top:6px}
+.mprep .mpr .ck{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:transparent;padding:0;display:grid;place-items:center;color:#14122b;margin-top:1px}
+.mprep .mpr .ck svg{width:13px;height:13px;opacity:0}.mprep .mpr.dn .ck{background:#7FD6A0;border-color:#7FD6A0}.mprep .mpr.dn .ck svg{opacity:1}
+.mprep .mpr b{display:block;font-weight:700}.mprep .mpr.dn b{text-decoration:line-through;opacity:.55}
+.mprep .mpr small{display:block;color:var(--dim);font-size:13px;line-height:1.4;margin-top:2px}
+.mprep .mpr small i{font-style:normal;color:#F3F1EC}
+.mprep .mptip{font-size:13px;color:var(--dim);line-height:1.45;margin:8px 2px 0}
+.mprep .mpq{display:flex;gap:8px;margin-top:12px}.mprep .mpq .btn{flex:1;margin:0}
+.mpsh .chips{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.mpsh .chips .chip{margin:0;padding:10px 0;text-align:center;justify-content:center}
+.mpsh .bt2{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px}.mpsh .bt2 .btn{margin:0;width:100%}
+.fpd .dl i{display:block;margin-top:3px;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#7FD6A0}
+.fpmp{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgba(127,214,160,.08);border:1px solid rgba(127,214,160,.3)}
+.fpmp span{font-size:14px}.fpmp b{font-weight:700}.fpmp .btn{margin:0;flex:none;padding:7px 12px;font-size:14px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. which days are prep days ---------- */
+const MP=()=>{S.prep=S.prep||{};const p=S.prep;p.w=p.w||[];p.add=p.add||{};p.skip=p.skip||{};p.done=p.done||{};return p};
+const wdOf=d=>new Date(d+'T12:00').getDay();
+function isPrep(d){const p=MP();if(p.add[d])return true;return p.w.includes(wdOf(d))&&!p.skip[d]}
+function prepNext(d){for(let k=1;k<=7;k++){const x=addDays(d,k);if(isPrep(x))return x}return null}
+const shortDay=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short'});
+const longDay=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long'});
+const RICE=r=>(r.items||[]).some(x=>{const n=String(x.nm||x.q||'').toLowerCase();return/\brice\b/.test(n)&&!/rice (cake|milk|noodle|vinegar|wine|paper|cracker)|rice krisp/.test(n)});
+// what to cook on prep day d: every planned meal from d up to the day before the next prep day (a week at most)
+function prepList(d){const nx=prepNext(d),end=nx?addDays(nx,-1):addDays(d,6),days=[];for(let x=d;x<=end&&days.length<7;x=addDays(x,1))days.push(x);
+ const by={};days.forEach(x=>fpOf(x).forEach(e=>{const r=rcById(e.r);if(!r)return;const o=by[e.r]=by[e.r]||{r,n:0,fr:[],fz:[]},sv=+e.sv||1,lim=RICE(r)?1:2;o.n+=sv;(cyDD(d,x)<=lim?o.fr:o.fz).push(x)}));
+ const L=Object.values(by).map(o=>({...o,batch:Math.max(1,Math.ceil(o.n/Math.max(1,+o.r.sv||1))),rice:RICE(o.r)}));
+ return{days,end,L,portions:L.reduce((a,o)=>a+o.n,0)}}
+
+/* ---------- 2. the calendar: a PREP tag on prep days ---------- */
+{const _c=cal2;cal2=function(){const h=_c.apply(this,arguments);try{return h.replace(/(<div class="cday [^"]*" data-date="(\d{4}-\d\d-\d\d)"[\s\S]*?)(<span class="dts">)/g,(m,a,d,b)=>isPrep(d)?`${a}<div class="mpc" aria-label="Meal prep day">Prep</div>${b}`:m)}catch(_){return h}}}
+
+/* ---------- 3. Home on a prep day: the cook list ---------- */
+const dayList=L=>{const s=L.map(shortDay);return s.length>2?s.slice(0,-1).join(', ')+' and '+s[s.length-1]:s.join(' and ')};
+function prepCard(d){const P=prepList(d),done=MP().done[d]||[],t=realToday(),span=P.days.length>1?`${shortDay(P.days[0])} to ${shortDay(P.end)}`:shortDay(P.days[0]);
+ const lead=d===t?'Meal prep today':d===addDays(t,1)?'Meal prep tomorrow':'Meal prep · '+longDay(d);
+ if(!P.L.length)return`<div class="card mprep"><div class="mph"><div><small>${lead}</small><h2>Cook for ${span}</h2></div></div><p class="mptip" style="margin-top:8px">Nothing planned for those days yet. Add recipes to them in your food plan and the cook list fills in here.</p><div class="mpq"><button class="btn on" data-a="fpopen" data-i="plan">Plan meals</button><button class="btn" data-a="mpedit" data-i="${d}">Prep days</button></div></div>`;
+ const rows=P.L.map(o=>{const id=rcId(o.r),dn=done.includes(id),sv=Math.max(1,+o.r.sv||1),bits=[sv>1?`${o.batch} batch${o.batch===1?'':'es'} of ${sv}${o.batch*sv>o.n?` · ${o.n} needed`:''}`:`${o.n} portion${o.n===1?'':'s'}`];
+  if(o.fr.length)bits.push(`<i>Fridge:</i> ${dayList(o.fr)}`);if(o.fz.length)bits.push(`<i>Freeze:</i> ${dayList(o.fz)}`);
+  return`<div class="mpr ${dn?'dn':''}"><button class="ck" data-a="mpck" data-i="${d}|${id}" aria-label="${dn?'Untick':'Tick'} ${esc(o.r.n)}" role="checkbox" aria-checked="${dn}">${TK}</button><div><b>${esc(o.r.n)}</b><small>${bits.join(' · ')}</small></div></div>`}).join('');
+ const fz=P.L.some(o=>o.fz.length),rice=P.L.some(o=>o.rice);
+ const tip=`Cool it and get it in the fridge within 2 hours.${fz?' Freeze the later portions straight away, then move each one to the fridge the night before.':' Everything here keeps in the fridge.'}${rice?' Cooked rice keeps 1 day in the fridge, so freeze rice for later days.':''}`;
+ const left=P.L.filter(o=>!done.includes(rcId(o.r))).length;
+ return`<div class="card mprep"><div class="mph"><div><small>${lead}</small><h2>Cook for ${span}</h2></div><div class="n"><b>${P.portions}</b><span>portion${P.portions===1?'':'s'}</span></div></div>${rows}<p class="mptip">${left?tip:'All cooked. Nice work: that’s the next few days sorted.'}</p>
+ <div class="mpq"><button class="btn" data-a="fpopen" data-i="plan">Food plan</button><button class="btn" data-a="mpedit" data-i="${d}">Prep days</button></div></div>`}
+{const _h=home;home=function(){const h=_h.apply(this,arguments);try{if(ED||!S.user)return h;const d=today();if(!isPrep(d))return h;const T=document.createElement('template');T.innerHTML=h;const c=T.content.querySelector('.card.cal');if(!c)return h;c.insertAdjacentHTML('afterend',prepCard(d));return T.innerHTML}catch(_){return h}}}
+// the line under the day's name
+{const _l=hdrLine;hdrLine=function(t){let s=_l.apply(this,arguments);try{const r=realToday(),add=isPrep(t)?'meal prep':t===r&&isPrep(addDays(t,1))?'meal prep tomorrow':'';if(!add)return s;if(s==='Nothing planned')return add[0].toUpperCase()+add.slice(1);const i=s.indexOf(' · bed by');return i>=0?s.slice(0,i)+' · '+add+s.slice(i):s+' · '+add}catch(_){}return s}}
+
+/* ---------- 4. setting prep days: hold a day, or from the food plan ---------- */
+function mpSheet(d){const p=MP(),on=d&&isPrep(d),wk=d&&p.w.includes(wdOf(d)),sd=shopDay();
+ const one=d?(on?(p.add[d]&&!wk?`<button class="btn" data-a="mpone" data-i="${d}">Not a prep day</button>`:`<button class="btn" data-a="mpone" data-i="${d}">Skip prep this ${longDay(d)}</button>`):`<button class="btn on" data-a="mpone" data-i="${d}">Prep on ${new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'})}</button>`):'';
+ sheet(`<div class="mpsh"><h2>Meal prep days</h2><p class="sm" style="margin:0 0 12px">On a prep day, Home shows what to cook for the days until your next one, worked out from your food plan.</p>
+ ${d?`<div class="bt2">${one}</div>`:''}
+ <p class="sm" style="margin:12px 0 8px"><b>Every week</b></p><div class="chips">${[1,2,3,4,5,6,0].map(n=>`<button class="chip ${p.w.includes(n)?'on':''}" data-a="mpwd" data-i="${n}" data-d="${d||''}" aria-pressed="${p.w.includes(n)}" aria-label="${WK7[n]}">${WK7[n].slice(0,2)}</button>`).join('')}</div>
+ <p class="sm" style="margin:12px 2px 0">Cooked food keeps 2 days in the fridge, so many people prep twice a week, for example on${sd!=null?` ${WK7[sd]}, your shop day,`:' Sunday'} and again midweek. Later portions go in the freezer.</p>
+ <button class="btn big on" data-a="shx" style="margin-top:14px">Done</button></div>`)}
+const mpRe=d=>{save();if(FS==='food')fsr();else render();if($('#sheet .mpsh'))mpSheet(d||null)};
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mpck],[data-a=mpedit],[data-a=mpwd],[data-a=mpone]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a,i=el.dataset.i,p=MP();
+ try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}
+ if(a==='mpck'){const [d,id]=i.split('|'),L=p.done[d]=p.done[d]||[],k=L.indexOf(id);k>=0?L.splice(k,1):L.push(id);save();render();return}
+ if(a==='mpedit'){mpSheet(i||null);return}
+ if(a==='mpwd'){const n=+i,k=p.w.indexOf(n);k>=0?p.w.splice(k,1):p.w.push(n);p.w.sort();mpRe(el.dataset.d);return}
+ if(a==='mpone'){const d=i;if(isPrep(d)){if(p.add[d])delete p.add[d];if(p.w.includes(wdOf(d)))p.skip[d]=1;toast(`No meal prep on ${longDay(d)}.`)}else{delete p.skip[d];if(!p.w.includes(wdOf(d)))p.add[d]=1;toast(`${longDay(d)} is a meal prep day.`)}save();sheet(null);if(FS==='food')fsr();else render()}},true);
+// hold a day on the calendar
+{let lp=null,x0=0,y0=0,fired=0;const cancel=()=>{if(lp){clearTimeout(lp.t);lp.el.classList.remove('mplp');lp=null}};
+ document.addEventListener('pointerdown',e=>{cancel();if(ED||e.button>0)return;const c=e.target.closest('#app .cal .cday');if(!c||e.target.closest('.chipw')||c.closest('.cwn'))return;x0=e.clientX;y0=e.clientY;
+  lp={el:c,t:setTimeout(()=>{const d=c.dataset.date;c.classList.remove('mplp');lp=null;fired=Date.now();try{navigator.vibrate&&navigator.vibrate(15)}catch(_){}mpSheet(d)},550)};setTimeout(()=>{lp&&lp.el===c&&c.classList.add('mplp')},180)},true);
+ document.addEventListener('pointermove',e=>{if(lp&&Math.hypot(e.clientX-x0,e.clientY-y0)>8)cancel()},true);
+ ['pointerup','pointercancel','scroll'].forEach(t=>document.addEventListener(t,cancel,true));
+ window.addEventListener('click',e=>{if(Date.now()-fired<700&&e.target.closest('#app .cal')){e.stopImmediatePropagation();e.preventDefault()}},true);
+ document.addEventListener('contextmenu',e=>{if(e.target.closest('#app .cal .cday'))e.preventDefault()},true)}
+
+/* ---------- 5. the food plan knows about prep days ---------- */
+{const _f=fpPlanTab;fpPlanTab=function(){let h=_f.apply(this,arguments);try{const p=MP(),w=[1,2,3,4,5,6,0].filter(n=>p.w.includes(n));
+  h=h.replace(/(data-fpd="(\d{4}-\d\d-\d\d)"><div class="dl [^"]*"><small>[^<]*<\/small><b>\d+<\/b>)/g,(m,a,d)=>isPrep(d)?a+'<i>Prep</i>':m);
+  const row=`<div class="fpmp"><span>${w.length?`<b>Meal prep</b> every ${w.map(n=>WK7[n]).join(' and ')}`:'<b>Meal prep?</b> Pick a day to batch cook'}</span><button class="btn" data-a="mpedit">${w.length?'Change':'Set'}</button></div>`;
+  h=h.replace('<div class="card"><p class="sm" style="margin:0 0 8px">','<div class="card">'+row+'<p class="sm" style="margin:0 0 8px">')}catch(_){}return h}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M2 11h20M9 7c0-1.5 1-2 1-3M14 7c0-1.5 1-2 1-3"/>',h:'Meal prep days',p:'Hold a day on the calendar to make it a meal prep day. On the day, Home lists what to cook from your food plan, how many portions, and which go in the fridge or freezer.'});
+ (R.tour=R.tour||[]).push({t:'home',q:'#app .cal',h:'Meal prep days',p:'Hold any day to make it a meal prep day, once or every week. It gets a Prep tag here.'})}}
+// the Claude preview: prep on Sundays and Wednesdays, with a few more planned days so the cook list has something in it
+try{if(PREVIEW&&!S.prevMP){S.prevMP=1;const p=MP();if(!p.w.length)p.w=[0,3];const t=realToday();for(let k=0;k<7;k++){const d=addDays(t,k);if(wdOf(d)===3){[0,1,2,3].forEach(j=>{const x=addDays(d,j);if(!fpOf(x).length)FP().d[x]=[{r:'rdemo2',sv:1},{r:'rdemo1',sv:1}]});break}}save()}}catch(_){}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
