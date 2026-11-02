@@ -570,7 +570,7 @@ function onb(){
  return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 4</small>${steps[st]}<button class="btn big on" data-a="st">${st<3?'Next':'Get started'}</button></div>`}
 function plates(w){const u=U(),P=u==='lb'?[45,35,25,10,5,2.5]:[20,15,10,5,2.5,1.25],o=[];let r=w;for(const p of P){const n=Math.floor(r/p+1e-9);if(n){o.push(n+' × '+p+u);r-=n*p}}return o.join(' + ')}
 function load(e){const w=+e.w,u=U();if(!w)return'';if(e.eq==='Bar'){const bar=+e.bar||BAR(),side=(w-bar)/2;return side<0?'Total is below the bar weight':side===0?'Just the bar':`${plates(side)} on each side`}if(e.eq==='Free Weights')return`${w/2}${u} in each hand`;if(e.eq==='Body Weight')return`Add ${w}${u}`;return`Set the machine to ${w}${u}`}
-const repTxt=e=>e.t==='Until Failure'?'until failure':e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?`${e.v||'?'} second hold`:`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
+const repTxt=e=>e.t==='Until Failure'?(+e.flo>0&&+e.fhi>=+e.flo?`until failure (aim ${+e.flo} to ${+e.fhi})`:'until failure'):e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?`${e.v||'?'} second hold`:`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
 const restOf=(e,d)=>+e.ro?e.ro*1000:((d&&d.rest)||90000);
 function exBlock0(e){const u=U(),w=+e.w,r=[];
  if(w)r.push([e.eq==='Body Weight'?'Added weight':'Total weight',w+u]);
@@ -9538,6 +9538,53 @@ cycRing=function(n,size){const st=cycStats(),len=st.len||28,pl=st.pl||5,day=Math
  const sz=size?`width:${size}px;height:${size}px`:'';return`<svg viewBox="0 0 100 100" style="${sz}" aria-hidden="true">${p}${n?`<text x="50" y="48" text-anchor="middle" font-size="18" font-weight="900" fill="#F3F1EC" font-family="Archivo,system-ui" style="font-stretch:70%">${day}</text><text x="50" y="62" text-anchor="middle" font-size="8" font-weight="700" fill="rgba(243,241,236,.55)" letter-spacing="1">OF ${len}</text>`:''}</svg>`};
 {const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{if(S.cyc&&S.cyc.fert&&!/lgf/.test(h))h=h.replace('<span><i class="lgt" style="background:rgba(127,208,255,.6)"></i>Ovulation (estimate)</span>','<span><i class="lgt" style="background:rgba(127,208,255,.6)"></i>Ovulation (estimate)</span><span><i class="lgf"></i>Fertile window (estimate)</span>');
  h=h.replace('<small>Shown in blue. An estimate only, not for contraception.</small>','<small>Shown in lavender. An estimate only, not for contraception.</small>')}catch(_){}return h};FSX.cyc=cycV}
+/* ===== v125: "Until failure" with reps you can log (optional) and a rep range to aim for and beat ===== */
+// Research notes for this block:
+// - Sets taken to (or near) failure build muscle across a wide range of reps, roughly 6 to 30 (Schoenfeld et al. 2017,
+//   J Strength Cond Res, meta-analysis of low vs high load), so the number of reps is what tells you you're getting
+//   stronger. An "as many reps as possible" set is a standard way to track and auto-regulate progress (Helms et al.
+//   2016, reps-in-reserve RPE scale; AMRAP testing).
+// - Double progression: work inside a rep range, and when you reach the top on every set, add a little weight and
+//   start again at the bottom (ACSM 2009 progression models: increase load 2 to 10% once you can do 1 to 2 reps over
+//   the target on two sessions running). Swell already does this for "A range"; "Until failure" can now use it too.
+// - Logging stays optional: the reps box starts empty and a set is only recorded if you fill it in, so skipping it
+//   never writes a wrong number. "To beat" shows last time's reps for the same set, the quickest useful target
+//   (goal-setting: specific, near goals beat "do your best", Locke & Latham 2002).
+(function(){const st=document.createElement('style');st.textContent=`
+.xfa{margin-top:10px}.xfa>small{display:block;color:var(--dim);font-size:12.5px;margin:0 2px 6px}
+.xfa .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.xfa .two input{margin:0}
+#aw .awl .st b.empty{opacity:.45;font-weight:700}
+#aw .awfb{font-size:14px;max-width:340px;margin:10px auto 0;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#F3F1EC}
+#aw .awfb b{font-weight:800}`;document.head.appendChild(st)})();
+
+/* ---------- 1. the plan: an optional range to aim for ---------- */
+{const _f=xForm;xForm=function(){let h=_f.apply(this,arguments);try{if(X&&X.t==='Until Failure'&&X.eq!=='Cardio'){const box=`<div class="xfa"><small>Aim for a range (optional). Swell shows what to beat each set, and suggests more weight when you reach the top on every set.</small><div class="two"><input type="number" inputmode="numeric" placeholder="Low, e.g. 8" data-b="X.flo" value="${esc(X.flo||'')}"><input type="number" inputmode="numeric" placeholder="High, e.g. 12" data-b="X.fhi" value="${esc(X.fhi||'')}"></div></div>`;
+  h=h.replace('<small>Each set goes until you can’t do another rep.</small>','<small>Each set goes until you can’t do another rep.</small>'+box)}}catch(_){}return h}}
+// the plan's save builds a fresh object, so carry the range across once it's saved
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=addx2]')||typeof X==='undefined'||!X||!D)return;const ei=X.ei,L=D.days[D.sel].ex,n=L.length,lo=+X.flo||0,hi=+X.fhi||0,t=X.t;
+ setTimeout(()=>{try{const L2=D.days[D.sel].ex,ex=ei!=null?L2[ei]:L2.length>n?L2[L2.length-1]:null;if(!ex||t!=='Until Failure')return;if(lo>0&&hi>=lo){ex.flo=lo;ex.fhi=hi}else{delete ex.flo;delete ex.fhi}}catch(_){}},0)},true);
+const failAim=e=>e&&e.t==='Until Failure'&&+e.flo>0&&+e.fhi>=+e.flo?{lo:+e.flo,hi:+e.fhi}:null;
+// (repTxt is a const, so the aim is added to it in place at its definition)
+// progression treats an aimed failure set like a rep range
+{const _t=xTop;xTop=function(e){const a=failAim(e);if(a)return{lo:a.lo,hi:a.hi,range:1,fail:1};return _t.apply(this,arguments)}}
+
+/* ---------- 2. the guided set: log reps if you like, and see what to beat ---------- */
+const failLastSet=(e,n)=>{try{const L=xLast(e);if(!L||!L.s.length)return null;const s=L.s[Math.min(n-1,L.s.length-1)];return s&&+s.r>0?s:null}catch(_){return null}};
+{const _l=awLogHTML;awLogHTML=function(e){if(!e||e.t!=='Until Failure'||e.eq==='Cardio')return _l.apply(this,arguments);const c=awCur();if(c.fr===undefined)c.fr=null;
+ const A=failAim(e),last=AW?failLastSet(e,AW.s||1):null;c.r=c.fr==null?0:c.fr;let tb='';if(last)tb=`To beat: <b>${+last.r+1} reps</b>`;if(A)tb+=`${tb?' · ':''}aim <b>${A.lo} to ${A.hi}</b>`;
+ let h=(tb?`<div class="awfb">${tb}</div>`:'')+_l.apply(this,arguments);return h.replace('<small>Reps done</small>','<small>Reps you managed <span style="opacity:.6">(optional)</span></small>').replace(/data-a="awlr"/g,'data-a="awfr"').replace(/<b data-awv="r">[^<]*<\/b>/,`<b data-awv="r" class="${c.fr==null?'empty':''}">${c.fr==null?'–':c.fr}</b>`)}}
+{const _s=awSugHTML;awSugHTML=function(e){const h=_s.apply(this,arguments);if(!e||e.t!=='Until Failure'||e.eq==='Cardio'||!AW)return h;const a=failAim(e),last=failLastSet(e,AW.s||1);let t='';
+ if(last)t=`Set ${AW.s||1} last time: <b>${last.r} reps</b>${+last.w>0?' at '+fmtW(+last.w)+U():''}. Beat it with <b>${+last.r+1}</b>.`;
+ if(a)t+=`${t?' ':''}Aim for <b>${a.lo} to ${a.hi}</b>.`;
+ return h+(t?`<div class="awfb">${t}</div>`:'')}}
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awfr]');if(!el||!AW)return;e.stopImmediatePropagation();e.preventDefault();const c=awCur(),ex=AW.d.ex[AW.e],d=+el.dataset.i;
+ if(c.fr==null){if(d<0)return;const last=failLastSet(ex,AW.s||1),a=failAim(ex);c.fr=last?+last.r:a?a.lo:8}else{c.fr=Math.max(0,Math.min(200,c.fr+d));if(c.fr===0&&d<0)c.fr=null}
+ c.r=c.fr||0;const v=$('#aw [data-awv=r]');if(v){v.textContent=c.fr==null?'–':c.fr;v.classList.toggle('empty',c.fr==null)}try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}},true);
+// after "Completed set": keep the set only if reps were logged, then clear the box for the next set
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awn]');if(!el||!AW||AW.ph!=='set')return;const ex=AW.d.ex[AW.e];if(!ex||ex.t!=='Until Failure'||ex.eq==='Cardio')return;const c=awCur(),had=c.fr;
+ setTimeout(()=>{try{const h=xHist(ex),s=h[h.length-1];if(had==null&&s&&s.d===today()&&s.s.length){s.s.pop();if(!s.s.length)h.pop();save()}c.fr=null;c.r=0}catch(_){}},0)},true);
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M4 12h3l3-7 4 14 3-7h3"/>',h:'Until failure, tracked',p:'Log how many reps you managed on “Until failure” sets if you want, add a range to aim for, and Swell shows what to beat each set.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
