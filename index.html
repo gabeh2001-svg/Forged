@@ -9817,6 +9817,173 @@ function mpDietCard(){const t=today(),np=nextPrepFrom(t),T=tonight(t),n=tnIds(T)
 // the Claude preview: oats are made the night before, and the widget is on Home
 setTimeout(()=>{try{if(PREVIEW&&!S.prevMP2&&rcById('rdemo2')){S.prevMP2=1;const o=rcById('rdemo2');if(o)o.pm='n';if(!S.lay.some(l=>l.id==='prep'))S.lay.splice(1,0,{id:'prep',w:2,h:2});save();render()}}catch(_){}},0);
 
+/* ===== v128: prep each part of a recipe on its own schedule, "cook it all on the day" for one meal, and calmer Meal prep widgets ===== */
+// Research notes for this block:
+// - Batch cooking usually means cooking the parts that take time once (a protein, a sauce) and putting meals together
+//   fresh. Prepping ingredients ahead cuts weekday cooking time and makes home cooking more likely (Mills et al. 2017,
+//   Appetite, "Perceived time for cooking" and home cooking frequency, from memory; Ducrot et al. 2017 on planning).
+//   So each ingredient and each step can have its own timing: on prep day, every 2 or 3 days, the night before, or at
+//   mealtime. The shopping list still has everything.
+// - Food safety (Food Standards Agency, "Leftovers", checked this session): the 48-hour fridge rule and the freezer
+//   split only apply to what's cooked on prep day. Chopped raw veg keeps a couple of days chilled, which is why "every
+//   2 days" exists (FSA "Chilling", from memory). Cooked rice keeps 1 day (NHS, from memory).
+// - Steps take their timing from the ingredients they mention, and the latest one wins, since a step that uses the
+//   chicken and the rice can only happen once both are ready. You can override any step.
+// - Widgets: one clear number and the next few actions, laid out from the top with no dead space; wording that reads as
+//   a short list rather than chores ("2 to prep") (Apple HIG "Widgets": glanceable, one main piece of information, from memory).
+(function(){const st=document.createElement('style');st.textContent=`
+.mpw .wl{width:100%;display:flex;align-items:center;gap:6px}.mpw .wl em{margin-left:auto;font-style:normal;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:rgba(243,241,236,.66);white-space:nowrap}
+.mpw .hn{display:flex;align-items:baseline;gap:6px;margin-top:6px}.mpw .hn b{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.02em}.mpw .hn span{font-size:15px;font-weight:600;color:rgba(243,241,236,.8)}
+.mpw .hs{font-size:19px;font-weight:800;letter-spacing:-.01em;line-height:1.15;margin-top:6px}
+.mpw .rw{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;min-height:30px}
+.mpw .rw .ck{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:transparent;padding:0;display:grid;place-items:center;color:#14122b;position:relative}
+.mpw .rw .ck::before{content:"";position:absolute;inset:-10px}
+.mpw .rw .ck svg{width:12px;height:12px;opacity:0}.mpw .rw.dn .ck{background:#7FD6A0;border-color:#7FD6A0}.mpw .rw.dn .ck svg{opacity:1}.mpw .rw.dn span{text-decoration:line-through;opacity:.5}
+.mpw .rw span{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.mpw .rw em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#7FD6A0}
+.mpw .rws{display:flex;flex-direction:column;margin-top:8px}
+.mpw .nx{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)}.mpw .nx small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#7FD6A0;margin-bottom:3px}
+.mpw .nx span{display:block;font-size:13.5px;color:rgba(243,241,236,.8);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mpw .sb{font-size:13px;color:rgba(243,241,236,.72);line-height:1.35;margin-top:4px}
+.mpw.w21 .rws .rw:nth-child(n+3),.mpw.w22 .rws .rw:nth-child(n+5){display:none}
+.mprep .mpr small.cp{color:#F3F1EC;opacity:.9}
+.mprep details{margin-top:6px}.mprep details summary{font-size:13px;color:#7FD6A0;font-weight:700;cursor:pointer;list-style:none}.mprep details summary::-webkit-details-marker{display:none}
+.mprep details ol{margin:6px 0 0;padding-left:18px;font-size:13.5px;line-height:1.45;color:rgba(243,241,236,.85)}
+.mped{margin-top:14px}.mped .chips.g2{margin-top:6px}
+.mped .mpi{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)}.mped .mpi:first-of-type{border-top:0}
+.mped .mpi span{font-size:14.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mped .mpi.st span{white-space:normal;font-size:13.5px;line-height:1.35;color:rgba(243,241,236,.85)}
+.mped select.mpsel{width:156px;max-width:156px;margin:0;padding:7px 26px 7px 10px;font-size:14px;border-radius:10px}
+.mped h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:14px 2px 2px;font-weight:700}
+.mpp .rcb{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;padding:11px 0;border-top:1px solid rgba(255,255,255,.08);display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.mpp .rcb:first-of-type{border-top:0}.mpp .rcb b{display:block;font-weight:600}.mpp .rcb small{display:block;color:var(--dim);font-size:13px;margin-top:2px;line-height:1.35}
+.mpp .rcb svg{width:16px;height:16px;opacity:.6}
+.mpp .mln{font-size:13.5px;color:rgba(243,241,236,.85);line-height:1.4;padding:6px 0}.mpp .mln b{font-weight:700}`;document.head.appendChild(st)})();
+
+/* ---------- 1. timings ---------- */
+PM.f='On the day';PM.x='Mixed';
+const PTO=[['b','Prep day'],['e2','Every 2 days'],['e3','Every 3 days'],['n','Night before'],['m','At mealtime']];
+const PTN=Object.fromEntries(PTO);const PTR={b:0,e2:1,e3:1,n:2,m:3};
+// what an ingredient's timing is: the recipe's, unless it's mixed; "cook it all on the day" for one plan entry wins
+const itT=(r,x,e)=>{if(e&&e.fr)return'c';const m=pmOf(r);if(m==='x')return PTN[x.pt]?x.pt:'b';return m==='b'?'b':m==='n'?'n':'c'};
+const kw=s=>String(s||'').toLowerCase().split(/[^a-z]+/).filter(w=>w.length>=4&&!/^(with|from|into|fresh|large|small|pack|packs|tins?|grated|chopped|sliced|diced|breast|thigh|fillet|fillets|plain)$/.test(w));
+function stAuto(r,j){const m=pmOf(r);if(m!=='x')return m==='n'?'n':m==='f'?'m':'b';const t=String((r.steps||[])[j]||'').toLowerCase();let best=null;
+ (r.items||[]).forEach(x=>{const ws=kw(ingName(x)+' '+(x.nm||''));if(ws.some(w=>t.includes(w.replace(/s$/,'')))){const tt=PTN[x.pt]?x.pt:'b';if(best==null||PTR[tt]>PTR[best])best=tt}});return best||'b'}
+const stT=(r,j)=>{const v=(r.stt||[])[j];return PTN[v]?v:stAuto(r,j)};
+const relDay=d=>{const t=today();return d===t?'today':d===addDays(t,1)?'tomorrow':shortDay(d)};
+const relList=L=>{const s=L.map(relDay);return s.length>2?s.slice(0,-1).join(', ')+' and '+s[s.length-1]:s.join(' and ')};
+function mpAmt(x,f){const c=ingCount(x);return fpAmt({n:ingName(x),g:c==null?(+x.g||0)*f:0,c:c!=null?c*f:0})}
+
+/* ---------- 2. the prep-day list, part by part ---------- */
+prepList=function(d){const nx=prepNext(d),end=nx?addDays(nx,-1):addDays(d,6),days=[];for(let x=d;x<=end&&days.length<7;x=addDays(x,1))days.push(x);
+ const by={},oth={};days.forEach(x=>fpOf(x).forEach(e=>{const r=rcById(e.r);if(!r)return;const f=(+e.sv||1)/Math.max(1,+r.sv||1),bi=(r.items||[]).map((it,j)=>[it,j]).filter(([it])=>itT(r,it,e)==='b');
+  if(!bi.length){oth[e.r]=oth[e.r]||{r,pm:e.fr?'c':pmOf(r)};return}
+  const o=by[e.r]=by[e.r]||{r,n:0,fr:[],fz:[],cp:{},all:bi.length===(r.items||[]).length};o.n+=+e.sv||1;
+  const rice=bi.some(([it])=>RICE({items:[it]})),lim=rice?1:2;(cyDD(d,x)<=lim?o.fr:o.fz).push(x);
+  bi.forEach(([it,j])=>{const c=o.cp[j]=o.cp[j]||{x:it,f:0};c.f+=f})}));
+ const L=Object.values(by).map(o=>({...o,batch:Math.max(1,Math.ceil(o.n/Math.max(1,+o.r.sv||1))),rice:Object.values(o.cp).some(c=>RICE({items:[c.x]})),comps:Object.values(o.cp).map(c=>`${ingName(c.x)} ${mpAmt(c.x,c.f)}`.trim())}));
+ return{days,end,L,portions:L.reduce((a,o)=>a+o.n,0),other:Object.values(oth)}};
+// is this recipe partly done on other days?
+const laterParts=r=>{if(pmOf(r)!=='x')return'';const g={};(r.items||[]).forEach(x=>{const t=PTN[x.pt]?x.pt:'b';if(t!=='b')(g[t]=g[t]||[]).push(ingName(x).toLowerCase())});return Object.entries(g).map(([t,n])=>`${n.join(', ')} ${t==='m'?'at mealtime':t==='n'?'the night before':PTN[t].toLowerCase()}`).join('; ')};
+prepCard=function(d){const P=prepList(d),done=MP().done[d]||[],t=realToday(),span=P.days.length>1?`${shortDay(P.days[0])} to ${shortDay(P.end)}`:shortDay(P.days[0]);
+ const lead=d===t?'Meal prep today':d===addDays(t,1)?'Meal prep tomorrow':'Meal prep · '+longDay(d);
+ const oth=(P.other||[]).length?`<p class="mptip" style="margin-top:6px">Done on the day instead: ${P.other.map(o=>esc(o.r.n)+(o.pm==='n'?' (the night before)':o.pm==='c'?' (cooked that day)':'')).join(', ')}.</p>`:'';
+ if(!P.L.length)return`<div class="card mprep"><div class="mph"><div><small>${lead}</small><h2>${(P.other||[]).length?'Nothing to batch cook':'Cook for '+span}</h2></div></div>${oth||'<p class="mptip" style="margin-top:8px">Nothing planned for those days yet. Add recipes to them in your food plan and the cook list fills in here.</p>'}<div class="mpq"><button class="btn on" data-a="fpopen" data-i="plan">Food plan</button><button class="btn" data-a="mpedit" data-i="${d}">Prep days</button></div></div>`;
+ const rows=P.L.map(o=>{const id=rcId(o.r),dn=done.includes(id),sv=Math.max(1,+o.r.sv||1),bits=[o.all?(sv>1?`${o.batch} batch${o.batch===1?'':'es'} of ${sv}${o.batch*sv>o.n?` · ${o.n} needed`:''}`:`${o.n} portion${o.n===1?'':'s'}`):`${o.n} portion${o.n===1?'':'s'}`];
+  if(o.fr.length)bits.push(`<i>Fridge:</i> ${dayList(o.fr)}`);if(o.fz.length)bits.push(`<i>Freeze:</i> ${dayList(o.fz)}`);
+  const lp=laterParts(o.r),steps=(o.r.steps||[]).map((s,j)=>[s,j]).filter(([s,j])=>stT(o.r,j)==='b');
+  return`<div class="mpr ${dn?'dn':''}"><button class="ck" data-a="mpck" data-i="${d}|${id}" aria-label="${dn?'Untick':'Tick'} ${esc(o.r.n)}" role="checkbox" aria-checked="${dn}">${TK}</button><div><b>${esc(o.r.n)}</b>${o.all?'':`<small class="cp">Cook: ${esc(o.comps.join(', '))}</small>`}<small>${bits.join(' · ')}</small>${lp?`<small>Later: ${esc(lp)}</small>`:''}${steps.length&&!o.all?`<details><summary>Steps for prep day</summary><ol>${steps.map(([s])=>`<li>${esc(s)}</li>`).join('')}</ol></details>`:''}</div></div>`}).join('');
+ const fz=P.L.some(o=>o.fz.length),rice=P.L.some(o=>o.rice),left=P.L.filter(o=>!done.includes(rcId(o.r))).length;
+ const tip=`Cool it and get it in the fridge within 2 hours.${fz?' Freeze the later portions straight away. Swell reminds you the night before to move each one to the fridge.':' Everything here keeps in the fridge.'}${rice?' Cooked rice keeps 1 day in the fridge, so freeze rice for later days.':''}`;
+ return`<div class="card mprep"><div class="mph"><div><small>${lead}</small><h2>Cook for ${span}</h2></div><div class="n"><b>${P.portions}</b><span>portion${P.portions===1?'':'s'}</span></div></div>${rows}${oth}<p class="mptip">${left?tip:'All cooked. Nice work: that’s the next few days sorted.'}</p>
+ <div class="mpq"><button class="btn" data-a="fpopen" data-i="plan">Food plan</button><button class="btn" data-a="mpedit" data-i="${d}">Prep days</button></div></div>`};
+
+/* ---------- 3. what to prep on a given day ---------- */
+function mpTasks(d){const out=[],tm=addDays(d,1),p=MP(),dn=p.done[d]||[],tk=MPNT(d);
+ // batch cooking, on a prep day
+ if(isPrep(d))prepList(d).L.forEach(o=>{const id=rcId(o.r);out.push({k:id,b:1,n:o.all?`Cook ${o.r.n}`:`Cook ${o.comps.map(c=>c.replace(/ [\d.]+.*$/,'')).join(', ').toLowerCase()}`,w:'',done:dn.includes(id)})});
+ // cook the whole meal today
+ fpOf(d).forEach((e,i)=>{const r=rcById(e.r);if(!r)return;if(e.fr||pmOf(r)==='f'){const k=`c:${rcId(r)}:${i}`;out.push({k,n:`Cook ${r.n}`,w:'',done:tk.includes(k)})}});
+ // parts done every few days: on the first day of each run
+ const P0=prepPrev(d)||addDays(d,-6),need={};for(let x=P0;x<=addDays(d,4);x=addDays(x,1))fpOf(x).forEach(e=>{const r=rcById(e.r);if(!r||e.fr)return;(r.items||[]).forEach((it,j)=>{const t=itT(r,it,e);if(t[0]!=='e')return;const o=need[rcId(r)+'.'+j]=need[rcId(r)+'.'+j]||{r,it,N:+t.slice(1)||2,days:{}};o.days[x]=(o.days[x]||0)+(+e.sv||1)/Math.max(1,+r.sv||1)})});
+ Object.entries(need).forEach(([k0,o])=>{const ds=Object.keys(o.days).sort();let i=0;while(i<ds.length){const s=ds[i],ch=[];while(i<ds.length&&cyDD(s,ds[i])<o.N){ch.push(ds[i]);i++}if(s===d){const f=ch.reduce((a,x)=>a+o.days[x],0),k=`e:${k0}:${s}`;const am=mpAmt(o.it,f),nm=ingName(o.it).toLowerCase();out.push({k,n:`Prep ${nm}`,s:`${ingCount(o.it)!=null?am+' '+nm:am}, enough for ${relList(ch)}`,w:'',done:tk.includes(k)})}}});
+ // the night before
+ const seen=new Set();fpOf(tm).forEach(e=>{const r=rcById(e.r);if(!r||e.fr||seen.has(e.r))return;const ni=(r.items||[]).filter(it=>itT(r,it,e)==='n');if(!ni.length)return;seen.add(e.r);const k=`n:${rcId(r)}`;
+  out.push({k,n:ni.length===(r.items||[]).length?`Make ${r.n}`:`Prep ${ni.map(x=>ingName(x).toLowerCase()).join(', ')}`,s:ni.length===(r.items||[]).length?'For tomorrow':`For tomorrow’s ${r.n}`,w:'Tonight',done:tk.includes(k)})});
+ // defrost for tomorrow
+ const P1=prepPrev(d);if(P1)try{prepList(P1).L.forEach(o=>{if(o.fz.includes(tm)){const k=`t:${rcId(o.r)}`;out.push({k,n:`Defrost ${o.r.n}`,s:'Freezer to fridge, for tomorrow',w:'Tonight',done:tk.includes(k)})}})}catch(_){}
+ return out}
+// at mealtime: what's left to do when you eat
+function mealNotes(d){const L=[];fpOf(d).forEach(e=>{const r=rcById(e.r);if(!r||e.fr||pmOf(r)!=='x')return;const m=(r.items||[]).filter(it=>itT(r,it,e)==='m');if(!m.length)return;const st=(r.steps||[]).filter((s,j)=>stT(r,j)==='m');L.push({r,txt:st.length?st.join(' '):`Add ${m.map(x=>ingName(x).toLowerCase()).join(', ')}.`})});return L}
+
+/* ---------- 4. the widget ---------- */
+const wHead=(t,em)=>`<div class="wl">${WIS.pot||''}<span>${esc(t)}</span>${em?`<em>${esc(em)}</em>`:''}</div>`;
+const tRow=(d,x)=>`<div class="rw ${x.done?'dn':''}"><button class="ck" data-a="${x.b?'mpck':'mptn'}" data-i="${d}|${x.k}" aria-label="${x.done?'Untick':'Tick'} ${esc(x.n)}">${TK}</button><span>${esc(x.n)}</span>${x.w?`<em>${x.w}</em>`:''}</div>`;
+{const _wd=wd;wd=function(l){if(!l||l.id!=='prep')return _wd.apply(this,arguments);const t=today(),np=nextPrepFrom(t),Tk=mpTasks(t),left=Tk.filter(x=>!x.done),isT=np===t,P=np?prepList(np):null;
+ const when=np?(isT?'Prep day':whenLbl(np)):'';
+ const nxt=np&&!isT?(P.L.length?`${P.L.length} recipe${P.L.length===1?'':'s'}, ${P.portions} portions for ${shortDay(P.days[0])} to ${shortDay(P.end)}`:`Nothing to batch cook yet for ${shortDay(P.days[0])} to ${shortDay(P.end)}`):'';
+ if(!np&&!Tk.length)return`<div class="mpw">${wHead('Meal prep')}<div class="hs">No prep day yet</div><div class="sb">Tap to pick one, or tap a free day on the calendar.</div></div>`;
+ if(l.w===1&&l.h===1){if(left.length)return`<div class="mpw">${wHead('Meal prep')}<div class="hn" style="margin-top:auto"><b>${left.length}</b><span>to prep</span></div><div class="sb">${esc(left.slice(0,2).map((x,i)=>i?x.n[0].toLowerCase()+x.n.slice(1):x.n).join(', '))}</div></div>`;
+  return`<div class="mpw">${wHead('Meal prep')}<div class="hs" style="margin-top:auto">${Tk.length?'All prepped':np?whenLbl(np):'Not set'}</div><div class="sb">${Tk.length?'Nothing left for today.':isT?'':'Next prep day'}</div></div>`}
+ const big=left.length?`<div class="hn"><b>${left.length}</b><span>to prep${isT?' today':''}</span></div>`:Tk.length?'<div class="hs">All prepped</div>':'';
+ const rows=Tk.length?`<div class="rws">${[...left,...Tk.filter(x=>x.done)].map(x=>tRow(t,x)).join('')}</div>`:'';
+ if(l.h===1){if(!Tk.length)return`<div class="mpw w21">${wHead('Meal prep',when)}<div class="hs">${np?(isT?'Prep day':longDay(np)):'Meal prep'}</div><div class="sb">${esc(nxt||'Nothing planned yet')}</div></div>`;
+  return`<div class="mpw w21">${wHead('Meal prep',left.length?`${left.length} to prep`:'All prepped')}${rows}</div>`}
+ const pd=isT&&P&&P.L.length?`<div class="sb">${P.portions} portions for ${shortDay(P.days[0])} to ${shortDay(P.end)}</div>`:'';
+ return`<div class="mpw w22">${wHead('Meal prep',when)}${big?big+pd:''}${big?'':`<div class="hs">${np?(isT?'Prep day':longDay(np)):'Meal prep'}</div><div class="sb">Nothing to prep today.</div>`}${rows}${nxt?`<div class="nx"><small>Next prep · ${esc(whenLbl(np))}</small><span>${esc(nxt)}</span></div>`:''}</div>`}}
+
+/* ---------- 5. how a recipe is prepped: in the recipe builder and from the Meal prep page ---------- */
+const mpTgt=k=>k==='rcd'?RCD:rcById(k);
+function mpSum(r){const m=pmOf(r);if(m!=='x')return{b:'Batch cook on prep day',n:'Made the night before',f:'Cooked on the day'}[m];const g={};(r.items||[]).forEach(x=>{const t=PTN[x.pt]?x.pt:'b';(g[t]=g[t]||[]).push(ingName(x).toLowerCase())});
+ return PTO.filter(([t])=>g[t]).map(([t,n])=>`${n}: ${g[t].join(', ')}`).join(' · ')}
+function mpEdHTML(r,k){const m=pmOf(r),items=r.items||[],steps=(r.steps||[]).map(s=>String(s)).filter(s=>s.trim());
+ const sel=(a,j,v,auto)=>`<select class="mpsel" data-${a}="${k}|${j}" aria-label="When">${auto?`<option value="" ${v?'':'selected'}>Auto: ${PTN[auto]}</option>`:''}${PTO.map(([c,n])=>`<option value="${c}" ${v===c?'selected':''}>${n}</option>`).join('')}</select>`;
+ return`<div class="mped"><p class="sm" style="margin:0 0 4px"><b>Meal prep</b></p><p class="sm" style="margin:0">When each part gets made. Mixed lets you batch cook one part and do the rest on the day.</p>
+ <div class="chips g2">${[['b','Batch cook'],['n','Night before'],['f','Cook on the day'],['x','Mixed']].map(([c,n])=>`<button class="chip ${m===c?'on':''}" data-a="mpm" data-i="${k}|${c}" aria-pressed="${m===c}">${n}</button>`).join('')}</div>
+ ${m==='x'?`${items.length?`<h4>Ingredients</h4>${items.map((x,j)=>`<div class="mpi"><span>${esc(ingName(x))}</span>${sel('mpit',j,PTN[x.pt]?x.pt:'b')}</div>`).join('')}`:''}
+ ${steps.length?`<h4>Method</h4>${steps.map((s,j)=>`<div class="mpi st"><span>${esc(s)}</span>${sel('mpst',j,(r.stt||[])[j]||'',stAuto(r,j))}</div>`).join('')}`:''}`:''}</div>`}
+const mpEdPaint=k=>{const w=$('#sheet .mped');const r=mpTgt(k);if(w&&r)w.outerHTML=mpEdHTML(r,k)};
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mpm],[data-a=mpred]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();
+ if(el.dataset.a==='mpred'){const r=rcById(el.dataset.i);if(!r)return;sheet(`<h2>${esc(r.n)}</h2>${mpEdHTML(r,rcId(r))}<button class="btn big on" data-a="shx" style="margin-top:14px">Done</button>`);return}
+ const [k,c]=el.dataset.i.split('|'),r=mpTgt(k);if(!r)return;if(c==='b')delete r.pm;else r.pm=c;if(k!=='rcd'){save();if(FS)fsr();render()}mpEdPaint(k);try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true);
+document.addEventListener('change',e=>{const s=e.target;if(!s.dataset||!(s.dataset.mpit||s.dataset.mpst))return;const [k,j]=(s.dataset.mpit||s.dataset.mpst).split('|'),r=mpTgt(k);if(!r)return;
+ if(s.dataset.mpit){const x=(r.items||[])[+j];if(x)x.pt=s.value}else{r.stt=r.stt||[];r.stt[+j]=s.value}
+ if(k!=='rcd'){save();if(FS)fsr();render()}mpEdPaint(k)});
+// the builder: show it under the method, keep it when saving, and keep step timings in line with the steps
+{const _s=rcSheet;rcSheet=function(){if(RCD&&RCD.i!=null&&RCD.pm===undefined&&S.recipes[RCD.i]){const o=S.recipes[RCD.i];RCD.pm=o.pm||null;RCD.stt=(o.stt||[]).slice()}_s.apply(this,arguments);try{const t=$('#sheet .rctot');if(t&&RCD&&!$('#sheet .mped'))t.insertAdjacentHTML('beforebegin',mpEdHTML(RCD,'rcd'))}catch(_){}}}
+{const _p=rcPaint;rcPaint=function(){_p.apply(this,arguments);try{if(RCD)mpEdPaint('rcd')}catch(_){}}}
+window.addEventListener('pointerdown',e=>{const el=e.target.closest('#sheet [data-a=rcsrm]');if(el&&RCD&&RCD.stt)RCD.stt.splice(+el.dataset.i,1)},true);
+['pointerup','keyup'].forEach(t=>document.addEventListener(t,e=>{if(RCD&&(e.target.closest&&e.target.closest('#sheet [data-a=rcsadd],#sheet [data-a=rcsrm]')||(t==='keyup'&&e.key==='Enter'&&e.target.matches&&e.target.matches('[data-rcsq]'))))setTimeout(()=>mpEdPaint('rcd'),60)}));
+let MPS2=null;window.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-a=rcsave]')||!RCD)return;MPS2={i:RCD.i,n:(S.recipes||[]).length,pm:RCD.pm||null,stt:(RCD.stt||[]).slice(),at:Date.now()}},true);
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(MPS2&&!RCD&&Date.now()-MPS2.at<4000){const P=MPS2;MPS2=null;const L=S.recipes||[],x=P.i!=null?L[P.i]:L.length>P.n?L[L.length-1]:null;if(x){if(P.pm)x.pm=P.pm;else delete x.pm;x.stt=P.stt;save()}}}catch(_){}return r}}
+
+/* ---------- 6. one plan entry: cook the whole meal that day ---------- */
+{const _s=sheet;sheet=function(h){_s.apply(this,arguments);try{if(h&&typeof FPE!=='undefined'&&FPE&&String(h).includes('data-a="fprm"')){const e2=fpOf(FPE.d)[FPE.k],b=$('#sheet [data-a=fprm]');if(e2&&b)b.insertAdjacentHTML('beforebegin',`<div class="npr" style="margin-top:14px"><div><b>Make it all on the day</b><small>Just this meal: skip the prep day and cook it from scratch on ${esc(longDay(FPE.d))}.</small></div><button class="tg ${e2.fr?'on':''}" data-a="mpfr" role="switch" aria-checked="${!!e2.fr}" aria-label="Make it all on the day"></button></div>`)}}catch(_){}}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mpfr]');if(!el||!FPE)return;e.stopImmediatePropagation();e.preventDefault();const e2=fpOf(FPE.d)[FPE.k];if(!e2)return;if(e2.fr)delete e2.fr;else e2.fr=1;save();el.classList.toggle('on',!!e2.fr);el.setAttribute('aria-checked',!!e2.fr);try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}if(FS)fsr();render()},true);
+// the plan shows which meals are cooked on the day
+{const _f=fpPlanTab;fpPlanTab=function(){let h=_f.apply(this,arguments);try{h=h.replace(/(<button class="pl" data-a="fpent" data-i="(\d{4}-\d\d-\d\d)\|(\d+)">)/g,(m,a,d,i)=>{const e=fpOf(d)[+i];return e&&e.fr?a+'<span class="sl" style="color:#7FD6A0">ON THE DAY</span>':m})}catch(_){}return h}}
+
+/* ---------- 7. the Meal prep page ---------- */
+FSX.prep=function(){const t=today(),p=MP(),np=nextPrepFrom(t),Tk=mpTasks(t).filter(x=>!x.b||np!==t),sd=shopDay(),R=S.recipes||[],MN2=mealNotes(t);
+ const rows=Tk.map(x=>`<div class="tn ${x.done?'dn':''}"><button class="ck" data-a="${x.b?'mpck':'mptn'}" data-i="${t}|${x.k}" aria-label="Tick ${esc(x.n)}">${TK}</button><div><b>${esc(x.n)}</b>${x.s||x.w?`<small>${esc([x.w,x.s].filter(Boolean).join(' · '))}</small>`:''}</div></div>`).join('');
+ const used=new Set();Object.keys(FP().d).filter(d=>d>=addDays(realToday(),-7)).forEach(d=>fpOf(d).forEach(e=>used.add(e.r)));
+ const recs=[...R].sort((a,b)=>(used.has(rcId(b))?1:0)-(used.has(rcId(a))?1:0));
+ const chev='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>';
+ return`<h1>Meal prep</h1><div class="mpp">
+ ${np?prepCard(np):`<div class="card"><h2>No prep day yet</h2><p class="sm" style="margin:0">Pick a day below, or tap a free day on the Home calendar and then “+ Prep”.</p></div>`}
+ ${rows||MN2.length?`<div class="card"><h2>${t===realToday()?'Today':longDay(t)}</h2>${rows}${MN2.length?`${rows?'<div style="height:6px"></div>':''}${MN2.map(n=>`<div class="mln"><b>${esc(n.r.n)}, at mealtime:</b> ${esc(n.txt)}</div>`).join('')}`:''}</div>`:''}
+ <h3>Prep days</h3><div class="card"><p class="sm" style="margin:0 0 8px">Every week</p><div class="chips7">${[1,2,3,4,5,6,0].map(n=>`<button class="chip ${p.w.includes(n)?'on':''}" data-a="mpwd" data-i="${n}" aria-pressed="${p.w.includes(n)}" aria-label="${WK7[n]}">${WK7[n].slice(0,2)}</button>`).join('')}</div>
+ <p class="sm" style="margin:10px 2px 0">For a one-off, tap a free day on the Home calendar, then “+ Prep”. Drag the Prep tag to move it.${sd!=null?` Your shop day is ${WK7[sd]}.`:''}</p></div>
+ ${recs.length?`<h3>How each recipe is made</h3><div class="card"><p class="sm" style="margin:0 0 2px">Tap a recipe to choose when each part gets made.</p>${recs.map(r=>`<button class="rcb" data-a="mpred" data-i="${rcId(r)}"><span><b>${esc(r.n)}</b><small>${esc(mpSum(r))}</small></span>${chev}</button>`).join('')}</div>`:''}
+ <h3>Keeping it safe</h3><div class="card"><p class="sm" style="margin:0">Cool cooked food and get it in the fridge within 2 hours. Eat it within 2 days, or freeze it. Defrost in the fridge overnight and eat within 24 hours. Cooked rice: fridge for 1 day at most. Guidance from the Food Standards Agency and the NHS.</p></div></div>`};
+mpDietCard=function(){const t=today(),np=nextPrepFrom(t),n=mpTasks(t).filter(x=>!x.done).length,P=np?prepList(np):null;
+ const line=np?`${np===t?'Prep day today':'Next prep '+whenLbl(np).replace(/^T/,'t')}${P&&P.L.length?` · ${P.L.length} recipe${P.L.length===1?'':'s'}, ${P.portions} portions`:''}${n?` · ${n} to prep today`:''}.`:'Pick a day to batch cook, and Swell lists what to make from your food plan.';
+ return`<div class="card fpc mpdc"><h2>Meal prep</h2><p class="sm" style="margin:0">${line}</p><div class="fpq"><button class="btn ${np===t||n?'on':''}" data-a="mpopen">${np?'Open meal prep':'Set a prep day'}</button></div></div>`};
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M5 6h14M5 12h9M5 18h5"/><circle cx="18" cy="16" r="3"/>',h:'Prep it your way',p:'Set when each part of a recipe gets made: cook the chicken on prep day, chop onion every 2 days, add rice and cheese at mealtime. Or make one planned meal all on the day.'})}
+// the Claude preview: a chicken and rice bowl prepped in parts, planned through the next week
+setTimeout(()=>{try{if(PREVIEW&&!S.prevMP3&&S.recipes){S.prevMP3=1;if(!rcById('rdemo3'))S.recipes.push({id:'rdemo3',n:'Chicken and rice',sv:3,pm:'x',items:[{q:'600 g chicken breast',nm:'Chicken breast',g:600,k:636,p:144,f:7,c:0,ri:null,pt:'b'},{q:'1 onion',nm:'Onion',g:150,k:54,p:2,f:0,c:12,ri:null,pt:'e2'},{q:'3 microwave rice pouches',nm:'Microwave rice',g:750,k:1200,p:26,f:15,c:255,ri:null,pt:'m'},{q:'90 g cheddar',nm:'Cheddar',g:90,k:377,p:23,f:31,c:0,ri:null,pt:'m'}],steps:['Season the chicken and roast at 200°C for 25 minutes. Cool, slice and portion.','Dice the onion.','Microwave a rice pouch with a portion of chicken and the onion, then top with cheese.']});
+ for(let k=0;k<12;k++){const d=addDays(realToday(),k);const L=FP().d[d]=FP().d[d]||[];if(!L.some(e=>e.r==='rdemo3'))L.push({r:'rdemo3',sv:1})}save();render()}}catch(_){}},0);
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
