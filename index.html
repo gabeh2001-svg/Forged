@@ -9984,6 +9984,62 @@ mpDietCard=function(){const t=today(),np=nextPrepFrom(t),n=mpTasks(t).filter(x=>
 setTimeout(()=>{try{if(PREVIEW&&!S.prevMP3&&S.recipes){S.prevMP3=1;if(!rcById('rdemo3'))S.recipes.push({id:'rdemo3',n:'Chicken and rice',sv:3,pm:'x',items:[{q:'600 g chicken breast',nm:'Chicken breast',g:600,k:636,p:144,f:7,c:0,ri:null,pt:'b'},{q:'1 onion',nm:'Onion',g:150,k:54,p:2,f:0,c:12,ri:null,pt:'e2'},{q:'3 microwave rice pouches',nm:'Microwave rice',g:750,k:1200,p:26,f:15,c:255,ri:null,pt:'m'},{q:'90 g cheddar',nm:'Cheddar',g:90,k:377,p:23,f:31,c:0,ri:null,pt:'m'}],steps:['Season the chicken and roast at 200°C for 25 minutes. Cool, slice and portion.','Dice the onion.','Microwave a rice pouch with a portion of chicken and the onion, then top with cheese.']});
  for(let k=0;k<12;k++){const d=addDays(realToday(),k);const L=FP().d[d]=FP().d[d]||[];if(!L.some(e=>e.r==='rdemo3'))L.push({r:'rdemo3',sv:1})}save();render()}}catch(_){}},0);
 
+/* ===== v129: Rate it in the Claude preview: read the product from photos when the barcode can't be looked up ===== */
+// Why: the preview runs inside claude.ai, which has no camera access for pages and blocks requests to other websites,
+// so the live barcode scan and the Open Food Facts lookup can't work there. The live app is unchanged (it can reach
+// Open Food Facts). In the preview, "Rate from photos" sends 1 to 3 photos of the pack (front, nutrition table,
+// ingredients) to Claude, which reads them into the same fields Open Food Facts gives, and the usual score runs on that.
+// Research notes: reading values off the label is the same source Open Food Facts contributors use; only printed values
+// are kept (anything unreadable is left blank rather than guessed), and the score says when it's from photos, because
+// missing values lower confidence (Nutri-Score 2023 algorithm needs energy, sugars, saturates, salt, fibre, protein and
+// fruit/veg share; Santé publique France, from memory).
+(function(){const st=document.createElement('style');st.textContent=`
+#bcs .bcp .rtph{display:flex;flex-direction:column;gap:8px;width:100%}
+#bcs .bcp .rtph small{display:block;font-size:12.5px;color:rgba(243,241,236,.66);line-height:1.4;text-align:center}
+#bcs .bcp .rtspin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:#F3F1EC;animation:rtsp 0.9s linear infinite;margin:8px auto}
+@keyframes rtsp{to{transform:rotate(360deg)}}`;document.head.appendChild(st)})();
+// inside claude.ai the blurred backdrop can fail to draw in a frame, so the preview's rating screen is near-solid
+if(PREVIEW){const st=document.createElement('style');st.textContent='#rt{background:rgba(8,8,8,.95)!important}';document.head.appendChild(st)}
+let RTSMP;// undefined = not asked yet, null = not available here
+async function rtSample(){if(RTSMP!==undefined)return RTSMP;try{RTSMP=window.claude&&typeof claude.use==='function'?await claude.use('sample'):null}catch(_){RTSMP=null}return RTSMP}
+const RTPH_PROMPT=`These are photos of one shop-bought product's packaging (front, nutrition table, ingredients). Read what is printed and return ONLY a JSON object in Open Food Facts format:
+{"product_name":"","brands":"","categories_tags":[],"nutriments":{"energy-kcal_100g":null,"proteins_100g":null,"fat_100g":null,"saturated-fat_100g":null,"carbohydrates_100g":null,"sugars_100g":null,"fiber_100g":null,"salt_100g":null},"additives_tags":[],"nova_group":null,"serving_quantity":null,"serving_size":"","ingredients_text":"","labels_tags":[],"missing":""}
+Rules:
+- Use only values you can read. Leave anything unreadable as null or "" and list it in "missing" in a few plain words. Never guess numbers.
+- Nutrition per 100 g or 100 ml. If only per serving is printed and the serving size is printed, convert to per 100. Salt in grams (if only sodium is shown, salt = sodium x 2.5).
+- categories_tags: 1 to 4 Open Food Facts English tags that fit, e.g. en:beverages, en:carbonated-drinks, en:snacks, en:cereal-bars, en:breakfast-cereals, en:yogurts, en:dairies, en:dietary-supplements, en:protein-powders, en:breads, en:ready-meals.
+- additives_tags: E numbers from the ingredients as en:e471 style tags (include ones written by name, e.g. citric acid = en:e330).
+- nova_group: 1 to 4 from the ingredients, or null if no ingredients are visible.
+- ingredients_text: the ingredients as printed, in English, including supplement doses.
+- serving_quantity: grams or ml in one serving as a number; serving_size: as printed.
+- If the photos don't show a food, drink or supplement package, return {"error":"not a product"}.`;
+function rtPhotoPick(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.multiple=true;i.setAttribute('capture','environment');i.style.display='none';document.body.appendChild(i);
+ i.addEventListener('change',()=>{const f=[...(i.files||[])];i.remove();if(f.length)rtPhotoGo(f)});i.click()}
+async function rtPhotoGo(files){const smp=await rtSample();if(!smp){toast('Rating from photos needs Claude, which isn’t available here.');return}
+ let lim=null;try{lim=await smp.limits()}catch(_){}if(!lim||!lim.images){toast('This view can’t send photos to Claude.');return}
+ files=files.filter(f=>!lim.images.mediaTypes||lim.images.mediaTypes.includes(f.type)||/^image\//.test(f.type)).slice(0,Math.min(3,lim.images.maxCount||3));
+ if(!BC)bcOpen('rate');bcStop();BC.st='rtai';bcRender();
+ try{const P=await smp.json(RTPH_PROMPT,{images:files,modelTier:'default'});if(!BC)return;
+  if(!P||P.error||!(P.product_name||(P.ingredients_text||'').length>3||(P.nutriments&&Object.values(P.nutriments).some(v=>v!=null)))){BC.st='rterr';BC.err='Swell couldn’t read a product from those photos. Try the front and the nutrition table, close up and in good light.';bcRender();return}
+  const prod={...P,brands:P.brands||'',nutriments:Object.fromEntries(Object.entries(P.nutriments||{}).filter(([,v])=>v!=null&&v!==''))};
+  const p=bcProd({product:prod});p.at=Date.now();p.photo=1;const code='photo-'+Date.now().toString(36);bcClose();
+  rtOpen({R:{...p.rt},code,log:p.k100!=null||p.ks!=null,p});
+  setTimeout(()=>{try{const h=$('#rt .rth small');if(h&&!h.dataset.ph){h.dataset.ph=1;h.insertAdjacentText('beforeend',' · Read from your photos'+(P.missing?`. Couldn’t read: ${P.missing}`:''))}}catch(_){}},60)}
+ catch(e){if(!BC)return;const c=e&&e.code;if(c==='cancelled')return;BC.st='rterr';
+  BC.err=c==='not_granted'||c==='sampling_disabled'||c==='capability_disabled'||c==='not_declared'?'Claude isn’t allowed for this preview, so photos can’t be read. You can allow it from the page’s Permissions menu.':c==='rate_limited'?'Claude is busy right now. Try again in a minute.':c==='image_rejected'?'Those photos couldn’t be used. Try smaller JPEG or PNG photos.':c==='refused'?'Claude couldn’t read those photos. Try different ones.':'Something went wrong reading the photos. Try again.';bcRender()}}
+// the scanner's panels, in Rate mode, in the preview: offer photos where the barcode route can't work
+{const _br=bcRender;bcRender=function(){const o=$('#bcs');if(o&&BC&&(BC.st==='rtai'||BC.st==='rterr')){o.classList.add('nocam');
+  o.innerHTML=BC.st==='rtai'?`<div class="bcp"><h2>Reading the pack</h2><div class="rtspin" aria-hidden="true"></div><p>Claude is reading the label. This takes a few seconds.</p><button class="glink" data-a="bcx" style="align-self:center">Cancel</button></div>`
+   :`<div class="bcp"><h2>Couldn’t rate that</h2><p>${esc(BC.err||'')}</p><button class="btn on" data-a="rtphoto">Try other photos</button><button class="glink" data-a="bcx" style="align-self:center">Close</button></div>`;return}
+ const r=_br.apply(this,arguments);try{if(PREVIEW&&BC&&BC.mode==='rate'&&o&&!o.querySelector('[data-a=rtphoto]')){const box=o.querySelector('.bcp')||o.querySelector('.bca');
+  if(box&&/nocam|off|nf|type/.test(BC.st)){const why=BC.st==='off'||BC.st==='nf'?'<small>The preview can’t reach Open Food Facts. Photos of the pack work instead.</small>':BC.st==='nocam'?'<small>The preview can’t use the camera. Pick or take photos of the front, nutrition table and ingredients.</small>':'';
+   const h2=box.querySelector('h2');if(BC.st==='off'&&h2)h2.textContent='Can’t look it up here';if(BC.st==='off'){const pp=box.querySelector('p');if(pp)pp.remove()}
+   const hh=box.querySelector('h2'),pp2=hh&&hh.nextElementSibling&&hh.nextElementSibling.tagName==='P'?hh.nextElementSibling:hh,html=`<div class="rtph"><button class="btn on" data-a="rtphoto">Rate from photos</button>${why}</div>`;
+   if(pp2)pp2.insertAdjacentHTML('afterend',html);else box.insertAdjacentHTML('afterbegin',html);
+   box.querySelectorAll('.btn.on:not([data-a=rtphoto])').forEach(b=>b.classList.remove('on'))}}}catch(_){}return r}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=rtphoto]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();rtPhotoPick()},true);
+// cancelling while Claude reads: close the scanner; the answer is ignored when it lands
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
