@@ -9519,6 +9519,25 @@ const devCopy=s=>String(s).replace(/your phone’s Health app shows this/g,`${DE
 {const _o=rpOpen;rpOpen=function(){_o.apply(this,arguments);try{const b=$('#rpt .rpbar b');if(b&&!b.dataset.dv){b.dataset.dv=1;b.title=DEV.ios?'Save as PDF opens the print sheet: tap the share button there to save or send the PDF.':DEV.and?'Save as PDF opens Print: choose “Save as PDF” as the printer.':''}}catch(_){}}}
 window.addEventListener('click',e=>{if(!e.target.closest('[data-a=rppdf]'))return;if(DEV.ios)toast('In the print sheet, tap Share to save or send the PDF.');else if(DEV.and)toast('Choose “Save as PDF” as the printer.')},true);
 
+
+/* ===== v124: the fertile window gets its own colour, everywhere ===== */
+// Research notes: colours that mean different things must look different, and meaning shouldn't rest on colour alone
+// (WCAG 1.4.1; NN/g, "Using colour in charts"). The fertile window was light blue, the same family as the ovulation
+// tint added in v111, so it vanished. It's now lavender, drawn as a lavender ring on the calendar (so it sits on top
+// of the phase tint rather than replacing it) and as its own segments on the ring, with a matching key.
+(function(){const st=document.createElement('style');st.textContent=`
+.cym button.fw{box-shadow:inset 0 0 0 2px #B79CFF!important}
+.cym button.fw.td{outline:2px solid #fff!important}
+.cylg .lgf{display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 2px #B79CFF}`;document.head.appendChild(st)})();
+cycRing=function(n,size){const st=cycStats(),len=st.len||28,pl=st.pl||5,day=Math.min(len,n?n.day:1),ov=len-14,R=40,cx=50,cy=50,seg=360/len,fert=!!(S.cyc&&S.cyc.fert),PL=(typeof pmsLen==='function'?pmsLen():5);let p='';
+ for(let i=0;i<len;i++){const a0=(i*seg-90+1.2)*Math.PI/180,a1=((i+1)*seg-90-1.2)*Math.PI/180,x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1),toN=len-i;
+  const ph=i<pl?'p':Math.abs(i-ov)<=1?'o':toN<=PL?'pms':i<ov?'f':'l',inF=fert&&i>=ov-5&&i<=ov+1;
+  const col=ph==='p'?'#FF6B8B':inF?'#B79CFF':ph==='o'?'rgba(127,208,255,.7)':ph==='pms'?'rgba(255,138,92,.85)':ph==='l'?'rgba(255,192,98,.5)':'rgba(127,214,160,.5)';
+  p+=`<path d="M${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" stroke="${col}" stroke-width="${i===day-1?11:7}" fill="none" stroke-linecap="butt"/>`}
+ if(n){const a=((day-.5)*seg-90)*Math.PI/180;p+=`<circle cx="${(cx+R*Math.cos(a)).toFixed(2)}" cy="${(cy+R*Math.sin(a)).toFixed(2)}" r="6" fill="#F3F1EC" stroke="#141414" stroke-width="2"/>`}
+ const sz=size?`width:${size}px;height:${size}px`:'';return`<svg viewBox="0 0 100 100" style="${sz}" aria-hidden="true">${p}${n?`<text x="50" y="48" text-anchor="middle" font-size="18" font-weight="900" fill="#F3F1EC" font-family="Archivo,system-ui" style="font-stretch:70%">${day}</text><text x="50" y="62" text-anchor="middle" font-size="8" font-weight="700" fill="rgba(243,241,236,.55)" letter-spacing="1">OF ${len}</text>`:''}</svg>`};
+{const _v=cycV;cycV=function(){let h=_v.apply(this,arguments);try{if(S.cyc&&S.cyc.fert&&!/lgf/.test(h))h=h.replace('<span><i class="lgt" style="background:rgba(127,208,255,.6)"></i>Ovulation (estimate)</span>','<span><i class="lgt" style="background:rgba(127,208,255,.6)"></i>Ovulation (estimate)</span><span><i class="lgf"></i>Fertile window (estimate)</span>');
+ h=h.replace('<small>Shown in blue. An estimate only, not for contraception.</small>','<small>Shown in lavender. An estimate only, not for contraception.</small>')}catch(_){}return h};FSX.cyc=cycV}
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
