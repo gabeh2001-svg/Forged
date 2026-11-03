@@ -570,7 +570,7 @@ function onb(){
  return`<div class="card" style="margin-top:8vh"><small>Step ${st+1} of 4</small>${steps[st]}<button class="btn big on" data-a="st">${st<3?'Next':'Get started'}</button></div>`}
 function plates(w){const u=U(),P=u==='lb'?[45,35,25,10,5,2.5]:[20,15,10,5,2.5,1.25],o=[];let r=w;for(const p of P){const n=Math.floor(r/p+1e-9);if(n){o.push(n+' × '+p+u);r-=n*p}}return o.join(' + ')}
 function load(e){const w=+e.w,u=U();if(!w)return'';if(e.eq==='Bar'){const bar=+e.bar||BAR(),side=(w-bar)/2;return side<0?'Total is below the bar weight':side===0?'Just the bar':`${plates(side)} on each side`}if(e.eq==='Free Weights')return`${w/2}${u} in each hand`;if(e.eq==='Body Weight')return`Add ${w}${u}`;return`Set the machine to ${w}${u}`}
-const repTxt=e=>e.t==='Until Failure'?(+e.flo>0&&+e.fhi>=+e.flo?`until failure (aim ${+e.flo} to ${+e.fhi})`:'until failure'):e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?`${e.v||'?'} second hold`:`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
+const repTxt=e=>e.t==='Until Failure'?(+e.flo>0&&+e.fhi>=+e.flo?`until failure (aim ${+e.flo} to ${+e.fhi})`:'until failure'):e.t==='Custom'?(e.v||'?'):e.t==='Time Under Tension'?(+e.hn>1?`${+e.hn} holds of ${e.v||'?'} seconds`:`${e.v||'?'} second hold`):`${e.v||'?'} reps`;const tgt2=e=>`${e.s||'?'} × ${repTxt(e)}`;
 const restOf=(e,d)=>+e.ro?e.ro*1000:((d&&d.rest)||90000);
 function exBlock0(e){const u=U(),w=+e.w,r=[];
  if(w)r.push([e.eq==='Body Weight'?'Added weight':'Total weight',w+u]);
@@ -10039,6 +10039,142 @@ async function rtPhotoGo(files){const smp=await rtSample();if(!smp){toast('Ratin
    box.querySelectorAll('.btn.on:not([data-a=rtphoto])').forEach(b=>b.classList.remove('on'))}}}catch(_){}return r}}
 window.addEventListener('click',e=>{const el=e.target.closest('[data-a=rtphoto]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();rtPhotoPick()},true);
 // cancelling while Claude reads: close the scanner; the answer is ignored when it lands
+
+/* ===== v130: guided workouts you can leave and resume, End workout with a confirm, holds per set, setup that fits the
+   exercise, one way to start (guided), and an Achievements page ===== */
+// Research notes for this block:
+// - Don't lose work: leaving a screen shouldn't throw away what someone has done (NN/g "Preserve user input"; Nielsen
+//   heuristic 5, error prevention). Leaving keeps the session and Home offers Resume. Ending is destructive, so it's one
+//   button and then a confirm, with the destructive action styled as such (Apple HIG "Alerts": confirm destructive
+//   actions, from memory). Ended sessions are still logged, marked as ended early, with what was done.
+// - Holds: isometric work is usually prescribed as several holds per set, e.g. 3 to 5 holds of 15 to 45 seconds with a
+//   short rest (Lum & Barbosa 2019, "Brief review: effects of isometric strength training", from memory). Each Timed
+//   exercise can now have holds per set and a rest between holds, which also covers reps with a pause.
+// - Setup copy names the right kit for the exercise (dip bars for dips, a pull-up bar for pull-ups); a mat only for
+//   floor work (NN/g "Match between system and the real world").
+// - Achievements you can look back on: seeing progress supports a sense of competence, one of the three needs in
+//   self-determination theory (Ryan & Deci 2000), and badges tied to real accomplishments raise activity (Hamari 2017,
+//   Computers in Human Behavior, field experiment, from memory).
+// - One start option: the friend testing it found Guided useful and Solo didn't do anything visible on the new Home,
+//   so Start workout now goes straight to the guided session (fewer choices, Hick's law).
+(function(){const st=document.createElement('style');st.textContent=`
+#aw .awend{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;margin:0;padding:10px 16px}
+#aw>small[style*="position:absolute"]{top:calc(70px + env(safe-area-inset-top,0px))!important;left:0;right:0;text-align:center}
+#aw .awcf{position:absolute;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55);padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+#aw .awcf .card{width:100%;max-width:440px;text-align:left;padding:20px 18px 16px;background:#18181a;border-radius:24px}
+#aw .awcf h2{margin:0 0 6px;font-size:21px}#aw .awcf p{margin:0 0 14px;color:rgba(243,241,236,.75);font-size:15px;line-height:1.4}
+#aw .awcf .btn{width:100%;margin:0 0 8px}#aw .awcf .btn.dng{background:#E5484D;color:#fff;border-color:#E5484D}
+.awrc{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px!important}
+.awrc small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ac,#E0643A);margin-bottom:3px}
+.awrc b{display:block;font-size:17px;font-weight:800}.awrc span{display:block;font-size:13px;color:var(--dim);margin-top:2px}
+.awrc .bts{display:flex;flex-direction:column;gap:6px;flex:none;align-items:stretch}.awrc .btn{margin:0;min-width:104px}
+.awrc .glink{font-size:13px;padding:2px;text-align:center}
+.wearly{font-size:13px;color:#ffd27a;margin:8px 0 0}
+.ach .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ach .tile{padding:14px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.ach .tile b{display:block;font-size:28px;font-weight:800;line-height:1.05}.ach .tile span{font-size:13px;color:var(--dim)}
+.ach h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:16px 2px 8px}
+.ach .row3{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08);align-items:center}
+.ach .row3:first-child{border-top:0}.ach .row3 b{font-weight:600;display:block}.ach .row3 small{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.ach .row3 em{font-style:normal;font-size:13px;color:var(--dim);text-align:right;white-space:nowrap}
+.ach .tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:7px;margin-left:6px;vertical-align:1px}
+.ach .tag.ok{background:rgba(127,214,160,.16);color:#7FD6A0}.ach .tag.early{background:rgba(255,210,122,.14);color:#ffd27a}`;document.head.appendChild(st)})();
+
+/* ---------- 1. one way to start ---------- */
+{const _m=mwr;mwr=function(){_m.apply(this,arguments);try{const o=$('#mw');if(!o)return;const s=o.querySelector('[data-a=solo]');if(s)s.remove();const g=o.querySelector('.mopt[data-a=awgo]');
+ if(g)g.outerHTML='<p class="sm" style="margin:6px 2px 12px">Step by step: where to go, what to load, every set and every rest, timed for you.</p><button class="btn big on" data-a="awgo">Start guided workout</button>'}catch(_){}}}
+try{TOUR.forEach(s=>{if(s&&typeof s.p==='string'){if(s.q==='[data-a=wsel]')s.p='Starts a guided session: where to go, what to load, every set and every rest, timed for you.';s.p=s.p.replace('then choose Guided or Solo','then start the guided session')}})}catch(_){}
+
+/* ---------- 2. holds per set ---------- */
+{const _x=xTargetBox;xTargetBox=function(){let h=_x.apply(this,arguments);try{if((X.t||'')==='Time Under Tension'){h=h.replace('How long is each set?','How long is each hold?');
+  h=h.replace(/<\/div>$/,`<div class="xcalc" style="margin-top:8px"><label>Holds each set<input type="number" inputmode="numeric" data-b="X.hn" value="${esc(X.hn||'')}" placeholder="1"></label><label>Rest between holds (s)<input type="number" inputmode="numeric" data-b="X.hr" value="${esc(X.hr??'')}" placeholder="10"></label></div><small>For reps with a hold, like 8 holds of 5 seconds, set holds to 8.</small></div>`)}}catch(_){}return h}}
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=addx2]')||typeof X==='undefined'||!X||!D)return;const ei=X.ei,n=D.days[D.sel].ex.length,t=X.t,hn=Math.round(+X.hn||0),hr=X.hr===''||X.hr==null?null:Math.max(0,+X.hr||0);
+ setTimeout(()=>{try{const L=D.days[D.sel].ex,ex=ei!=null?L[ei]:L.length>n?L[L.length-1]:null;if(!ex||t!=='Time Under Tension')return;if(hn>1)ex.hn=Math.min(50,hn);else delete ex.hn;if(hr!=null)ex.hr=hr;else delete ex.hr}catch(_){}},0)},true);
+const holdsOf=x=>x&&x.t==='Time Under Tension'?Math.max(1,Math.min(50,+x.hn||1)):1;
+{const _c=completeSet;completeSet=function(now){try{const x=AW&&AW.d.ex[AW.e];if(x&&AW.ph==='tut'&&holdsOf(x)>1){const hi=AW.hi||1;if(hi<holdsOf(x)){AW.hi=hi+1;const t0=now||performance.now(),hr=(x.hr==null?10:Math.max(0,+x.hr))*1000;
+   if(hr>0){AW.ph='hrest';AW.left=hr;AW.end=t0+hr;AW.run=true}else{AW.ph='tut';AW.left=(+x.v||30)*1000;AW.end=t0+AW.left;AW.run=true}return}AW.hi=1}}catch(_){}return _c.apply(this,arguments)}}
+(function hl(){try{if(AW&&AW.ph==='hrest'){const b=$('#awht');if(b)b.textContent=fmt(awLeft());if(AW.run&&awLeft()<=0){try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(_){}const x=AW.d.ex[AW.e];AW.ph='tut';AW.left=(+x.v||30)*1000;AW.end=performance.now()+AW.left;AW.run=true;awr()}}}catch(_){}requestAnimationFrame(hl)})();
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awhs]');if(!el||!AW)return;e.stopImmediatePropagation();e.preventDefault();const x=AW.d.ex[AW.e];AW.ph='tut';AW.left=(+x.v||30)*1000;AW.end=performance.now()+AW.left;AW.run=true;awr()},true);
+
+/* ---------- 3. setup that fits the exercise ---------- */
+{const _s=setup2;setup2=function(e){let r=_s.apply(this,arguments);try{const M='Find a clear space and grab a mat if you use one';if(r.includes(M)){const n=String(e.n||'').toLowerCase();let t='Find a clear space';
+  if(/bench dips?|chair dips?/.test(n))t='Find a bench or a sturdy chair';else if(/\bdips?\b/.test(n))t='Find the dip bars';
+  else if(/pull.?ups?|chin.?ups?|muscle.?ups?|dead ?hangs?|\bhangs?\b|toes.?to.?bar|hanging/.test(n))t='Find a pull-up bar';
+  else if(/step.?ups?|box jumps?|box squats?/.test(n))t='Find a sturdy box or step';
+  else if(/inverted rows?|ring rows?|\brings?\b/.test(n))t='Find a low bar or rings';
+  else if(/plank|push.?ups?|press.?ups?|crunch|sit.?ups?|glute bridge|hip thrust|bird.?dog|dead.?bug|superman|hollow|v.?ups?|flutter|russian twist|leg raise|side plank|stretch|yoga|clamshell|fire hydrant/.test(n))t=M;
+  r=r.replace(M,t)}}catch(_){}return r}}
+
+/* ---------- 4. leave, resume and end ---------- */
+let AWH=null;
+const awDoneN=A=>Object.keys(A.dn||{}).length;
+function awSnap(){try{if(!AW||AW.ph==='done')return;const o={};for(const k in AW)if(k!=='p'&&k!=='d')o[k]=AW[k];o.wallEnd=AW.run?Date.now()+(AW.end-performance.now()):null;
+ S.awp={d:today(),at:Date.now(),pid:AW.p&&AW.p.id||null,di:AW.p&&AW.p.days?AW.p.days.indexOf(AW.d):-1,dn:AW.d&&AW.d.name||'Workout',n:(AW.d&&AW.d.ex||[]).length,aw:JSON.parse(JSON.stringify(o)),dsnap:AW.p&&AW.p.days&&AW.p.days.indexOf(AW.d)>=0?null:JSON.parse(JSON.stringify(AW.d||null))};save()}catch(_){}}
+function awFromSave(){const P=S.awp;if(!P||P.d!==realToday())return null;const p=P.pid&&S.plans.find(x=>x.id===P.pid),d=p&&P.di>=0?p.days[P.di]:P.dsnap;if(!d)return null;
+ const A={...P.aw,p:p||null,d};if(A.run&&A.wallEnd){const left=A.wallEnd-Date.now();if(left>0){A.end=performance.now()+left}else{A.left=0;A.end=performance.now();if(A.ph==='rest'){A.ph='set';A.run=false}else if(A.ph==='tut'||A.ph==='hrest'){A.ph='set';A.run=false;A.hi=1}}}return A}
+function awLog(early){try{const A=AW;if(!A)return;const t=today(),n=(A.d.ex||[]).length,done=early?awDoneN(A):n;(S.wlog=S.wlog||[]).unshift({d:t,at:Date.now(),n:A.d.name||'Workout',done,of:n,early:early?1:0});S.wlog=S.wlog.slice(0,200);
+ if(early){const ck=S.checks[t]=S.checks[t]||[];Object.keys(A.dn||{}).forEach(i=>ck[+i]=true)}save()}catch(_){}}
+function awEndNow(){if(!AW)return;const n=(AW.d.ex||[]).length,dn=awDoneN(AW);awLog(true);AW=null;AWH=null;delete S.awp;save();awr();render();toast(dn?`Workout ended early. ${dn} of ${n} exercise${n===1?'':'s'} logged.`:'Workout ended. Sets you finished are still saved.')}
+// the guided screen: Back keeps the session, End workout asks first
+function awDress(){try{const o=$('#aw');if(!o||!AW)return;
+  if(AW.ph==='hrest'&&!o.querySelector('#awht')){const e=AW.d.ex[AW.e]||{},hn=holdsOf(e);o.className='rest';const keep=`<button class="btn" data-a="awleave" data-v130="1" aria-label="Leave for now. Resume from Home." style="position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:16px;margin:0">Back</button><small style="position:absolute;top:calc(22px + env(safe-area-inset-top,0px))">Exercise ${AW.e+1} of ${AW.d.ex.length}</small>`;
+   o.innerHTML=keep+`<small>${esc(e.n)}, set ${AW.s} of ${e.s}</small><div class="num" id="awht">${fmt(awLeft())}</div><small>Rest, then hold ${AW.hi} of ${hn}</small><div class="row" style="justify-content:center"><button class="btn on" data-a="awhs">Start hold ${AW.hi} now</button></div>`}
+  if(AW.ph==='set'||AW.ph==='tut'){const e=AW.d.ex[AW.e]||{},hn=holdsOf(e);if(hn>1){const hi=AW.hi||1;
+   o.querySelectorAll('small').forEach(s=>{if(/Get into position, then start your/.test(s.textContent))s.textContent=`Get into position. ${hn} holds of ${e.v||'?'} seconds, with ${(e.hr==null?10:+e.hr)?`a ${e.hr==null?10:+e.hr}-second rest`:'no rest'} between.`;if(s.textContent.trim()==='Hold')s.textContent=`Hold ${hi} of ${hn}`});
+   const b=o.querySelector('[data-a=awtut]');if(b)b.textContent=`Start hold ${hi} of ${hn}`}}
+  const x=o.querySelector('[data-a=awx]');if(AW.ph!=='done'){if(x&&!x.dataset.v130){x.dataset.v130=1;x.textContent='Back';x.setAttribute('aria-label','Leave for now. Resume from Home.');x.dataset.a='awleave'}
+   if(!o.querySelector('[data-a=awend]'))o.insertAdjacentHTML('beforeend','<button class="btn awend" data-a="awend">End workout</button>')}
+  const pb=o.querySelector('.prb');if(pb&&!pb.dataset.v130){pb.dataset.v130=1;pb.insertAdjacentHTML('beforeend','<small style="display:block;font-size:11px;font-weight:600;opacity:.7;margin-top:2px">Saved in Achievements</small>')}}catch(_){}}
+{const _r=awr;awr=function(){_r.apply(this,arguments);try{awDress();if(!AW)return;if(AW.ph==='done'&&!AW.logged){AW.logged=1;awLog(false);delete S.awp;save()}else if(AW.ph!=='done')awSnap()}catch(_){}}}
+// the guided screen redraws after its fade, so dress it whenever it changes
+{let mo=null;new MutationObserver(()=>{const o=$('#aw');if(o&&!o.__v130){o.__v130=1;mo=new MutationObserver(()=>awDress());mo.observe(o,{childList:true});awDress()}}).observe(document.body,{childList:true})}
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awleave],#aw [data-a=awend],#aw [data-a=awendy],#aw [data-a=awendn],[data-a=awres],[data-a=awhomeend]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='awleave'){if(!AW)return;awSnap();AWH=AW;AW=null;awr();render();toast('Paused. Resume it from Home.');return}
+ if(a==='awend'){const o=$('#aw');if(!o||!AW||o.querySelector('.awcf'))return;const n=(AW.d.ex||[]).length,dn=awDoneN(AW);
+  o.insertAdjacentHTML('beforeend',`<div class="awcf" role="alertdialog" aria-label="End workout"><div class="card"><h2>Confirm you want to end workout?</h2><p>${dn} of ${n} exercise${n===1?'':'s'} done. Everything you’ve logged is kept, and it’s saved as ended early.</p><button class="btn big dng" data-a="awendy">End workout</button><button class="btn big" data-a="awendn">Keep going</button></div></div>`);return}
+ if(a==='awendn'){const c=$('#aw .awcf');c&&c.remove();return}
+ if(a==='awendy'){awEndNow();return}
+ if(a==='awres'){const A=AWH&&AWH.d?AWH:awFromSave();if(!A){delete S.awp;save();render();toast('That workout can’t be resumed, but your sets are saved.');return}AWH=null;AW=A;awr();return}
+ if(a==='awhomeend'){sheet(`<h2>Confirm you want to end workout?</h2><p class="sm" style="margin:0 0 12px">Everything you’ve logged is kept, and it’s saved as ended early.</p><button class="btn big dng" data-a="awhomeendy">End workout</button><button class="btn big" data-a="shx">Keep it</button>`);return}},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=awhomeendy]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();sheet(null);const A=AWH&&AWH.d?AWH:awFromSave();if(A){AW=A;awEndNow()}else{delete S.awp;save();render()}},true);
+// starting again while one is paused: offer to pick it up
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=wsel]');if(!el||AW||!S.awp||S.awp.d!==realToday())return;e.stopImmediatePropagation();e.preventDefault();
+ sheet(`<h2>Pick up where you left off?</h2><p class="sm" style="margin:0 0 12px">${esc(S.awp.dn)} is paused at exercise ${(S.awp.aw.e||0)+1} of ${S.awp.n}.</p><button class="btn big on" data-a="awres">Resume workout</button><button class="btn big" data-a="awfresh">Start a new one</button>`)},true);
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=awfresh]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();sheet(null);AWH=null;delete S.awp;save();MW=true;mwr()},true);
+window.addEventListener('click',e=>{if(e.target.closest('[data-a=awres]'))sheet(null)},true);
+// Home: a resume card while one is paused
+{const _h=home;home=function(){const h=_h.apply(this,arguments);try{if(ED||AW||!S.awp)return h;if(S.awp.d!==realToday()){delete S.awp;save();return h}const P=S.awp,A=P.aw||{},ph=A.ph;
+  const where=ph==='go'||ph==='load'||ph==='begin'?`Next: exercise ${(A.e||0)+1} of ${P.n}`:`Exercise ${(A.e||0)+1} of ${P.n}, set ${A.s||1}`;
+  const card=`<div class="card awrc"><div style="min-width:0"><small>Workout paused</small><b>${esc(P.dn)}</b><span>${where}</span></div><div class="bts"><button class="btn on" data-a="awres">Resume</button><button class="glink" data-a="awhomeend">End workout</button></div></div>`;
+  const T=document.createElement('template');T.innerHTML=h;const c=T.content.querySelector('.card.cal');if(!c)return card+h;c.insertAdjacentHTML('afterend',card);return T.innerHTML}catch(_){return h}}}
+// the workout card says when today's session ended early
+{const _w=wHero;wHero=function(){let h=_w.apply(this,arguments);try{const t=today(),L=(S.wlog||[]).filter(x=>x.d===t);if(L.length&&L[0].early&&!(S.fd||{})[t]&&!S.awp)h=h.replace(/(<div class="whp">[\s\S]*?)(<\/div><\/div>)$/,`$1<p class="wearly">Ended early: ${L[0].done} of ${L[0].of} exercises done.</p>$2`)}catch(_){}return h}}
+// a quick relaunch that reopens the workout: put the timers right
+setTimeout(()=>{try{if(AW&&S.awp&&S.awp.d===realToday()){const A=awFromSave();if(A){AW=A;awr()}}}catch(_){}},60);
+
+/* ---------- 5. achievements ---------- */
+{const _p=prCheck;prCheck=function(ex,set){const b=AW&&AW.prt;const r=_p.apply(this,arguments);try{if(AW&&AW.prm&&AW.prt!==b){(S.prl=S.prl||[]).unshift({d:today(),t:AW.prm,k:xKey(ex)});S.prl=S.prl.slice(0,150);save()}}catch(_){}return r}}
+{const _b=boom;boom=function(kind){try{if(kind==='week'||kind==='month'){(S.prl=S.prl||[]).unshift({d:today(),t:kind==='week'?'Won the week':'Won the whole month',k:'_'+kind});save()}}catch(_){}return _b.apply(this,arguments)}}
+NM.ach='Achievements';
+const achName=k=>{for(const p of S.plans||[])for(const d of p.days||[])for(const e of d.ex||[])if(xKey(e)===k)return e.n||e.act;return k.replace(/^\w/,c=>c.toUpperCase())};
+const achDate=d=>new Date(d+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+FSX.ach=function(){const W=S.wlog||[],done=Math.max(W.filter(x=>!x.early).length,Object.keys(S.fd||{}).length),wins=Object.keys(S.wins||{}).length,P=S.pr||{},L=S.prl||[];let st=0;try{st=stk2().n}catch(_){}
+ const pb=Object.entries(P).filter(([k,v])=>v&&(v.w>0||v.r>0)).sort((a,b)=>achName(a[0]).localeCompare(achName(b[0])));
+ return`<h1>Achievements</h1><div class="ach">
+ <div class="tiles"><div class="tile"><b>${done}</b><span>workouts done</span></div><div class="tile"><b>${wins}</b><span>winning days</span></div><div class="tile"><b>${pb.length}</b><span>personal bests</span></div><div class="tile"><b>${st}</b><span>day streak</span></div></div>
+ <h3>Recent</h3><div class="card">${L.length?L.slice(0,20).map(x=>`<div class="row3"><b>${esc(x.t)}</b><em>${achDate(x.d)}</em></div>`).join(''):'<p class="sm" style="margin:0">Beat a weight or a rep count in a guided workout, or win a week, and it shows up here.</p>'}</div>
+ <h3>Personal bests</h3><div class="card">${pb.length?pb.map(([k,v])=>`<div class="row3"><span><b>${esc(achName(k))}</b><small>${[v.w>0?`Heaviest ${fmtW(v.w)}${U()}`:'',v.e1>0?`best set about ${fmtW(Math.round(v.e1))}${U()} for one rep`:'',v.r>0&&!(v.w>0)?`most reps ${v.r}`:''].filter(Boolean).join(' · ')}</small></span></div>`).join(''):'<p class="sm" style="margin:0">Log weights and reps in guided workouts and your bests are kept here.</p>'}</div>
+ <h3>Workouts</h3><div class="card">${W.length?W.slice(0,15).map(x=>`<div class="row3"><span><b>${esc(x.n)}<span class="tag ${x.early?'early':'ok'}">${x.early?'Ended early':'Done'}</span></b><small>${x.done} of ${x.of} exercises</small></span><em>${achDate(x.d)}</em></div>`).join(''):'<p class="sm" style="margin:0">Finished and ended-early guided workouts are listed here.</p>'}</div></div>`};
+const ACHIC='<path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>';
+{const _ss=settingsSheet;settingsSheet=function(){const r=_ss.apply(this,arguments);try{const L=$('#sheet .setl');if(L&&!L.querySelector('[data-a=achopen]')){const rp=L.querySelector('[data-a=reports]');const h=`<button data-a="achopen">${ico(ACHIC)}<span>Achievements<small>Personal bests, winning days and workouts</small></span></button>`;
+  if(rp)rp.insertAdjacentHTML('beforebegin',h);else L.insertAdjacentHTML('beforeend',h);try{setDress()}catch(_){}}}catch(_){}return r}}
+{const _k=stkSheet;stkSheet=function(){const r=_k.apply(this,arguments);try{const c=$('#sheet .mwc');if(c&&!c.querySelector('[data-a=achopen]')){const b=c.querySelector('.btn.big');const h=`<button class="btn big" data-a="achopen" style="margin-top:10px">See your achievements</button>`;if(b)b.insertAdjacentHTML('beforebegin',h);else c.insertAdjacentHTML('beforeend',h)}}catch(_){}return r}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=achopen]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();sheet(null);fsOpen('ach')},true);
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push(
+ {i:'<path d="M6 4v16M18 4l-8 8 8 8"/>',h:'Leave a workout and come back',p:'Back keeps your guided workout paused, and Home has a Resume button. End workout asks first, and saves it as ended early with what you did.'},
+ {i:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',h:'Holds, more than once',p:'Timed exercises can have several holds per set with a short rest between, so 3 sets of 5 holds works.'},
+ {i:ACHIC,h:'Achievements',p:'Personal bests, winning days and your workouts, all in one place. It’s in Settings, and under your streak.'})}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
