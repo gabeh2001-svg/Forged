@@ -10672,6 +10672,157 @@ window.addEventListener('click',e=>{if(!e.target.closest('[data-a=addx2]')||type
 setTimeout(()=>{try{if(PREVIEW&&!S.prevMU&&S.plans&&S.plans[0]){S.prevMU=1;const p=S.plans[0],t=Date.now();const log=(e,hAgo)=>{const h=xHist(e),d=new Date(t-hAgo*36e5).toISOString().slice(0,10);h.push({d,sid:t-hAgo*36e5,s:[{w:+e.w||20,r:8},{w:+e.w||20,r:8},{w:+e.w||20,r:8}]})};
  (p.days[0]&&p.days[0].ex||[]).forEach(e=>log(e,20));(p.days[2]&&p.days[2].ex||[]).forEach(e=>log(e,52));save();render()}}catch(_){}},0);
 
+/* ===== v135: fasting windows, strength standards, a mood and energy widget, and guided breathing and wind-down
+   (on its own, from the Timer tab, or tagged onto the end of a workout) ===== */
+// Research notes for this block:
+// - Fasting: time-restricted eating gives similar weight loss to ordinary calorie control, not more (Lowe et al. 2020,
+//   JAMA Internal Medicine, TREAT trial, 16:8; de Cabo & Mattson 2019, NEJM review, from memory). Swell offers it as a
+//   structure some people find easier, not as a better diet, and says who shouldn't fast (NHS guidance: under 18s,
+//   pregnancy or breastfeeding, a history of eating disorders, diabetes medication).
+// - Estimated one-rep max uses the Epley formula, reliable up to about 10 to 12 reps (LeSuer et al. 1997, from memory).
+//   Strength levels are body-weight ratios in line with common standards tables (e.g. Strength Level's population data,
+//   from memory), lower for women; they're a rough guide, not a test.
+// - Mood and energy: naming how you feel lowers its intensity (affect labelling, Lieberman et al. 2007), and logging
+//   over time shows patterns with sleep, training and your cycle. Two taps, optional widget.
+// - Breathing: five minutes a day of cyclic sighing improved mood more than mindfulness (Balban et al. 2023, Cell
+//   Reports Medicine). Slow breathing near six breaths a minute raises heart-rate variability (Lehrer & Gevirtz 2014,
+//   from memory). Box breathing and 4-7-8 are widely used calming patterns with modest evidence. Power breathing
+//   (deep breaths then a breath hold) is the style studied by Kox et al. 2014 (PNAS); it must never be done in water
+//   or while driving, so the session says so before it starts.
+(function(){const st=document.createElement('style');st.textContent=`
+.fstc .fsr{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:center}.fstc .fsr svg{width:88px;height:88px}
+.fstc .fsr b{display:block;font-size:26px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}.fstc .fsr small{display:block;color:var(--dim);font-size:13px;margin-top:3px}
+.fstc .fsr .k{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7FB7E8;margin-bottom:3px}.fstc .fsr .k.eat{color:#7FD6A0}
+.fstc .fq{display:flex;gap:8px;margin-top:12px}.fstc .fq .btn{flex:1;margin:0}
+.fstsh .chips.g2{margin:6px 0 12px}.fstsh label{display:block;margin:6px 0}
+.stg .lift{padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}.stg .lift:first-of-type{border-top:0}
+.stg .lift .t{display:flex;justify-content:space-between;align-items:baseline}.stg .lift b{font-weight:700}.stg .lift em{font-style:normal;font-size:13px;color:var(--dim)}
+.stg .scale{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,#4A5A6E,#7FB7E8,#7FD6A0,#E9B44C,#E5674F);margin:8px 0 4px}
+.stg .scale i{position:absolute;top:-4px;width:4px;height:16px;border-radius:2px;background:#F3F1EC;box-shadow:0 0 0 2px #141414}
+.stg .lv{display:flex;justify-content:space-between;font-size:10.5px;color:rgba(243,241,236,.5)}
+.mdw{display:flex;flex-direction:column;height:100%;gap:6px}.mdw .rw{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}.mdw .rw>span{font-size:12px;font-weight:700;color:rgba(243,241,236,.65);width:46px}
+.mdw .dots{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.mdw .dots button{all:unset;cursor:pointer;height:30px;border-radius:9px;background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:11px;font-weight:700;color:rgba(243,241,236,.7);position:relative}
+.mdw .dots button::before{content:"";position:absolute;inset:-4px -1px}
+.mdw .dots button.on{background:var(--mc,#7FD6A0);color:#141412}.mdw .now{font-size:20px;font-weight:800;margin-top:auto}.mdw .now small{display:block;font-size:12.5px;font-weight:500;color:rgba(243,241,236,.7)}
+.mdw .wkc{display:flex;align-items:flex-end;gap:5px;height:46px;margin-top:6px}.mdw .wkc i{flex:1;border-radius:4px 4px 2px 2px;background:rgba(127,214,160,.75);min-height:3px}.mdw .wkc i.e{background:rgba(127,183,232,.55)}
+.mdw .brb{all:unset;cursor:pointer;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:14px;background:rgba(127,183,232,.14);color:#BFDDF7;font-weight:700;font-size:14px}
+#br{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#EAF4FB;background:radial-gradient(120% 90% at 50% 30%,#1B3B52 0%,#0E1F2E 55%,#070D14 100%);text-align:center;padding:24px}
+#br .bx{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font-size:22px}
+#br .bn{position:absolute;top:calc(24px + env(safe-area-inset-top,0px));left:0;right:0;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:rgba(234,244,251,.6)}
+#br .orb{width:min(62vw,280px);height:min(62vw,280px);border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(186,228,255,.95),rgba(96,170,220,.55) 45%,rgba(40,100,150,.15) 70%,transparent 72%);box-shadow:0 0 80px rgba(110,190,240,.35);transform:scale(.55);will-change:transform}
+#br .ring{position:absolute;width:min(62vw,280px);height:min(62vw,280px);border-radius:50%;border:1px solid rgba(186,228,255,.25)}
+#br .stage{position:relative;display:grid;place-items:center;margin:20px 0 34px}
+#br .ph{font-size:30px;font-weight:300;letter-spacing:.02em;min-height:38px}#br .ct{font-size:15px;color:rgba(234,244,251,.65);margin-top:6px;min-height:20px;font-variant-numeric:tabular-nums}
+#br .left{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom,0px));left:0;right:0;font-size:13px;color:rgba(234,244,251,.55)}
+#br .end{max-width:340px}#br .end h2{font-weight:600;font-size:26px;margin:0 0 8px}#br .end p{color:rgba(234,244,251,.75);margin:0 0 18px}
+#br .end .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:18px}#br .btn{width:100%;margin:0 0 8px}
+#br .warn{max-width:340px}#br .warn h2{font-weight:600}#br .warn p{color:rgba(234,244,251,.8);line-height:1.5}
+.brl .brs{width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}.brl .brs:first-of-type{border-top:0}
+.brl .brs b{display:block;font-weight:700}.brl .brs small{display:block;color:var(--dim);font-size:13px;margin-top:2px;line-height:1.35}.brl .brs em{font-style:normal;font-size:13px;color:#BFDDF7}
+.brl .dur{display:flex;gap:6px;margin:0 0 6px}.brl .dur .chip{margin:0}`;document.head.appendChild(st)})();
+
+/* ---------- 1. fasting ---------- */
+const FST=()=>{S.fast=S.fast||{on:0,plan:'16:8',start:'12:00',rem:1,long:null};return S.fast};
+const FPL={'14:10':10,'16:8':8,'18:6':6,'20:4':4};
+const hmAdd=(hm,h)=>{const [a,b]=hm.split(':').map(Number),m=((a*60+b+Math.round(h*60))%1440+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+function fstNow(){const F=FST(),now=Date.now();if(F.long){const end=F.long.st+F.long.h*36e5;return{long:1,fasting:now<end,from:F.long.st,to:end,left:end-now,tot:F.long.h*36e5}}
+ const len=FPL[F.plan]||8,t=realToday();let o=at(t,F.start).getTime(),c=o+len*36e5;if(now<o){const po=o-864e5,pc=po+len*36e5;if(now<pc)return{fasting:false,from:po,to:pc,left:pc-now,tot:len*36e5};return{fasting:true,from:pc,to:o,left:o-now,tot:o-pc}}
+ if(now<c)return{fasting:false,from:o,to:c,left:c-now,tot:len*36e5};const no=o+864e5;return{fasting:true,from:c,to:no,left:no-now,tot:no-c}}
+const fdur=ms=>{const m=Math.max(0,Math.round(ms/6e4)),h=Math.floor(m/60);return h?`${h}h ${String(m%60).padStart(2,'0')}m`:`${m}m`};
+function fstRing(p,col){const r=38,C=2*Math.PI*r;return`<svg viewBox="0 0 88 88"><circle cx="44" cy="44" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="8"/><circle cx="44" cy="44" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-Math.max(0,Math.min(1,p)))}" transform="rotate(-90 44 44)"/></svg>`}
+function fstCard(){const F=FST();if(!F.on)return`<div class="card fstc"><h2>Fasting</h2><p class="sm" style="margin:0">Optional. Set an eating window, like 16:8, and Swell tracks it and tells you when it opens.</p><div class="fq"><button class="btn" data-a="fstset">Set up fasting</button></div></div>`;
+ const N=fstNow(),p=1-N.left/N.tot,col=N.fasting?'#7FB7E8':'#7FD6A0',hm=ms=>new Date(ms).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ return`<div class="card fstc"><div class="fsr">${fstRing(p,col)}<div><div class="k ${N.fasting?'':'eat'}">${N.long?'Long fast':N.fasting?'Fasting':'Eating window'}</div><b data-fstl>${fdur(N.left)}</b><small>${N.long?`${N.fasting?'Ends':'Ended'} ${new Date(N.to).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit'})} · ${F.long.h} hours`:N.fasting?`Window opens at ${hm(N.to)} · ${F.plan}`:`Closes at ${hm(N.to)} · ${F.plan}`}</small></div></div>
+ <div class="fq">${N.long?`<button class="btn" data-a="fstend">${N.fasting?'End fast':'Done'}</button>`:''}<button class="btn" data-a="fstset">Change</button></div></div>`}
+function fstSheet(){const F=FST(),len=FPL[F.plan]||8;sheet(`<div class="fstsh"><h2>Fasting</h2><p class="sm" style="margin:0 0 8px">Pick a daily eating window, or start one longer fast.</p>
+ <p class="sm" style="margin:8px 2px 0"><b>Every day</b></p><div class="chips g2">${Object.keys(FPL).map(k=>`<button class="chip ${F.on&&!F.long&&F.plan===k?'on':''}" data-a="fstpl" data-i="${k}">${k}<small style="display:block;font-weight:500;opacity:.7">${FPL[k]}h to eat</small></button>`).join('')}</div>
+ <label>Eating window starts<input type="time" data-fsts value="${esc(F.start)}"></label><p class="sm" style="margin:0 2px 10px">So it ends at ${hmAdd(F.start,len)}.</p>
+ <p class="sm" style="margin:8px 2px 0"><b>One longer fast, from now</b></p><div class="chips g2">${[24,36].map(h=>`<button class="chip ${F.long&&F.long.h===h?'on':''}" data-a="fstlg" data-i="${h}">${h} hours</button>`).join('')}</div>
+ <div class="npr"><div><b>Tell me when it opens</b><small>A notification when your eating window starts</small></div><button class="tg ${F.rem?'on':''}" data-a="fstrem" role="switch" aria-checked="${!!F.rem}"></button></div>
+ <p class="sm" style="margin:12px 2px">Fasting isn’t better than other ways of eating less, it just suits some people. Don’t fast if you’re under 18, pregnant or breastfeeding, have had an eating disorder, or take medicine for diabetes without asking your GP.</p>
+ ${F.on?'<button class="btn big dng" data-a="fstoff">Turn fasting off</button>':''}<button class="btn big on" data-a="shx">Done</button></div>`)}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a^=fst]');if(!el)return;const a=el.dataset.a,F=FST();if(!/^fst(set|pl|lg|rem|off|end)$/.test(a))return;e.stopImmediatePropagation();e.preventDefault();
+ if(a==='fstset')return fstSheet();if(a==='fstpl'){F.on=1;F.plan=el.dataset.i;F.long=null}if(a==='fstlg'){F.on=1;F.long={st:Date.now(),h:+el.dataset.i}}if(a==='fstrem')F.rem=F.rem?0:1;if(a==='fstoff'){F.on=0;F.long=null;sheet(null)}if(a==='fstend'){F.long=null;if(!F.plan)F.on=0}
+ save();try{remSync&&remSync()}catch(_){}render();if($('#sheet .fstsh'))fstSheet();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}},true);
+document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('[data-fsts]')){FST().start=e.target.value||'12:00';save();try{remSync&&remSync()}catch(_){}render();fstSheet()}});
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='diet'&&!$('#app .fstc')){const a=$('#app>.mpdc')||$('#app>.fpc');if(a)a.insertAdjacentHTML('afterend',fstCard())}}catch(_){}return r}}
+setInterval(()=>{try{const b=$('#app [data-fstl]');if(b&&FST().on){const N=fstNow();if(N.left<=0)render();else b.textContent=fdur(N.left)}}catch(_){}},30000);
+{const _rp=remPlan;remPlan=function(){const L=_rp.apply(this,arguments);try{const F=FST();if(F.on&&F.rem){const now=Date.now();if(F.long){const end=F.long.st+F.long.h*36e5;if(end>now)L.push({k:'fastl|'+end,t:'fastl',at:new Date(end),p:{h:F.long.h}})}
+  else for(let i=0;i<2;i++){const d=addDays(realToday(),i),x=at(d,F.start);if(x.getTime()>now)L.push({k:'fast|'+d,t:'fast',at:x,p:{plan:F.plan}})}}}catch(_){}return L}}
+{const _rs=remSig;remSig=function(){let v='';try{v=JSON.stringify(S.fast||{})}catch(_){}return _rs.apply(this,arguments)+v}}
+
+/* ---------- 2. strength standards ---------- */
+const LIFTS=[['bench','Bench press',/bench press|^bench$/,/incline|decline|close|dumbbell|db\b/,[.5,.75,1,1.5,2]],['squat','Squat',/squat/,/split|goblet|front|hack|bulgarian|jump|sissy|pistol/,[.75,1.25,1.5,2.25,2.75]],
+ ['dead','Deadlift',/deadlift/,/romanian|rdl|stiff|single/,[1,1.5,2,2.5,3]],['ohp','Overhead press',/overhead press|military|shoulder press|\bohp\b/,/dumbbell|db\b|seated|machine/,[.35,.55,.75,1,1.25]],['row','Barbell row',/barbell row|bent.?over row|pendlay/,/dumbbell|db\b/,[.5,.75,1,1.5,1.75]]];
+const LVL=['Beginner','Novice','Intermediate','Advanced','Elite'];
+function stBest(){const P=S.pr||{},out={};Object.entries(P).forEach(([k,v])=>{LIFTS.forEach(([id,,re,no])=>{if(re.test(k)&&!no.test(k)&&v&&v.e1>0&&(!out[id]||v.e1>out[id].e1))out[id]={e1:v.e1,k}})});return out}
+function stSection(){const B=stBest(),bw=+S.setup.w||0,f=S.setup.sex==='f'?.65:1;const L=LIFTS.filter(x=>B[x[0]]);
+ if(!L.length)return'<h3>Strength</h3><div class="card stg"><p class="sm" style="margin:0">Log weights and reps for bench, squat, deadlift, overhead press or barbell rows in a guided workout, and your estimated one-rep max and level show here.</p></div>';
+ return`<h3>Strength</h3><div class="card stg">${L.map(([id,n,,,th])=>{const e1=B[id].e1,r=bw?e1/bw:0,T=th.map(x=>x*f);let lv=0;T.forEach((x,i)=>{if(r>=x)lv=i});const pos=bw?Math.max(0,Math.min(100,r/T[4]*100)):0;
+  return`<div class="lift"><div class="t"><b>${n}</b><em>about ${fmtW(Math.round(e1))}${U()} for one rep</em></div>${bw?`<div class="scale"><i style="left:calc(${pos}% - 2px)"></i></div><div class="lv">${LVL.map((x,i)=>`<span style="${i===lv?'color:#F3F1EC;font-weight:800':''}">${x}</span>`).join('')}</div><small class="sm" style="display:block;margin-top:4px">${(Math.round(r*100)/100)} × your body weight</small>`:'<small class="sm">Add your weight in Body metrics to see your level.</small>'}</div>`}).join('')}
+ <p class="sm" style="margin:10px 0 0">One-rep max is estimated from your best set (Epley formula, most accurate under 10 reps). Levels are a rough guide${S.setup.sex==='f'?', scaled for women':''}.</p></div>`}
+{const _a=FSX.ach;FSX.ach=function(){const h=_a.apply(this,arguments);try{return h.replace('<h3>Recent</h3>',stSection()+'<h3>Recent</h3>')}catch(_){return h}}}
+
+/* ---------- 3. mood and energy ---------- */
+const MDW=['Low','Meh','Okay','Good','Great'],ENW=['Drained','Tired','Okay','Good','Buzzing'],MDCOL=['#E5674F','#E9A04C','#E9C46A','#9AD38A','#7FD6A0'];
+const MD=d=>{S.mood=S.mood||{};return S.mood[d]||{}};
+NM.mood='Mood';WIS.mood='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8M9 9.5h.01M15 9.5h.01"/></svg>';
+WDESC.mood=['Mood and energy','Two taps a day. See how sleep, training and food shape how you feel.','mood','Body'];
+{const _wd=wd;wd=function(l){if(!l||l.id!=='mood')return _wd.apply(this,arguments);const t=today(),M=MD(t);
+ const row=(k,lab,W)=>`<div class="rw"><span>${lab}</span><div class="dots">${W.map((w,i)=>`<button class="${M[k]===i+1?'on':''}" style="--mc:${MDCOL[i]}" data-a="mdset" data-i="${k}|${i+1}" aria-label="${lab}: ${w}">${l.w===1?'':i+1}</button>`).join('')}</div></div>`;
+ const said=M.m?`${MDW[M.m-1]}${M.e?`, ${ENW[M.e-1].toLowerCase()}`:''}`:'How are you?';
+ if(l.w===1&&l.h===1)return`<div class="mdw">${wlab('mood','Mood')}<div class="now">${esc(said)}</div>${row('m','Mood',MDW)}</div>`;
+ const wk=[...Array(7)].map((_,i)=>MD(addDays(t,i-6)));
+ if(l.h===1)return`<div class="mdw">${wlab('mood','Mood and energy')}${row('m','Mood',MDW)}${row('e','Energy',ENW)}</div>`;
+ return`<div class="mdw">${wlab('mood','Mood and energy')}<div class="now">${esc(said)}<small>${M.m?'Logged today':'Tap to log today'}</small></div>${row('m','Mood',MDW)}${row('e','Energy',ENW)}<div class="wkc">${wk.map(x=>`<i style="height:${x.m?x.m*20:6}%"></i><i class="e" style="height:${x.e?x.e*20:6}%"></i>`).join('')}</div><button class="brb" data-a="bropen">Breathe for a few minutes</button></div>`}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mdset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const [k,v]=el.dataset.i.split('|'),t=today();S.mood=S.mood||{};const M=S.mood[t]=S.mood[t]||{};M[k]=M[k]===+v?undefined:+v;save();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}render()},true);
+
+/* ---------- 4. breathing and wind-down ---------- */
+const BRS={sigh:{n:'Cyclic sighing',d:'Two breaths in through the nose, one long breath out. The quickest way to calm down.',ph:[['Breathe in',2.5,1.85],['And a little more',1,1],['Breathe out slowly',6,.55]]},
+ box:{n:'Box breathing',d:'In, hold, out, hold, four seconds each. Steady focus before pressure.',ph:[['Breathe in',4,1],['Hold',4,1],['Breathe out',4,.55],['Hold',4,.55]]},
+ coh:{n:'Even breathing',d:'About 5.5 breaths a minute, in and out evenly. Calm and easy.',ph:[['Breathe in',5.5,1],['Breathe out',5.5,.55]]},
+ wind:{n:'4-7-8 wind-down',d:'In for 4, hold for 7, out for 8. A slow pattern for before sleep.',ph:[['Breathe in',4,1],['Hold',7,1],['Breathe out',8,.55]]},
+ power:{n:'Power breaths',d:'30 deep breaths, a breath hold, then a recovery breath. Energising. Three rounds.',power:1}};
+let BR=null;
+function brList(){const D=S.brDur||3;return`<div class="brl"><div class="dur">${[1,3,5,10].map(m=>`<button class="chip ${D===m?'on':''}" data-a="brdur" data-i="${m}">${m} min</button>`).join('')}</div>${Object.entries(BRS).map(([k,b])=>`<button class="brs" data-a="brgo" data-i="${k}"><span><b>${b.n}</b><small>${b.d}</small></span><em>${b.power?'3 rounds':D+' min'}</em></button>`).join('')}</div>`}
+function brSheet(){sheet(`<h2>Breathe</h2><p class="sm" style="margin:0 0 6px">Sit or lie somewhere comfortable. Follow the circle.</p>${brList()}`)}
+function brOpen(k,mins){const b=BRS[k];if(!b)return;sheet(null);let o=$('#br');if(o)o.remove();o=document.createElement('div');o.id='br';o.setAttribute('role','dialog');o.setAttribute('aria-label',b.n);document.body.appendChild(o);try{lockOn()}catch(_){}
+ BR={k,b,end:Date.now()+(mins||S.brDur||3)*6e4,t:null,i:0,round:1,n:0};
+ if(b.power){o.innerHTML=`<button class="bx" data-a="brx" aria-label="Close">×</button><div class="warn"><h2>Before you start</h2><p>Sit or lie down. Never do this in water, in the bath, while driving or standing up. You may feel tingly or light-headed, which passes. Stop if you feel unwell, and skip it if you’re pregnant or have heart problems or epilepsy.</p><button class="btn big on" data-a="brpow">I’m sitting down, start</button></div>`;return}
+ brStage(o);brStep()}
+function brStage(o){o.innerHTML=`<button class="bx" data-a="brx" aria-label="Close">×</button><div class="bn">${esc(BR.b.n)}</div><div class="stage"><div class="ring"></div><div class="orb"></div></div><div class="ph" data-brp></div><div class="ct" data-brc></div><div class="left" data-brl></div>`}
+function brAnim(scale,ms){const orb=$('#br .orb');if(!orb)return;const cur=getComputedStyle(orb).transform;orb.getAnimations().forEach(a=>a.cancel());orb.animate([{transform:cur==='none'?'scale(.55)':cur},{transform:`scale(${scale})`}],{duration:ms,easing:'cubic-bezier(.45,.05,.55,.95)',fill:'forwards'})}
+function brTxt(p,c,l){const a=$('#br [data-brp]'),b=$('#br [data-brc]'),d=$('#br [data-brl]');if(a&&p!=null){a.textContent=p;if(!MRM())a.animate([{opacity:0},{opacity:1}],{duration:400})}if(b&&c!=null)b.textContent=c;if(d&&l!=null)d.textContent=l}
+function brStep(){if(!BR||!$('#br'))return;const b=BR.b;if(Date.now()>=BR.end&&BR.i===0)return brDone();const [lab,sec,sc]=b.ph[BR.i];brAnim(sc,sec*1000);brTxt(lab,null,`${Math.max(0,Math.ceil((BR.end-Date.now())/6e4))} min left`);try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+ let n=Math.ceil(sec);const tick=()=>{if(!BR)return;brTxt(null,sec>=3?String(n):'');n--};tick();const iv=setInterval(()=>{if(n<=0||!BR){clearInterval(iv);return}tick()},1000);
+ BR.t=setTimeout(()=>{clearInterval(iv);BR.i=(BR.i+1)%b.ph.length;brStep()},sec*1000)}
+// power breaths: 30 breaths, a hold after breathing out (tap when you need to breathe), then a 15-second recovery hold
+function brPower(){const o=$('#br');if(!o||!BR)return;brStage(o);BR.n=0;const breath=()=>{if(!BR)return;if(BR.n>=30)return hold();BR.n++;brTxt(BR.n%2?'Deep breath in':'Let it go',`${BR.n} of 30`,`Round ${BR.round} of 3`);brAnim(1,1500);BR.t=setTimeout(()=>{brAnim(.6,1200);BR.t=setTimeout(breath,1250)},1550)};
+ const hold=()=>{const t0=Date.now();brAnim(.5,1500);brTxt('Breathe out and hold','0s','Tap when you need to breathe');o.onclick=ev=>{if(ev.target.closest('.bx'))return;o.onclick=null;clearInterval(BR.iv);rec()};BR.iv=setInterval(()=>{brTxt(null,Math.round((Date.now()-t0)/1000)+'s')},500)};
+ const rec=()=>{brAnim(1,1800);brTxt('Big breath in and hold','15',`Round ${BR.round} of 3`);let n=15;BR.iv=setInterval(()=>{n--;brTxt(null,String(Math.max(0,n)));if(n<=0){clearInterval(BR.iv);brAnim(.55,2000);if(BR.round>=3){BR.t=setTimeout(brDone,2000)}else{BR.round++;BR.t=setTimeout(breath,2600)}}},1000)};
+ breath()}
+function brDone(){const o=$('#br');if(!o)return;clearTimeout(BR&&BR.t);clearInterval(BR&&BR.iv);const k=BR?BR.k:'';BR=null;const t=today();S.brl=S.brl||[];S.brl.unshift({d:t,k,at:Date.now()});S.brl=S.brl.slice(0,100);save();
+ o.innerHTML=`<button class="bx" data-a="brx" aria-label="Close">×</button><div class="end"><h2>Nicely done</h2><p>How do you feel now?</p><div class="chips">${MDW.map((w,i)=>`<button class="chip ${MD(t).m===i+1?'on':''}" data-a="brmd" data-i="${i+1}">${w}</button>`).join('')}</div><button class="btn big on" data-a="brx">Done</button></div>`}
+function brClose(){if(BR){clearTimeout(BR.t);clearInterval(BR.iv)}BR=null;const o=$('#br');if(o){o.remove();try{lockOff()}catch(_){}}render()}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=bropen],[data-a=brgo],[data-a=brdur],[data-a=brx],[data-a=brpow],[data-a=brmd],[data-a=awbr]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='bropen')return brSheet();if(a==='brdur'){S.brDur=+el.dataset.i;save();if($('#sheet .brl'))brSheet();else render();return}if(a==='brgo')return brOpen(el.dataset.i);if(a==='brx')return brClose();if(a==='brpow')return brPower();
+ if(a==='brmd'){const t=today();S.mood=S.mood||{};(S.mood[t]=S.mood[t]||{}).m=+el.dataset.i;save();document.querySelectorAll('#br [data-a=brmd]').forEach(b=>b.classList.toggle('on',b===el));return}
+ if(a==='awbr'){const k=el.dataset.i||'sigh';AW=null;awr();brOpen(k,3)}},true);
+// the Timer tab: a breathing card
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='timer'&&!$('#app .brcard')){const A=$('#app'),nav=A.querySelector(':scope>.nav');const h=`<div class="card brcard"><h2>Breathe</h2><p class="sm" style="margin:0 0 6px">Guided breathing to calm down, focus or wind down for sleep.</p>${brList()}</div>`;if(nav)nav.insertAdjacentHTML('beforebegin',h);else A.insertAdjacentHTML('beforeend',h)}}catch(_){}return r}}
+// end of a workout: offer it, and make it the main button if the day is set to finish with breathing
+{const _d=awDoneDress;awDoneDress=function(o){_d.apply(this,arguments);try{const q=o.querySelector('.awq');if(!q||q.querySelector('[data-a=awbr]'))return;const on=AW&&AW.d&&AW.d.brth;const done=q.querySelector('[data-a=awx]');
+  q.insertAdjacentHTML('beforeend',`<button class="btn big ${on?'on':''}" data-a="awbr" data-i="${on||'sigh'}">${on?'Start your breathing':'Wind down: 3 minutes of breathing'}</button>`);if(on&&done)done.classList.remove('on')}catch(_){}}}
+// the start sheet: finish this day with breathing
+{const _m=mwr;mwr=function(){_m.apply(this,arguments);try{const o=$('#mw');if(!o||o.querySelector('.mwbr'))return;const k=W.k||defK();if(!k)return;const [pi,di]=k.split('|'),d=(S.plans.find(x=>x.id===pi)||{days:[]}).days[+di];if(!d)return;const b=o.querySelector('[data-a=awgo]');if(!b)return;
+  b.insertAdjacentHTML('beforebegin',`<div class="npr mwbr" style="margin:0 0 12px"><div><b>Finish with breathing</b><small>A short session when you’re done. Good after yoga.</small></div><button class="tg ${d.brth?'on':''}" data-a="mwbrt" role="switch" aria-checked="${!!d.brth}"></button></div>`)}catch(_){}}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mwbrt]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const k=W.k||defK(),[pi,di]=k.split('|'),d=(S.plans.find(x=>x.id===pi)||{days:[]}).days[+di];if(!d)return;if(d.brth)delete d.brth;else d.brth='sigh';save();el.classList.toggle('on',!!d.brth);el.setAttribute('aria-checked',!!d.brth)},true);
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push(
+ {i:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 2h4"/>',h:'Fasting',p:'Pick an eating window like 16:8, or one longer fast. It sits on the Diet page and can tell you when your window opens.'},
+ {i:'<path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12"/>',h:'Strength levels',p:'Achievements now shows your estimated one-rep max for the big lifts and where it sits from beginner to elite.'},
+ {i:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/>',h:'Mood, energy and breathing',p:'An optional Mood widget, and guided breathing in the Timer tab. You can also finish a workout with a breathing session.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){

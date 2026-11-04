@@ -23,6 +23,8 @@ const MSG = {
   mealb: () => ['Log today’s meals', 'A quick catch-up keeps your totals right.'],
   cyc: () => ['A heads-up from Swell', 'Open Swell to see your cycle forecast for the next few days.'],
   pms: () => ['A heads-up from Swell', 'The next few days might feel a bit harder. Go easy on yourself.'],
+  fast: () => ['Your eating window is open', 'Fast done. Time to eat.'],
+  fastl: p => ['Fast complete', `That’s ${p && p.h ? p.h + ' hours' : 'your fast'} done. Break it gently with a proper meal.`],
   test: () => ['Notifications are working', 'This is how Swell reminders will look.']
 };
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });
