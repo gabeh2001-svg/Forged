@@ -10524,6 +10524,154 @@ function RTSWAPDEMO(o){const c=(o.R.cat||[]).join(' '),k=/colas|sodas|carbonated
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R){const it=R.items.find(x=>x.h==='Scores when you scan');if(it)it.p='Scan a barcode and you get one page: the score, Add to today, Save for later, then healthier swaps to swipe through, with prices where they’re known.'}}
 
+/* ===== v134: muscle recovery map: Swell works out which muscles each exercise trains, and a body diagram shows what's
+   still recovering (red) through to ready (blue-grey) ===== */
+// Research notes for this block:
+// - Recovery time: performance after a hard resistance session usually returns within 48 to 72 hours, with larger
+//   muscle groups and multi-joint lifts at the longer end (NSCA Essentials of Strength Training; McLester et al. 2003,
+//   J Strength Cond Res, from memory). Training to failure slows recovery by up to 24 to 48 hours (Morán-Navarro et al.
+//   2017, Eur J Appl Physiol, checked this session). So each muscle has a base time (large 72 h, medium 60 h,
+//   small 48 h), scaled by how many sets it did (more volume, longer), and stretched by 30% for sets to failure.
+//   Secondary muscles count at half a set (the convention in volume research, e.g. Pelland et al. 2024, from memory).
+// - Weekly volume: about 10 or more hard sets per muscle per week gives more growth than fewer (Schoenfeld, Ogborn &
+//   Krieger 2017 dose-response meta-analysis, from memory), so the detail shows sets this week against 10 to 20.
+// - Colour: red to amber to orange reads as "hot" and a cool blue-grey as "ready"; the label and hours are always
+//   shown too, so colour isn't the only signal (WCAG 1.4.1).
+// - Exercises are matched by name. When a name isn't recognised (people name things their own way) the form nudges
+//   once to pick the muscles, with a searchable list grouped by body part, rather than blocking the save.
+(function(){const st=document.createElement('style');st.textContent=`
+.mubody{display:grid;grid-template-columns:1fr 1fr;gap:4px;align-items:end}.mubody svg{width:100%;height:auto;display:block}
+.mubody .lb{display:block;text-align:center;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(243,241,236,.5);margin-top:4px}
+.mulg{margin:12px 2px 2px}.mulg i{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,#E5484D,#EF7D3C 35%,#E9B44C 65%,#3E4B5C)}
+.mulg div{display:flex;justify-content:space-between;font-size:11.5px;color:rgba(243,241,236,.6);margin-top:5px}
+.musum{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.musum span{font-size:12.5px;font-weight:700;padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.07)}
+.musum span u{text-decoration:none;font-weight:500;opacity:.7;margin-left:4px}
+.mucard .mubody{max-width:250px;margin:6px auto 0}.mupg .mubody{max-width:320px;margin:0 auto}.mucard .mut{display:flex;justify-content:space-between;align-items:baseline}.mucard .mut h2{margin:0}
+.mucard .mut button{all:unset;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--ac,#E0643A)}
+.munudge{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(242,193,78,.1);border:1px solid rgba(242,193,78,.3);font-size:13.5px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.munudge .btn{margin:0;flex:none;padding:7px 12px;font-size:13.5px}
+.mur{margin:12px 0 4px}.mur>span{display:block;font-size:15px;font-weight:600;margin-bottom:6px}.mur .chips{display:flex;flex-wrap:wrap;gap:6px}
+.mur .chip.sec{opacity:.7}.mur small{display:block;color:var(--dim);font-size:13px;margin:4px 0 6px}
+.mupk input{width:100%;box-sizing:border-box;margin:0 0 10px}.mupk h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:12px 2px 6px}
+.mupk .chips{display:flex;flex-wrap:wrap;gap:6px}.mupk .chip{margin:0}
+.mupg .sec2{margin-bottom:12px}.mupg .row4{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.07)}.mupg .row4:first-of-type{border-top:0}
+.mupg .row4 i{width:12px;height:12px;border-radius:50%}.mupg .row4 b{font-weight:600}.mupg .row4 small{display:block;color:var(--dim);font-size:12.5px}.mupg .row4 em{font-style:normal;font-size:13px;color:rgba(243,241,236,.75);text-align:right}
+.muw{display:grid;grid-template-columns:auto 1fr;gap:10px;height:100%;align-items:center}.muw .mubody{width:92px}.muw.big{grid-template-columns:1fr;align-items:start}.muw.big .mubody{width:100%;max-width:220px;margin:0 auto}
+.muw .mu1{display:flex;justify-content:center;gap:8px;height:118px;margin-top:4px}.muw .mu1 svg{height:100%;width:auto}.muw.big .mubody{display:flex;justify-content:center;gap:10px;height:200px}.muw.big .mubody>div{height:100%}.muw.big .mubody svg{height:100%;width:auto}.muw:not(.big) .mubody:not(.mu1){display:flex;gap:4px;height:120px}.muw:not(.big) .mubody:not(.mu1)>div{height:100%}.muw:not(.big) .mubody:not(.mu1) svg{height:100%;width:auto}.muw .tx b{display:block;font-size:17px;font-weight:800;line-height:1.2}.muw .tx small{display:block;font-size:12.5px;color:rgba(243,241,236,.7);margin-top:3px;line-height:1.35}`;document.head.appendChild(st)})();
+
+/* ---------- 1. muscles ---------- */
+const MUS={chest:['Chest','Chest',72,'pecs'],uchest:['Upper chest','Chest',72,'incline pecs clavicular'],
+ fdelt:['Front delts','Shoulders',60,'shoulders anterior deltoid'],sdelt:['Side delts','Shoulders',60,'shoulders lateral deltoid'],rdelt:['Rear delts','Shoulders',60,'shoulders posterior deltoid'],traps:['Traps','Shoulders',60,'trapezius neck'],
+ lats:['Lats','Back',72,'latissimus wings'],ubk:['Upper back','Back',72,'rhomboids mid back'],lbk:['Lower back','Back',72,'erectors spinal'],
+ bic:['Biceps','Arms',48,'arms'],tri:['Triceps','Arms',48,'arms'],fore:['Forearms','Arms',48,'grip wrist'],
+ abs:['Abs','Abs',48,'core six pack rectus'],obl:['Obliques','Abs',48,'core sides waist'],
+ glu:['Glutes','Glutes',72,'bum butt gluteus maximus'],abd:['Hip abductors','Glutes',60,'glute medius outer hip'],
+ quad:['Quads','Legs',72,'thighs quadriceps'],ham:['Hamstrings','Legs',72,'hammies back of thigh'],add:['Adductors','Legs',60,'inner thigh groin'],calf:['Calves','Legs',48,'lower leg'],hipf:['Hip flexors','Legs',48,'psoas']};
+const MSEC=['Chest','Shoulders','Back','Arms','Abs','Glutes','Legs'];
+// name patterns: [regex, primary, secondary] — first match wins, so specific ones come first
+const MUMAP=[
+ [/close.?grip (bench|press)|jm press/,'tri chest','fdelt'],[/incline.*(fly|flye)/,'uchest','fdelt'],[/incline|landmine press/,'uchest fdelt','tri'],[/decline/,'chest','tri'],
+ [/(bench|chest|floor) press|bench\b|press.?ups?|push.?ups?|svend/,'chest','fdelt tri'],[/(fly|flye|pec deck|crossover|cable cross)/,'chest','fdelt'],
+ [/bench dips?|chair dips?|tricep dips?/,'tri','chest fdelt'],[/\bdips?\b/,'chest tri','fdelt'],
+ [/face ?pulls?/,'rdelt','ubk traps'],[/rear delt|reverse (fly|flye|pec)/,'rdelt','ubk'],[/upright rows?/,'sdelt traps','fdelt'],
+ [/(overhead|shoulder|military|arnold|push) press|\bohp\b|pike push/,'fdelt sdelt','tri traps uchest'],[/lateral raise|side raise|lat raise/,'sdelt','traps'],[/front raise/,'fdelt','uchest'],[/shrugs?/,'traps',''],
+ [/chin.?ups?/,'lats bic','ubk'],[/pull.?ups?|pulldown|pull.?down|lat pull/,'lats','bic ubk rdelt'],[/straight.?arm|pull.?over/,'lats','chest tri'],
+ [/(bent.?over|barbell|pendlay|yates).*rows?/,'ubk lats','bic rdelt lbk'],[/rows?\b|t.?bar|inverted/,'ubk lats','bic rdelt'],
+ [/romanian|\brdl\b|stiff.?leg|single.?leg deadlift/,'ham glu','lbk'],[/sumo/,'glu quad add','ham lbk'],[/deadlift|rack pull|trap bar/,'ham glu lbk','quad traps fore lats'],[/good mornings?/,'ham lbk','glu'],
+ [/hyperextension|back extension|superman/,'lbk','glu ham'],[/hip thrust|glute bridge|bridges?\b/,'glu','ham'],[/kickback.*(glute|cable)|glute kickback|donkey kick/,'glu','ham'],
+ [/abduct|clamshell|fire hydrant|lateral walk|band walk/,'abd','glu'],[/adduct|copenhagen/,'add',''],
+ [/front squat|hack squat|leg press|sissy|leg extension|extension.*leg/,'quad','glu'],[/split squat|bulgarian|lunges?|step.?ups?|pistol/,'quad glu','ham add'],[/squat|thruster/,'quad glu','add lbk'],
+ [/nordic|leg curl|ham(string)? curl|glute.?ham/,'ham','calf'],[/calf|calves|heel raise/,'calf',''],
+ [/hammer curl|reverse curl/,'bic fore',''],[/wrist|farmer|grip|dead ?hang|\bhang\b/,'fore','traps lats'],[/curl/,'bic','fore'],
+ [/tricep|triceps|push.?down|pushdown|skull|kickback|overhead extension|french press/,'tri',''],
+ [/russian twist|oblique|side plank|woodchop|wood chop|pallof|side bend/,'obl','abs'],[/plank|crunch|sit.?ups?|\babs?\b|leg raise|knee raise|hollow|rollout|ab wheel|v.?ups?|toes.?to.?bar|dead ?bug|flutter|mountain climber/,'abs','hipf obl'],
+ [/kettlebell swing|kb swing|swings?\b/,'glu ham','lbk'],[/clean|snatch/,'glu quad traps','ham sdelt'],[/burpee/,'quad chest','abs fdelt'],[/sled|prowler/,'quad glu','calf']];
+function muAuto(n){const s=String(n||'').toLowerCase();for(const [re,p,sc] of MUMAP)if(re.test(s))return{p:p.split(' ').filter(Boolean),s:sc.split(' ').filter(Boolean)};return null}
+const muOf=e=>{if(!e||e.eq==='Cardio')return null;if(e.mu&&(e.mu.p||[]).length)return e.mu;return muAuto(e.n)};
+
+/* ---------- 2. fatigue from what you've done ---------- */
+function muLoad(){const now=Date.now(),out={},wk={},seen=new Set(),sess=[];const t0=addDays(realToday(),-8);
+ const add=(e,t,sets,fail)=>{const m=muOf(e);if(!m||!sets)return;sess.push({e,t,sets,fail,m})};
+ const tsOf=(h)=>h.sid&&+h.sid>1e12?+h.sid:new Date(h.d+'T18:00').getTime();
+ (S.plans||[]).forEach(p=>(p.days||[]).forEach(d=>(d.ex||[]).forEach(e=>{const k=xKey(e);if(!k||seen.has(k))return;seen.add(k);let h=[];try{h=xHist(e)}catch(_){}h.filter(x=>x.d>=t0).forEach(x=>add(e,tsOf(x),(x.s||[]).length,e.t==='Until Failure'))})));
+ // finished workouts whose exercises weren't logged set by set
+ Object.keys(S.fd||{}).filter(d=>d>=t0&&S.fd[d]).forEach(d=>{let w=null;try{w=dayWork(d)}catch(_){}if(!w)return;(w.ex||[]).forEach(e=>{if(sess.some(x=>xKey(x.e)===xKey(e)&&new Date(x.t).toISOString().slice(0,10)===d))return;add(e,new Date(d+'T18:00').getTime(),+e.s||3,e.t==='Until Failure')})});
+ sess.forEach(x=>{const parts=[...x.m.p.map(k=>[k,1]),...(x.m.s||[]).map(k=>[k,.5])];parts.forEach(([k,f])=>{if(!MUS[k])return;const sets=x.sets*f,T=MUS[k][2]*Math.max(.6,Math.min(1.5,.55+.09*sets))*(x.fail?1.3:1)*36e5,left=x.t+T-now,lv=Math.max(0,Math.min(1,left/T));
+  const o=out[k]=out[k]||{lv:0,ready:0,last:0,n:0};o.lv=Math.min(1,Math.max(o.lv,lv)+(o.lv>0&&lv>0?.15*Math.min(o.lv,lv):0));o.ready=Math.max(o.ready,x.t+T);o.last=Math.max(o.last,x.t);if(now-x.t<7*864e5)wk[k]=(wk[k]||0)+sets})});
+ return{m:out,wk}}
+const muCol=lv=>{const c=[[0,'#3E4B5C'],[.35,'#E9B44C'],[.7,'#EF7D3C'],[1,'#E5484D']];if(lv<=0)return c[0][1];for(let i=1;i<c.length;i++)if(lv<=c[i][0]){const [a,ca]=c[i-1],[b,cb]=c[i],t=(lv-a)/(b-a),h=x=>parseInt(x,16);const m=j=>Math.round(h(ca.substr(1+2*j,2))+(h(cb.substr(1+2*j,2))-h(ca.substr(1+2*j,2)))*t).toString(16).padStart(2,'0');return'#'+m(0)+m(1)+m(2)}return'#E5484D'};
+const muReady=ms=>{const h=Math.round((ms-Date.now())/36e5);if(h<=0)return'ready';if(h<20)return`~${h}h`;const d=new Date(ms),t=new Date();t.setHours(0,0,0,0);const dd=Math.round((new Date(d.toDateString())-t)/864e5);return dd<=1?'tomorrow':d.toLocaleDateString('en-GB',{weekday:'short'})};
+
+/* ---------- 3. the body ---------- */
+const MIR=s=>s.replace(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g,(m,x,y)=>(160-+x)+','+y);
+// shapes on a 160 × 360 figure; each is drawn on the left and mirrored to the right
+const MSIL={c:['M80,8 C88,8 93,15 93,24 C93,33 88,40 80,40 C72,40 67,33 67,24 C67,15 72,8 80,8 Z','M73,38 L87,38 L88,52 L72,52 Z',
+ 'M56,54 Q80,48 104,54 Q114,58 116,66 Q118,100 110,128 Q108,150 106,166 L104,196 Q80,204 56,196 L54,166 Q52,150 50,128 Q42,100 44,66 Q46,58 56,54 Z'],
+ l:['M44,60 Q52,58 55,66 L53,120 Q47,126 41,120 Q36,92 44,60 Z','M41,120 Q48,118 51,124 L46,172 Q40,176 36,170 Q34,146 41,120 Z','M35,172 Q41,170 46,174 Q46,186 41,190 Q35,188 34,180 Z',
+  'M54,184 Q68,178 79,186 L78,254 Q68,262 60,256 Q50,220 54,184 Z','M58,254 Q68,258 76,254 L72,328 Q66,334 61,328 Q54,290 58,254 Z','M60,328 L73,328 Q76,338 72,342 L56,342 Q54,336 60,328 Z']};
+const BODYF={parts:{traps:'M68,52 Q80,49 92,52 L98,58 Q80,55 62,58 Z',fdelt:'M46,62 Q54,57 62,61 Q61,72 54,78 Q46,74 46,62 Z',sdelt:'M43,64 Q45,60 47,62 Q47,72 45,80 Q41,74 43,64 Z',
+  chest:'M79,62 L79,94 Q66,99 58,91 Q54,80 59,70 Q68,62 79,62 Z',uchest:'M59,70 Q68,62 79,62 L79,72 Q67,72 58,77 Z',bic:'M45,82 Q51,80 53,88 L51,116 Q46,120 43,115 Q40,98 45,82 Z',
+  fore:'M41,126 Q47,123 49,128 L45,166 Q40,170 38,164 Q36,146 41,126 Z',abs:'M71,99 Q80,96 89,99 L88,158 Q80,164 72,158 Z',obl:'M58,102 Q64,102 69,105 L70,156 Q62,152 57,144 Q55,122 58,102 Z',
+  hipf:'M64,168 L76,172 L74,186 Q67,180 64,168 Z',quad:'M56,190 Q66,184 77,190 L76,248 Q68,256 61,250 Q53,220 56,190 Z',add:'M77,192 Q80,198 79,210 L77,234 Q74,212 75,196 Z',calf:'M59,262 Q63,258 66,262 L64,302 Q60,306 58,300 Q56,282 59,262 Z'}};
+const BODYB={parts:{traps:'M80,48 Q90,51 97,57 Q91,72 86,88 Q83,96 80,99 Q77,96 74,88 Q69,72 63,57 Q70,51 80,48 Z',rdelt:'M46,62 Q54,57 62,61 Q61,72 54,78 Q46,74 46,62 Z',ubk:'M64,62 L72,60 L77,94 Q69,92 62,84 Z',
+  lats:'M58,86 Q64,98 77,104 L78,136 Q66,132 58,120 Q54,104 58,86 Z',lbk:'M72,138 L88,138 L89,166 L71,166 Z',tri:'M45,82 Q51,80 53,88 L51,116 Q46,120 43,115 Q40,98 45,82 Z',fore:'M41,126 Q47,123 49,128 L45,166 Q40,170 38,164 Q36,146 41,126 Z',
+  abd:'M55,170 Q61,165 67,170 L65,181 Q58,181 55,170 Z',glu:'M57,176 Q68,170 79,176 L79,200 Q66,206 57,198 Q53,188 57,176 Z',ham:'M57,206 Q67,210 77,208 L76,252 Q66,258 61,252 Q55,228 57,206 Z',calf:'M58,262 Q64,256 70,264 Q72,286 67,304 Q60,306 58,294 Q56,278 58,262 Z'}};
+function muFig(B,L){const p=Object.entries(B.parts).map(([k,d])=>{const c=muCol((L[k]||{}).lv||0),title=MUS[k][0];return`<path d="${d}" fill="${c}"><title>${title}</title></path><path d="${MIR(d)}" fill="${c}"><title>${title}</title></path>`}).join('');
+ return`<svg viewBox="20 4 120 342" role="img"><defs><linearGradient id="musl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2E35"/><stop offset="1" stop-color="#1D2026"/></linearGradient></defs><g fill="url(#musl)" stroke="rgba(255,255,255,.07)" stroke-width="1">${MSIL.c.map(d=>`<path d="${d}"/>`).join('')}${MSIL.l.map(d=>`<path d="${d}"/><path d="${MIR(d)}"/>`).join('')}</g><g stroke="rgba(10,12,16,.55)" stroke-width="1.2" stroke-linejoin="round">${p}</g></svg>`}
+function muBody(L,lab){return`<div class="mubody"><div>${muFig(BODYF,L)}${lab?'<span class="lb">Front</span>':''}</div><div>${muFig(BODYB,L)}${lab?'<span class="lb">Back</span>':''}</div></div>`}
+const muLegend=()=>'<div class="mulg"><i></i><div><span>Just trained</span><span>Recovering</span><span>Ready</span></div></div>';
+function muMissing(){const L=[],seen=new Set();(S.plans||[]).forEach(p=>(p.days||[]).forEach(d=>(d.ex||[]).forEach(e=>{const k=xKey(e);if(!k||seen.has(k)||e.eq==='Cardio')return;seen.add(k);if(!muOf(e))L.push(e)})));return L}
+function muSum(M,n){const rec=Object.entries(M.m).filter(([,o])=>o.lv>0.05).sort((a,b)=>b[1].lv-a[1].lv);return rec.slice(0,n).map(([k,o])=>`<span style="color:${muCol(o.lv)}">${esc(MUS[k][0])}<u>${muReady(o.ready)}</u></span>`).join('')}
+
+/* ---------- 4. where it shows: the Workout page, a widget, and its own page ---------- */
+function muCard(){const M=muLoad(),miss=muMissing(),rs=muSum(M,6);
+ return`<div class="card mucard"><div class="mut"><h2>Recovery</h2><button data-a="muopen">Details</button></div>${muBody(M.m,1)}${muLegend()}<div class="musum">${rs||'<span>Everything’s ready</span>'}</div>
+ ${miss.length?`<div class="munudge"><span>${miss.length===1?`Swell can’t tell what “${esc(miss[0].n)}” works.`:`${miss.length} exercises need their muscles picked.`}</span><button class="btn" data-a="mufix">Pick</button></div>`:''}</div>`}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(tab==='plan'&&!D&&!$('#app .mucard')){const A=$('#app');const h=[...A.querySelectorAll(':scope>h3.dsec')].find(x=>x.textContent.trim()==='Reports');const html=`<h3 class="dsec">Recovery</h3>`+muCard();if(h)h.insertAdjacentHTML('beforebegin',html);else{const nav=A.querySelector(':scope>.nav');if(nav)nav.insertAdjacentHTML('beforebegin',html);else A.insertAdjacentHTML('beforeend',html)}}}catch(_){}return r}}
+NM.musc='Recovery';WIS.body='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M8 9l4-1 4 1-1 6h-6zM9 15l-1 6M15 15l1 6M8 9l-3 4M16 9l3 4"/></svg>';
+WDESC.musc=['Recovery','Which muscles are still recovering, and which are ready to train.','body','Training'];
+{const _wd=wd;wd=function(l){if(!l||l.id!=='musc')return _wd.apply(this,arguments);const M=muLoad(),rec=Object.entries(M.m).filter(([,o])=>o.lv>0.05).sort((a,b)=>b[1].lv-a[1].lv);
+ const ready=MSEC.filter(s=>!Object.entries(MUS).some(([k,v])=>v[1]===s&&(M.m[k]||{}).lv>0.05));const top=rec[0];
+ const tx=`<div class="tx"><b>${top?esc(MUS[top[0]][0])+' recovering':'All ready'}</b><small>${top?`Ready ${muReady(top[1].ready)}${ready.length?` · Fresh: ${esc(ready.slice(0,3).join(', '))}`:''}`:'Nothing’s still recovering.'}</small></div>`;
+ if(l.w===1&&l.h===1)return`<div class="muw" style="grid-template-columns:1fr">${wlab('body','Recovery')}<div class="mubody mu1">${muFig(BODYF,M.m)}${muFig(BODYB,M.m)}</div></div>`;
+ if(l.h===1)return`<div class="muw">${muBody(M.m,0)}<div>${wlab('body','Recovery')}${tx}</div></div>`;
+ return`<div class="muw big">${wlab('body','Recovery')}${muBody(M.m,0)}${tx}<div class="musum" style="margin-top:6px">${muSum(M,4)}</div></div>`}}
+FSX.musc=function(){const M=muLoad(),miss=muMissing();
+ return`<h1>Recovery</h1><div class="mupg"><div class="card">${muBody(M.m,1)}${muLegend()}</div>
+ ${miss.length?`<div class="card"><h2>Pick muscles</h2><p class="sm" style="margin:0 0 8px">Swell couldn’t tell what these work. Pick the muscles once and the map gets them right.</p>${miss.map(e=>`<div class="row4" style="grid-template-columns:1fr auto"><b>${esc(e.n)}</b><button class="btn" data-a="mupick" data-i="${esc(xKey(e))}" style="margin:0;padding:7px 12px">Pick</button></div>`).join('')}</div>`:''}
+ ${MSEC.map(s=>`<div class="card sec2"><h2>${s}</h2>${Object.entries(MUS).filter(([,v])=>v[1]===s).map(([k,v])=>{const o=M.m[k],lv=o?o.lv:0,w=Math.round((M.wk[k]||0)*10)/10;return`<div class="row4"><i style="background:${muCol(lv)}"></i><span><b>${v[0]}</b><small>${o&&o.last?`Last trained ${new Date(o.last).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}`:'Not trained this week'} · ${w} set${w===1?'':'s'} this week</small></span><em>${lv>0.05?'Ready '+muReady(o.ready):'Ready'}</em></div>`}).join('')}</div>`).join('')}
+ <p class="sm" style="margin:4px 2px 20px">Recovery is an estimate: big muscles take about 72 hours, smaller ones about 48, longer after more sets or sets to failure. About 10 to 20 hard sets a week per muscle suits most people.</p></div>`};
+NM.musc=NM.musc||'Recovery';
+
+/* ---------- 5. picking muscles: in the exercise form, and for saved exercises ---------- */
+let MUPK=null;// {k: xKey or 'X', sel:Set}
+function muPicker(k,cur){MUPK={k,sel:new Set(cur||[])};muPkDraw('')}
+function muPkDraw(q){if(!MUPK)return;const s=String(q||'').toLowerCase().trim();const hit=([k,v])=>!s||(v[0]+' '+v[1]+' '+v[3]).toLowerCase().includes(s);
+ const body=MSEC.map(sec=>{const L=Object.entries(MUS).filter(([,v])=>v[1]===sec).filter(hit);return L.length?`<h4>${sec}</h4><div class="chips">${L.map(([k,v])=>`<button class="chip ${MUPK.sel.has(k)?'on':''}" data-a="mupt" data-i="${k}" aria-pressed="${MUPK.sel.has(k)}">${v[0]}</button>`).join('')}</div>`:''}).join('')||'<p class="sm">No muscle matches that.</p>';
+ const ex=$('#sheet .mupk');if(ex){ex.querySelector('.mupl').innerHTML=body;return}
+ sheet(`<div class="mupk"><h2>Muscles worked</h2><input data-mupq placeholder="Search, like lats or quads" autocomplete="off" enterkeyhint="search"><div class="mupl">${body}</div><button class="btn big on" data-a="mupok" style="margin-top:14px">Done</button></div>`)}
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('[data-mupq]'))muPkDraw(e.target.value)});
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mupt],[data-a=mupok],[data-a=mufix],[data-a=mupick],[data-a=muopen],[data-a=muxp]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const a=el.dataset.a;
+ if(a==='muopen')return fsOpen('musc');
+ if(a==='mufix'){const m=muMissing();if(m.length===1)return muPicker(xKey(m[0]),[]);return fsOpen('musc')}
+ if(a==='mupick')return muPicker(el.dataset.i,[]);
+ if(a==='muxp'){const cur=X.mu&&X.mu.p?X.mu.p:(muAuto(X.n)||{p:[]}).p;return muPicker('X',cur)}
+ if(a==='mupt'){const k=el.dataset.i;MUPK.sel.has(k)?MUPK.sel.delete(k):MUPK.sel.add(k);el.classList.toggle('on');el.setAttribute('aria-pressed',MUPK.sel.has(k));try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}return}
+ if(a==='mupok'){const sel=[...MUPK.sel],k=MUPK.k;MUPK=null;sheet(null);
+  if(k==='X'){if(sel.length)X.mu={p:sel,s:[]};else delete X.mu;const r=$('#app .mur');if(r)r.outerHTML=muRow();return}
+  (S.plans||[]).forEach(p=>(p.days||[]).forEach(d=>(d.ex||[]).forEach(e=>{if(xKey(e)===k){if(sel.length)e.mu={p:sel,s:[]};else delete e.mu}})));save();if(FS)fsr();render();return}},true);
+function muRow(){if(!X||X.eq==='Cardio')return'';const own=X.mu&&(X.mu.p||[]).length,a=own?X.mu:muAuto(X.n),nm=k=>MUS[k]?MUS[k][0]:k;
+ return`<div class="mur"><span>Muscles worked</span>${a?`<div class="chips">${a.p.map(k=>`<span class="chip on">${nm(k)}</span>`).join('')}${(a.s||[]).map(k=>`<span class="chip sec">${nm(k)}</span>`).join('')}<button class="chip" data-a="muxp">${own?'Change':'Edit'}</button></div>${own?'':'<small>Worked out from the name. Lighter ones are helpers.</small>'}`:X.n?`<small>Swell can’t tell from the name. Pick them so your recovery map is right.</small><button class="btn" data-a="muxp" style="margin:0">Pick muscles</button>`:'<small>Type a name and Swell works these out.</small>'}</div>`}
+{const _f=xForm;xForm=function(){let h=_f.apply(this,arguments);try{if(X&&X.eq!=='Cardio'&&!h.includes('class="mur"'))h=h.replace('<div class="xbtns">',muRow()+'<div class="xbtns">')}catch(_){}return h}}
+document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.b==='X.n'){const r=$('#app .mur');if(r)setTimeout(()=>{const r2=$('#app .mur');if(r2)r2.outerHTML=muRow()},0)}});
+window.addEventListener('click',e=>{if(!e.target.closest('[data-a=addx2]')||typeof X==='undefined'||!X||!D)return;const ei=X.ei,n=D.days[D.sel].ex.length,mu=X.mu?JSON.parse(JSON.stringify(X.mu)):null;
+ setTimeout(()=>{try{const L=D.days[D.sel].ex,ex=ei!=null?L[ei]:L.length>n?L[L.length-1]:null;if(!ex)return;if(mu)ex.mu=mu;else delete ex.mu}catch(_){}},0)},true);
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:WIS.body.replace(/^<svg[^>]*>|<\/svg>$/g,''),h:'Muscle recovery map',p:'Swell works out which muscles each exercise trains and shows what’s still recovering on a body map, from red to ready. It’s on the Workout page, and there’s a widget too.'});(R.tour=R.tour||[]).push({t:'plan',q:'#app .mucard',h:'Recovery',p:'Red is just trained, blue-grey is ready. Tap Details for each muscle and your sets this week.'})}}
+// the Claude preview: a couple of recent sessions so the map has colour
+setTimeout(()=>{try{if(PREVIEW&&!S.prevMU&&S.plans&&S.plans[0]){S.prevMU=1;const p=S.plans[0],t=Date.now();const log=(e,hAgo)=>{const h=xHist(e),d=new Date(t-hAgo*36e5).toISOString().slice(0,10);h.push({d,sid:t-hAgo*36e5,s:[{w:+e.w||20,r:8},{w:+e.w||20,r:8},{w:+e.w||20,r:8}]})};
+ (p.days[0]&&p.days[0].ex||[]).forEach(e=>log(e,20));(p.days[2]&&p.days[2].ex||[]).forEach(e=>log(e,52));save();render()}}catch(_){}},0);
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
