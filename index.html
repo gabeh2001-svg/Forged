@@ -10291,7 +10291,7 @@ const WQ=[
 function wqPick(){const L=WQ;let i;const last=S.wqLast;do{i=Math.floor(Math.random()*L.length)}while(L.length>1&&i===last);S.wqLast=i;save();return L[i]}
 function awDoneDress(o){if(!AW||AW.ph!=='done'||o.querySelector('.awq'))return;const t=today(),q=AW.wq||(AW.wq=wqPick()),n=(AW.d.ex||[]).length,prs=(S.prl||[]).filter(x=>x.d===t&&x.k&&x.k[0]!=='_').length;
  let sets=0;try{(AW.d.ex||[]).forEach(x=>{const h=xHist(x),s=h.filter(y=>y.d===t);s.forEach(y=>sets+=(y.s||[]).length)})}catch(_){}
- o.className='done';o.innerHTML=`<div class="awq"><div class="k">Workout complete</div><blockquote>${esc(q[0])}</blockquote><cite>${esc(q[1])}</cite>
+ o.className='done';o.innerHTML=`<div class="awq"><div class="k">Workout complete</div><blockquote>${esc(q[0])}</blockquote>
  <div class="st"><span><b>${n}</b>exercise${n===1?'':'s'}</span>${sets?`<span><b>${sets}</b>set${sets===1?'':'s'}</span>`:''}${prs?`<span><b>${prs}</b>personal best${prs===1?'':'s'}</span>`:''}</div>
  <button class="btn big on" data-a="awx">Done</button>${prs?'<button class="btn big" data-a="awach">See your bests</button>':''}</div>`}
 window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awach]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();AW=null;awr();render();fsOpen('ach')},true);
@@ -10317,6 +10317,101 @@ window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awach
  {i:'<path d="M5 12h14M13 6l6 6-6 6"/>',h:'Up next',p:'Guided workouts skip the directions: you see what’s up next, the sets and what to load, then go.'},
  {i:'<path d="M7 7h4v4H7zM13 7h4v4h-4M7 15c0 2 1 3 3 3M13 15c0 2 1 3 3 3"/>',h:'A line to finish on',p:'Finish a workout and get one of 60-odd famous lines with a gym twist. Shakespeare included.'},
  {i:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/>',h:'Scores when you scan',p:'Scan a barcode or a label and the product’s score is right there, so there’s no separate Rate it button.'})}
+
+/* ===== v132: quieter feedback (a tick on what you pressed, not a message), an Undo pill, a steadier week strip, a
+   shorter day line, tags that settle when dropped, a live Nutrients widget, and pages that fold back into their widget ===== */
+// Research notes for this block:
+// - Feedback belongs where you acted: a quick visual change on the control you pressed confirms the action without
+//   reading (NN/g "Visibility of system status"; Apple HIG "Feedback": keep it subtle and close to the action, from
+//   memory). Confirmation messages for things you can already see added noise, so they're replaced by a tick and a
+//   brief ring. Messages stay for errors and instructions. Undo stays, as a pill at the bottom, because recovering from
+//   mistakes matters more than any confirmation (Nielsen heuristic 3, user control and freedom).
+// - Layout stability: content shouldn't move under your finger (Google's Cumulative Layout Shift guidance), so every
+//   day in the week strip keeps room for a workout tag and a Prep tag.
+// - Motion: a dropped item should travel to where it lands, not jump, so the eye can follow the change (Material
+//   motion, "continuity"). The page-to-widget fold now moves one plain shape, which phones animate reliably, instead
+//   of animating a clipping mask, which some iPhone versions skip.
+// - Nutrients: progress you can see grow keeps people going (goal-gradient effect, Kivetz, Urminsky & Zheng 2006), so
+//   the widget counts what you've hit today and names what's closest next. "Hit" means 100% of the UK reference intake.
+// - The finishing lines are parodies, so they show no names.
+(function(){const st=document.createElement('style');st.textContent=`
+.okt{position:fixed;z-index:120;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#7FD6A0;color:#0f2a1a;display:grid;place-items:center;pointer-events:none;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.okt svg{width:15px;height:15px}
+.btn,.chip,.mopt,.fopt button,.setl>button,.wgi .add{transition:scale .12s ease}
+.btn:active,.chip:active,.mopt:active,.fopt button:active,.setl>button:active{scale:.97}
+.toast.tu2{border-radius:999px!important;left:16px!important;right:16px!important;max-width:520px;margin:0 auto;padding:6px 6px 6px 18px!important;min-height:48px;box-sizing:border-box}
+.toast.tu2 span{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toast.tu2 button{border-radius:999px!important;background:#F3F1EC!important;color:#141412!important;font-weight:800!important;padding:9px 18px!important;border:0!important;flex:none}
+html[data-look] .cal .cday{min-height:120px}
+.cal .cday .mpc,.cal .cday .chipw,.cal .cday .mpadd{flex:none}
+.nuw{display:flex;flex-direction:column;height:100%;gap:4px;text-align:left;overflow:hidden}
+.nuw .hn{display:flex;align-items:baseline;gap:6px;margin-top:auto}.nuw .hn b{font-size:34px;font-weight:800;line-height:1;letter-spacing:-.02em}.nuw .hn span{font-size:14.5px;font-weight:600;color:rgba(243,241,236,.8)}
+.nuw .hn b.pop{animation:nupop .6s cubic-bezier(.3,1.5,.5,1)}@keyframes nupop{0%{transform:scale(.7);color:#7FD6A0}60%{transform:scale(1.12);color:#7FD6A0}}
+.nuw .sb{font-size:13px;color:rgba(243,241,236,.72);line-height:1.35}
+.nuw .hit{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}.nuw .hit span{font-size:12px;font-weight:700;padding:4px 8px;border-radius:8px;background:rgba(127,214,160,.14);color:#7FD6A0;white-space:nowrap}
+.nuw .nr{display:grid;grid-template-columns:1fr 64px 34px;gap:8px;align-items:center;font-size:13px;margin-top:5px}.nuw .nr i{height:5px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;display:block}.nuw .nr i u{display:block;height:100%;background:#F2C14E;border-radius:3px}.nuw .nr em{font-style:normal;text-align:right;color:rgba(243,241,236,.7)}
+.nuw .ai{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(243,241,236,.55);font-weight:700;margin-top:10px}
+.fsghost{position:fixed;z-index:59;pointer-events:none;will-change:left,top,width,height}`;document.head.appendChild(st)})();
+
+/* ---------- 1. parodies, so no names ---------- */
+try{Object.keys(QWHO).forEach(k=>{if(/sort of/.test(QWHO[k]))delete QWHO[k]})}catch(_){}
+
+/* ---------- 2. a tick where you pressed, instead of a confirmation message ---------- */
+const TOK=/\b(added|saved|set|moved|removed|deleted|updated|logged|started|turned on|turned off|copied|cleared|put back|is a meal prep day|paused|ticked|sorted|changed|renamed|ended|is on|is off|now fit|sits on home|focus set)\b/i,TKEEP=/\b(tap |try |first|can’t|can't|couldn|isn’t|needs?\b|no signal|not available|went wrong|choose|pick |check the|scan the|type )/i;
+let PT={at:0};
+document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('button,[data-a],.chip,.wd,label');if(el)PT={el,a:el.dataset&&el.dataset.a,i:el.dataset&&el.dataset.i,at:Date.now(),x:e.clientX,y:e.clientY}},true);
+const OKSVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
+function pressOk(){if(MRM())return;let el=Date.now()-PT.at<3000?PT.el:null;
+ if(el&&!el.isConnected&&PT.a){try{el=document.querySelector(`[data-a="${CSS.escape(PT.a)}"]${PT.i!=null?`[data-i="${CSS.escape(String(PT.i))}"]`:''}`)}catch(_){el=null}}
+ let x=null,y=null;if(el&&el.isConnected){const r=el.getBoundingClientRect();if(r.width&&r.bottom>0&&r.top<innerHeight){x=Math.min(innerWidth-18,r.right-4);y=Math.max(18,r.top+4);
+   try{el.animate([{boxShadow:'0 0 0 0 rgba(127,214,160,0)'},{boxShadow:'0 0 0 3px rgba(127,214,160,.85)',offset:.25},{boxShadow:'0 0 0 9px rgba(127,214,160,0)'}],{duration:700,easing:'ease-out'})}catch(_){}}}
+ if(x==null){x=innerWidth/2;y=innerHeight-150}
+ const t=document.createElement('div');t.className='okt';t.innerHTML=OKSVG;t.style.left=x+'px';t.style.top=y+'px';document.body.appendChild(t);
+ t.animate([{transform:'scale(.3)',opacity:0},{transform:'scale(1.15)',opacity:1,offset:.25},{transform:'scale(1)',opacity:1,offset:.4},{transform:'scale(1)',opacity:1,offset:.8},{transform:'scale(.8)',opacity:0}],{duration:1000,easing:'cubic-bezier(.2,.8,.2,1)'}).onfinish=()=>t.remove()}
+{const _t=toast;toast=function(m){try{const s=String(m||'');if(TOK.test(s)&&!TKEEP.test(s)){pressOk();try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}return}}catch(_){}return _t.apply(this,arguments)}}
+
+/* ---------- 3. the line under the day: the workout (or rest) and bedtime ---------- */
+hdrLine=function(t){const r=realToday(),out=[];if(t!==r)out.push(new Date(t+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}));
+ try{const d=dayWork(t);if(d)out.push(/day$/i.test(d.name)?d.name:d.name+' day');else if(activePlan())out.push('Rest day')}catch(_){}
+ try{if(t===r){const b=bedEff();if(b!=null)out.push('bed by '+hm12f(Math.round(b/5)*5))}}catch(_){}
+ if(!out.length)out.push('Nothing planned');return out.map((x,i)=>i?x:x[0].toUpperCase()+x.slice(1)).join(' · ')};
+
+/* ---------- 4. dropped tags settle into place ---------- */
+let TDRG=null;
+document.addEventListener('pointerup',e=>{const l=document.querySelector('#app .cal .chipw.lift,#app .cal .mpc.lift');if(!l)return;const k=l.classList.contains('mpc')?'mpc':'chipw',r=l.getBoundingClientRect();
+ l.style.pointerEvents='none';const t=document.elementFromPoint(e.clientX,e.clientY);l.style.pointerEvents='';const c=t&&t.closest('.cday');if(c)TDRG={k,d:c.dataset.date,x:r.left+r.width/2,y:r.top+r.height/2,at:Date.now()}},true);
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(TDRG&&Date.now()-TDRG.at<700&&!MRM()){const D=TDRG;TDRG=null;requestAnimationFrame(()=>{const el=document.querySelector(`#app .cal .cw7:not(.cwn) .cday[data-date="${D.d}"] .${D.k}`);if(!el)return;const b=el.getBoundingClientRect();
+  el.animate([{transform:`translate(${D.x-(b.left+b.width/2)}px,${D.y-(b.top+b.height/2)}px) scale(1.12)`},{transform:'none'}],{duration:420,easing:'cubic-bezier(.3,1.35,.5,1)'})})}}catch(_){}return r}}
+
+/* ---------- 5. Nutrients widget: what you've hit today, live ---------- */
+{const _wd=wd;wd=function(l){if(!l||l.id!=='micro')return _wd.apply(this,arguments);try{const t=today(),R=miRange([t]),rows=mnRows(R.per),nm=k=>MN[k][0].replace(/ \(.*\)/,'');
+ if(!R.dn)return`<div class="nuw">${wlab('leaf','Nutrients')}<div class="hn"><b>0</b><span>hit today</span></div><div class="sb">Log food or tick a supplement and watch vitamins and minerals fill up.</div></div>`;
+ const pc=rows.map(([k,v])=>[k,miPct(k,v)]),hit=pc.filter(x=>x[1]>=100).sort((a,b)=>b[1]-a[1]),near=pc.filter(x=>x[1]<100&&x[1]>=1).sort((a,b)=>b[1]-a[1]),n=hit.length,tot=rows.length;
+ const L=S.nuLast||{};const pop=L.d===t&&n>(+L.n||0);if(L.d!==t||L.n!==n){S.nuLast={d:t,n};try{save()}catch(_){}}
+ const big=`<div class="hn"><b class="${pop?'pop':''}">${n}</b><span>${l.w===1?'hit today':`of ${tot} hit today`}</span></div>`;
+ if(l.w===1&&l.h===1)return`<div class="nuw">${wlab('leaf','Nutrients')}${big}<div class="sb">${near.length?`Next: ${esc(nm(near[0][0]))}, ${Math.round(near[0][1])}%`:n===tot?'Every one hit. Brilliant.':'Log food to fill the rest.'}</div></div>`;
+ const chips=n?`<div class="hit">${hit.slice(0,l.h===2?6:3).map(([k])=>`<span>${esc(nm(k))}</span>`).join('')}${n>(l.h===2?6:3)?`<span>+${n-(l.h===2?6:3)}</span>`:''}</div>`:'';
+ if(l.h===1)return`<div class="nuw">${wlab('leaf','Nutrients')}${big}${chips||`<div class="sb">${near.length?`Closest: ${esc(near.slice(0,2).map(([k,p])=>`${nm(k)} ${Math.round(p)}%`).join(', '))}`:'Log food to fill these up.'}</div>`}</div>`;
+ return`<div class="nuw">${wlab('leaf','Nutrients')}<div class="hn" style="margin-top:6px"><b class="${pop?'pop':''}">${n}</b><span>of ${tot} hit today</span></div>${chips}${near.length?`<div class="ai">Almost there</div>${near.slice(0,4).map(([k,p])=>`<div class="nr"><span>${esc(nm(k))}</span><i><u style="width:${Math.max(4,Math.min(100,p))}%"></u></i><em>${Math.round(p)}%</em></div>`).join('')}`:'<div class="sb" style="margin-top:10px">Log food to see the rest fill up.</div>'}</div>`}catch(_){return _wd.apply(this,arguments)}}}
+
+/* ---------- 6. pages fold back into their widget with one moving shape ---------- */
+{const _prev=fsClose;fsClose=function(){const o=$('#fs');if(!o||MRM()||!S.nat||!NAT[S.nat])return _prev.apply(this,arguments);
+ const k=FS,wid=k==='food'&&!$('#app .grid .wd[data-id="food"]')?'shop':k;
+ if(!$(`#app .grid .wd[data-id="${wid}"]`)||tab!=='home')return _prev.apply(this,arguments);
+ FS=null;FSLAST=null;try{FXQ=Date.now()}catch(_){}o.style.pointerEvents='none';o.id='fsout';
+ try{render();document.querySelectorAll('#app .fx-in').forEach(el=>{el.getAnimations().forEach(a=>a.cancel());el.style.animation='none'})}catch(_){}
+ const w=$(`#app .grid .wd[data-id="${wid}"]`),r=w&&w.getBoundingClientRect(),vis=r&&r.width&&r.bottom>0&&r.top<innerHeight;const done=()=>{o.remove();try{lockOff()}catch(_){}};
+ o.getAnimations().forEach(a=>a.cancel());
+ if(!vis){o.animate([{opacity:1,transform:'none'},{opacity:0,transform:'scale(.985)'}],{duration:220,easing:'cubic-bezier(.4,0,1,1)',fill:'forwards'}).onfinish=done;return}
+ const cs=getComputedStyle(w),g=document.createElement('div');g.className='fsghost';g.style.background='linear-gradient(180deg,#1c1c1e,#121214)';g.style.border='1px solid rgba(255,255,255,.12)';g.style.boxShadow='0 20px 60px rgba(0,0,0,.5)';
+ Object.assign(g.style,{left:'0px',top:'0px',width:innerWidth+'px',height:innerHeight+'px',borderRadius:'0px'});document.body.appendChild(g);
+ o.animate([{opacity:1},{opacity:0}],{duration:160,easing:'ease-out',fill:'forwards'}).onfinish=done;
+ const D=440,rad=cs.borderRadius||'24px';w.style.visibility='hidden';
+ g.animate([{left:'0px',top:'0px',width:innerWidth+'px',height:innerHeight+'px',borderRadius:'0px',opacity:1},{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',borderRadius:rad,opacity:1,offset:.82},{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',borderRadius:rad,opacity:0}],{duration:D,easing:'cubic-bezier(.32,.72,0,1)',fill:'forwards'}).onfinish=()=>g.remove();
+ setTimeout(()=>{w.style.visibility='';w.animate([{opacity:0,transform:'scale(.98)'},{opacity:1,transform:'scale(1.01)',offset:.6},{opacity:1,transform:'none'}],{duration:320,easing:'cubic-bezier(.3,1.2,.5,1)'})},D*.72)}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="m5 12 5 5 9-10"/>',h:'Quieter',p:'Fewer pop-up messages. What you press gives a little tick instead, and Undo appears as a pill at the bottom when you need it.'},
+ {i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Nutrients, live',p:'The Nutrients widget counts the vitamins and minerals you’ve hit today and shows what’s closest next.'})}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
