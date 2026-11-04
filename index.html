@@ -10176,6 +10176,148 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=achopen]'
  {i:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',h:'Holds, more than once',p:'Timed exercises can have several holds per set with a short rest between, so 3 sets of 5 holds works.'},
  {i:ACHIC,h:'Achievements',p:'Personal bests, winning days and your workouts, all in one place. It’s in Settings, and under your streak.'})}
 
+/* ===== v131: from the screen recording: "Up next" instead of directions, a quote when you finish, scores built into
+   scanning (no separate Rate it), and small fixes (tab bar on top, the scan button clears toasts, quieter plan rows) ===== */
+// Research notes for this block:
+// - Fewer steps: the guided flow had three screens before the first set (go, set up, begin). People wrote their own
+//   plan, so they know where things are; "Up next" with the name, sets and the weight to load is enough, and Next goes
+//   straight to the exercise screen. Every extra tap in a repeated flow adds up (Fitts's and Hick's laws; NN/g on
+//   reducing interaction cost). Generic lines ("find a clear space") are dropped; only numbers worth reading stay.
+// - A rating is most useful where the decision happens: when you scan, not in a separate tool (NN/g "Recognition rather
+//   than recall"; Yuka and similar apps score on scan). Scans already carry the score, so the Rate it tile goes.
+// - Ending on a high: people judge an experience largely by its peak and its end (Kahneman's peak-end rule, Fredrickson
+//   & Kahneman 1993), so the finish screen gets a light, funny line. Humour in health messages helps them get noticed
+//   and remembered (Blanc & Brigaud 2014, from memory). Quotes are famous lines given a gym twist; nothing taken whole
+//   from songs or recent books.
+// - Layering: the tab bar sat under some cards' raised elements while scrolling ("7 days" floated over it); it now sits
+//   above page content and below pop-ups. The floating scan button moves up while a message shows so neither covers
+//   the other.
+(function(){const st=document.createElement('style');st.textContent=`
+.nav{z-index:40}
+body:has(.toast) .fsc.on{transform:translateY(-62px)!important}
+.fsc{transition:transform .3s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.dtiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}.dtiles [data-a=rtgo],#sheet [data-a=rtgo],.rtentry{display:none!important}
+.pdb b.nf{display:none}
+#aw .awup{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ac,#E0643A)}
+#aw .awsl{font-size:17px;color:rgba(243,241,236,.85);margin-top:6px;line-height:1.35}#aw .awsl .sm{font-size:14px!important;margin-top:4px!important}
+#aw.done{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 24px calc(28px + env(safe-area-inset-bottom,0px))}
+#aw .awq{max-width:360px;margin:0 auto}
+#aw .awq .k{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ac,#E0643A);margin-bottom:14px}
+#aw .awq blockquote{margin:0;font-family:'Fraunces',Georgia,serif;font-size:28px;line-height:1.22;font-weight:700;letter-spacing:-.01em;color:#F3F1EC}
+#aw .awq cite{display:block;margin-top:12px;font-style:normal;font-size:14px;color:rgba(243,241,236,.6)}
+#aw .awq .st{display:flex;justify-content:center;gap:18px;margin:26px 0 22px;font-size:13px;color:rgba(243,241,236,.7)}#aw .awq .st b{display:block;font-size:22px;color:#F3F1EC;font-weight:800}
+#aw .awq .btn{width:100%;margin:0 0 8px}`;document.head.appendChild(st)})();
+
+/* ---------- 1. "Up next", and straight on to the exercise ---------- */
+function awSetupLine(e){try{const eq=EQN(e),u=U();let w=0;try{const c=awCur();w=+c.w||0}catch(_){}if(!w)w=+e.w||0;let t='';
+  if(w&&WEQ(e))t=setup2({...e,eq,w});else if(w)t=`Add ${fmtW(w)}${u}`;
+  if(e.o&&!t.includes(esc(e.o)))t+=`<div class="sm" style="font-size:15px;margin-top:6px">${esc(e.o)}</div>`;return t}catch(_){return''}}
+const awWuDue=()=>AW&&!AW.wuSeen&&AW.ph==='go'&&AW.e===0&&AW.s===1&&!S.wuOff&&!(AW.dn&&Object.keys(AW.dn).length);
+{const _r=awr;awr=function(){try{if(AW&&AW.ph==='load'){const e=AW.d.ex[AW.e]||{};if(e.eq!=='Cardio')AW.ph='begin'}}catch(_){}return _r.apply(this,arguments)}}
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awn]');if(!el||!AW||AW.ph!=='go')return;const x=AW.d.ex[AW.e]||{};if(x.eq==='Cardio')return;e.stopImmediatePropagation();e.preventDefault();AW.ph='begin';awr()},true);
+function awUpDress(o){if(!AW||AW.ph!=='go'||o.dataset.up===AW.e+'|'+AW.s)return;const e=AW.d.ex[AW.e]||{};if(e.eq==='Cardio')return;const b2=o.querySelector('.big2');if(!b2||!/^Go to the /.test(b2.textContent))return;o.dataset.up=AW.e+'|'+AW.s;
+ const sm=[...o.querySelectorAll('small')];const nu=sm.find(s=>s.textContent.trim()==='Next up');if(nu){nu.className='awup';nu.textContent='Up next'}
+ b2.textContent=e.n||'Next exercise';const tp=sm.find(s=>/Tap Next when/.test(s.textContent));const sl=awSetupLine(e);
+ const html=`<small>${esc(tgt2(e))}</small>${sl?`<div class="awsl">${sl}</div>`:''}`;if(tp)tp.outerHTML=html;else b2.insertAdjacentHTML('afterend',html)}
+
+/* ---------- 2. a quote at the finish ---------- */
+const WQ=[
+ ['To squat, or not to squat: that is the question. (Squat.)','Hamlet, sort of'],
+ ['Once more unto the bench, dear friends, once more!','Henry V, sort of'],
+ ['All the world’s a gym, and all the men and women merely lifters.','As You Like It, sort of'],
+ ['Now is the winter of our discontent made glorious summer by this workout.','Richard III, sort of'],
+ ['Though she be but little, she is fierce. And she just out-lifted you.','A Midsummer Night’s Dream, sort of'],
+ ['We few, we happy few, we band of lifters.','Henry V, sort of'],
+ ['Wherefore art thou, protein shake?','Romeo and Juliet, sort of'],
+ ['Some are born great, some achieve greatness, and some just finished their workout.','Twelfth Night, sort of'],
+ ['Is this a dumbbell which I see before me?','Macbeth, sort of'],
+ ['My kingdom for a foam roller!','Richard III, sort of'],
+ ['Double, double, toil and trouble; fire burn and quads bubble.','Macbeth, sort of'],
+ ['Parting is such sweet sorrow. See you Thursday, squat rack.','Romeo and Juliet, sort of'],
+ ['The course of true gains never did run smooth.','A Midsummer Night’s Dream, sort of'],
+ ['Brevity is the soul of wit. And of rest periods.','Hamlet, sort of'],
+ ['Friends, Romans, gym-goers, lend me your ears. And a spot.','Julius Caesar, sort of'],
+ ['Et tu, hamstrings?','Julius Caesar, sort of'],
+ ['Out, damned spot! Wait, no. Come back, I need a spot.','Macbeth, sort of'],
+ ['What’s in a name? A deadlift by any other name would still be hard.','Romeo and Juliet, sort of'],
+ ['Cowards die many times before their deaths. The valiant train legs.','Julius Caesar, sort of'],
+ ['If music be the food of love, play on. One more set.','Twelfth Night, sort of'],
+ ['The lady doth protest too much, methinks. Especially about burpees.','Hamlet, sort of'],
+ ['Veni, vidi, squati. I came, I saw, I squatted.','Julius Caesar, sort of'],
+ ['I think, therefore I lift.','René Descartes, sort of'],
+ ['Eureka! I found my one-rep max.','Archimedes, sort of'],
+ ['Give me a place to stand and I will move the earth. Or at least this barbell.','Archimedes, sort of'],
+ ['Know thyself. And thy one-rep max.','The Oracle at Delphi, sort of'],
+ ['The unexamined workout is not worth logging. Log it anyway.','Socrates, sort of'],
+ ['A journey of a thousand miles begins with a single warm-up set.','Lao Tzu, sort of'],
+ ['Rome wasn’t built in a day. Neither were your delts.','An old proverb, sort of'],
+ ['Fortune favours the bold. And the well rested.','Virgil, sort of'],
+ ['What doesn’t kill you makes you stronger. Leg day agrees.','Friedrich Nietzsche, sort of'],
+ ['It was the best of times, it was the worst of times. It was leg day.','A Tale of Two Cities, sort of'],
+ ['It is a truth universally acknowledged that a lifter after a good workout must be in want of a snack.','Pride and Prejudice, sort of'],
+ ['Please, sir, I want some more. Plates.','Oliver Twist, sort of'],
+ ['Call me Ishmael. Call me after my cool-down.','Moby-Dick, sort of'],
+ ['Reader, I lifted it.','Jane Eyre, sort of'],
+ ['It’s alive! It’s alive! (Your glutes, after that.)','Frankenstein, sort of'],
+ ['Two roads diverged in a wood, and I, I took the one to the squat rack.','Robert Frost, sort of'],
+ ['’Tis better to have lifted and lost than never to have lifted at all.','Alfred, Lord Tennyson, sort of'],
+ ['Water, water, everywhere. So drink a glass or two.','Samuel Taylor Coleridge, sort of'],
+ ['Hope is the thing with feathers. Gains are the thing with plates.','Emily Dickinson, sort of'],
+ ['I am the master of my fate, the captain of my sets.','William Ernest Henley, sort of'],
+ ['Mirror, mirror, on the wall, who’s got the biggest gains of all?','Snow White, sort of'],
+ ['Give me liberty, or give me a rest day.','Patrick Henry, sort of'],
+ ['That’s one small step for man, one giant leap for your calves.','Neil Armstrong, sort of'],
+ ['The only thing we have to fear is fear itself. And the assault bike.','Franklin D. Roosevelt, sort of'],
+ ['Ask not what your gym can do for you. Ask what you can do for your gym. Rack your weights.','John F. Kennedy, sort of'],
+ ['We shall fight on the beaches, we shall fight in the squat racks. We shall never surrender.','Winston Churchill, sort of'],
+ ['Never was so much lifted by so few.','Winston Churchill, sort of'],
+ ['Speak softly and carry a big kettlebell.','Theodore Roosevelt, sort of'],
+ ['Keep calm and carry on lifting.','A wartime poster, sort of'],
+ ['Float like a butterfly, sting like a bee, recover like a champion.','Muhammad Ali, sort of'],
+ ['Let them eat protein.','Marie Antoinette, sort of (she never said it either)'],
+ ['Hell is other people. Especially ones who don’t rack their weights.','Jean-Paul Sartre, sort of'],
+ ['Do, or do not. There is no try. There is only one more rep.','Yoda, sort of'],
+ ['Live long and progressively overload.','Star Trek, sort of'],
+ ['Winter is coming. Bulk accordingly.','Game of Thrones, sort of'],
+ ['Not all who wander are lost. Some are just looking for a free bench.','J.R.R. Tolkien, sort of'],
+ ['Elementary, my dear Watson. You lift, you grow.','Sherlock Holmes, sort of'],
+ ['Houston, we have a PR.','Apollo 13, sort of'],
+ ['I’ll be back. Thursday, for legs.','The Terminator, sort of'],
+ ['There’s no place like the gym.','The Wizard of Oz, sort of'],
+ ['To infinity, and beyond your last set!','Toy Story, sort of'],
+ ['Here’s looking at you, quads.','Casablanca, sort of'],
+ ['Frankly, my dear, I don’t give a damn. I’ve done my workout.','Gone with the Wind, sort of'],
+ ['May the gains be with you.','Star Wars, sort of']];
+function wqPick(){const L=WQ;let i;const last=S.wqLast;do{i=Math.floor(Math.random()*L.length)}while(L.length>1&&i===last);S.wqLast=i;save();return L[i]}
+function awDoneDress(o){if(!AW||AW.ph!=='done'||o.querySelector('.awq'))return;const t=today(),q=AW.wq||(AW.wq=wqPick()),n=(AW.d.ex||[]).length,prs=(S.prl||[]).filter(x=>x.d===t&&x.k&&x.k[0]!=='_').length;
+ let sets=0;try{(AW.d.ex||[]).forEach(x=>{const h=xHist(x),s=h.filter(y=>y.d===t);s.forEach(y=>sets+=(y.s||[]).length)})}catch(_){}
+ o.className='done';o.innerHTML=`<div class="awq"><div class="k">Workout complete</div><blockquote>${esc(q[0])}</blockquote><cite>${esc(q[1])}</cite>
+ <div class="st"><span><b>${n}</b>exercise${n===1?'':'s'}</span>${sets?`<span><b>${sets}</b>set${sets===1?'':'s'}</span>`:''}${prs?`<span><b>${prs}</b>personal best${prs===1?'':'s'}</span>`:''}</div>
+ <button class="btn big on" data-a="awx">Done</button>${prs?'<button class="btn big" data-a="awach">See your bests</button>':''}</div>`}
+window.addEventListener('click',e=>{const el=e.target.closest('#aw [data-a=awach]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();AW=null;awr();render();fsOpen('ach')},true);
+// hook both into the guided screen's dressing (it redraws after its fade)
+{const _d=awDress;awDress=function(){_d.apply(this,arguments);try{const o=$('#aw');if(!o||!AW)return;awUpDress(o);awDoneDress(o)}catch(_){}}}
+
+/* ---------- 3. scores on scan, in the preview too ---------- */
+// the preview has no camera and can't reach Open Food Facts, so Barcode offers photos of the pack; the result goes to the
+// usual "add this food" sheet, which shows the score
+{const _br=bcRender;bcRender=function(){const r=_br.apply(this,arguments);try{const o=$('#bcs');if(PREVIEW&&BC&&BC.mode==='food'&&o&&/nocam|off|nf/.test(BC.st)&&!o.querySelector('[data-a=rtphoto]')){const box=o.querySelector('.bcp');if(box){const h=box.querySelector('h2'),pp=h&&h.nextElementSibling&&h.nextElementSibling.tagName==='P'?h.nextElementSibling:h;
+  const why=BC.st==='nocam'?'The preview can’t use the camera. Photos of the front, nutrition table and ingredients work instead.':'The preview can’t reach Open Food Facts. Photos of the pack work instead.';
+  if(BC.st==='off'&&h)h.textContent='Can’t look it up here';if(BC.st==='off'){const p2=box.querySelector('p');if(p2&&p2!==pp)p2.remove()}
+  pp.insertAdjacentHTML('afterend',`<div class="rtph"><button class="btn on" data-a="rtphoto">Read the pack from photos</button><small>${why}</small></div>`);box.querySelectorAll('.btn.on:not([data-a=rtphoto])').forEach(b=>b.classList.remove('on'))}}}catch(_){}return r}}
+{const _g=rtPhotoGo;rtPhotoGo=async function(files){if(!BC||BC.mode!=='food')return _g.apply(this,arguments);
+ // same reading as Rate, then hand the product to the usual food sheet
+ const smp=await rtSample();if(!smp){toast('Reading photos needs Claude, which isn’t available here.');return}let lim=null;try{lim=await smp.limits()}catch(_){}if(!lim||!lim.images){toast('This view can’t send photos to Claude.');return}
+ files=files.slice(0,Math.min(3,lim.images.maxCount||3));bcStop();BC.st='rtai';bcRender();
+ try{const P=await smp.json(RTPH_PROMPT,{images:files,modelTier:'default'});if(!BC)return;if(!P||P.error){BC.st='rterr';BC.err='Swell couldn’t read a product from those photos. Try the front and the nutrition table, close up and in good light.';bcRender();return}
+  const prod={...P,brands:P.brands||'',nutriments:Object.fromEntries(Object.entries(P.nutriments||{}).filter(([,v])=>v!=null&&v!==''))};const p=bcProd({product:prod});p.at=Date.now();p.photo=1;const code='photo-'+Date.now().toString(36);BC.code=code;S.bc=S.bc||{};S.bc[code]=p;bcDone(p)}
+ catch(e){if(!BC)return;BC.st='rterr';BC.err=e&&e.code==='rate_limited'?'Claude is busy right now. Try again in a minute.':e&&/not_granted|sampling_disabled|capability_disabled|not_declared/.test(e.code||'')?'Claude isn’t allowed for this preview. You can allow it from the page’s Permissions menu.':'Something went wrong reading the photos. Try again.';bcRender()}}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push(
+ {i:'<path d="M5 12h14M13 6l6 6-6 6"/>',h:'Up next',p:'Guided workouts skip the directions: you see what’s up next, the sets and what to load, then go.'},
+ {i:'<path d="M7 7h4v4H7zM13 7h4v4h-4M7 15c0 2 1 3 3 3M13 15c0 2 1 3 3 3"/>',h:'A line to finish on',p:'Finish a workout and get one of 60-odd famous lines with a gym twist. Shakespeare included.'},
+ {i:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.3 2.3 4.7-5"/>',h:'Scores when you scan',p:'Scan a barcode or a label and the product’s score is right there, so there’s no separate Rate it button.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
