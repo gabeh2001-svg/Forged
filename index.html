@@ -10024,7 +10024,7 @@ async function rtPhotoGo(files){const smp=await rtSample();if(!smp){toast('Ratin
   const prod={...P,brands:P.brands||'',nutriments:Object.fromEntries(Object.entries(P.nutriments||{}).filter(([,v])=>v!=null&&v!==''))};
   const p=bcProd({product:prod});p.at=Date.now();p.photo=1;const code='photo-'+Date.now().toString(36);bcClose();
   rtOpen({R:{...p.rt},code,log:p.k100!=null||p.ks!=null,p});
-  setTimeout(()=>{try{const h=$('#rt .rth small');if(h&&!h.dataset.ph){h.dataset.ph=1;h.insertAdjacentText('beforeend',' · Read from your photos'+(P.missing?`. Couldn’t read: ${P.missing}`:''))}}catch(_){}},60)}
+  setTimeout(()=>{try{const h=$('#rt .rth2 small')||$('#rt .rth small');if(h&&!h.dataset.ph){h.dataset.ph=1;h.insertAdjacentText('beforeend',' · Read from your photos'+(P.missing?`. Couldn’t read: ${P.missing}`:''))}}catch(_){}},60)}
  catch(e){if(!BC)return;const c=e&&e.code;if(c==='cancelled')return;BC.st='rterr';
   BC.err=c==='not_granted'||c==='sampling_disabled'||c==='capability_disabled'||c==='not_declared'?'Claude isn’t allowed for this preview, so photos can’t be read. You can allow it from the page’s Permissions menu.':c==='rate_limited'?'Claude is busy right now. Try again in a minute.':c==='image_rejected'?'Those photos couldn’t be used. Try smaller JPEG or PNG photos.':c==='refused'?'Claude couldn’t read those photos. Try different ones.':'Something went wrong reading the photos. Try again.';bcRender()}}
 // the scanner's panels, in Rate mode, in the preview: offer photos where the barcode route can't work
@@ -10412,6 +10412,117 @@ document.addEventListener('pointerup',e=>{const l=document.querySelector('#app .
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="m5 12 5 5 9-10"/>',h:'Quieter',p:'Fewer pop-up messages. What you press gives a little tick instead, and Undo appears as a pill at the bottom when you need it.'},
  {i:'<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/>',h:'Nutrients, live',p:'The Nutrients widget counts the vitamins and minerals you’ve hit today and shows what’s closest next.'})}
+
+/* ===== v133: one scan page: the score, Add to today and Save for later, then healthier swaps to swipe through, with the
+   detail folded away underneath ===== */
+// Research notes for this block:
+// - Decision first, detail on demand: the score, a one-line reason and the two actions sit at the top; the breakdown is
+//   in sections that open in place and push the rest down (progressive disclosure, NN/g; accordions on mobile keep
+//   people oriented when they open in place).
+// - Swaps work better than warnings: suggesting a healthier product from the same category at the point of choice
+//   shifts purchases more than information alone (Hollands et al. 2019, Cochrane review of choice-architecture nudges;
+//   Yuka's "better alternatives" pattern), so swaps come before the detail.
+// - Swaps are drawn from Open Food Facts (same category, Nutri-Score A to C, sold in the UK), rated by Swell, highest
+//   first. Prices come from Open Prices (Open Food Facts' crowd-sourced price records, GBP only) when someone has logged
+//   one, otherwise from your own shopping history; no price is shown rather than a guessed one.
+// - A carousel shows about three tiles with the next one peeking, which signals that it scrolls (NN/g "Carousels on
+//   mobile", from memory).
+(function(){const st=document.createElement('style');st.textContent=`
+#rt .rtw2{flex:1;min-width:0;width:100%;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;color:#F3F1EC;max-width:560px;margin:0 auto;padding:calc(56px + env(safe-area-inset-top,0px)) 16px calc(36px + env(safe-area-inset-bottom,0px))}
+#rt .rth2{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}
+#rt .rth2 .im{width:64px;height:64px;border-radius:16px;background:#F3F1EC center/contain no-repeat;display:grid;place-items:center;font-size:24px;font-weight:800;color:#141412;overflow:hidden}
+#rt .rth2 b{display:block;font-size:20px;font-weight:800;line-height:1.2}#rt .rth2 small{display:block;color:rgba(243,241,236,.65);font-size:13.5px;margin-top:3px}
+#rt .rtsc{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center;margin:18px 0 6px}
+#rt .rtsc .rgw{position:relative;width:96px;height:96px}#rt .rtsc .rgw svg{width:96px;height:96px;transform:none!important;animation:none!important}#rt .rtsc .rgw .rn{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;font-weight:800}
+#rt .rtsc .band{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}#rt .rtsc p{margin:4px 0 0;font-size:15px;line-height:1.4;color:rgba(243,241,236,.85)}
+#rt .rtact{display:grid;grid-template-columns:1.4fr 1fr;gap:8px;margin:14px 0 4px}#rt .rtact .btn{margin:0}
+#rt .rtact .btn.sv.on{background:rgba(127,214,160,.16);color:#7FD6A0;border-color:rgba(127,214,160,.4)}
+#rt h3.rt3{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(243,241,236,.6);margin:22px 2px 8px;display:flex;justify-content:space-between}
+#rt h3.rt3 span{letter-spacing:0;text-transform:none;font-weight:600}
+#rt .rtcar{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px;scroll-padding:0 16px}#rt .rtcar::-webkit-scrollbar{display:none}
+#rt .rttile{all:unset;box-sizing:border-box;flex:0 0 calc((100% - 32px - 16px)/3.25);min-width:104px;scroll-snap-align:start;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:8px;display:flex;flex-direction:column;gap:5px;cursor:pointer}
+#rt .rttile .pic{position:relative;aspect-ratio:1;border-radius:11px;background:#F3F1EC center/contain no-repeat;display:grid;place-items:center;font-size:22px;font-weight:800;color:#141412}
+#rt .rttile .pic i{position:absolute;top:5px;right:5px;font-style:normal;font-size:11.5px;font-weight:800;color:#fff;padding:2px 6px;border-radius:7px}
+#rt .rttile b{font-size:12.5px;font-weight:700;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:31px}
+#rt .rttile small{font-size:11.5px;color:rgba(243,241,236,.65);line-height:1.3}#rt .rttile em{font-style:normal;font-size:13px;font-weight:800;color:#F3F1EC}
+#rt .rttile.sk .pic,#rt .rttile.sk b,#rt .rttile.sk small{background:rgba(255,255,255,.08);color:transparent;border-radius:8px}
+#rt .rtnone{font-size:14px;color:rgba(243,241,236,.7);margin:0 2px}
+#rt details.rtd{border-top:1px solid rgba(255,255,255,.09)}#rt details.rtd:last-of-type{border-bottom:1px solid rgba(255,255,255,.09)}
+#rt details.rtd summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:15px 2px;font-weight:700;font-size:15.5px}
+#rt details.rtd summary::-webkit-details-marker{display:none}#rt details.rtd summary em{font-style:normal;font-weight:500;font-size:13.5px;color:rgba(243,241,236,.6);margin-left:auto;margin-right:10px}
+#rt details.rtd summary::after{content:"";width:9px;height:9px;border-right:2px solid rgba(243,241,236,.6);border-bottom:2px solid rgba(243,241,236,.6);transform:rotate(45deg) translateY(-3px);transition:transform .25s}
+#rt details.rtd[open] summary::after{transform:rotate(225deg) translateY(-1px)}
+#rt details.rtd .in{padding:0 0 14px}
+#rt .rtnt{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14.5px}#rt .rtnt span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums;color:rgba(243,241,236,.85)}#rt .rtnt .sub{padding-left:12px;color:rgba(243,241,236,.65)}
+.svd2 .row3{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.08)}.svd2 .row3:first-of-type{border-top:0}
+.svd2 .row3 .sc{font-size:12px;font-weight:800;color:#fff;padding:3px 7px;border-radius:8px}.svd2 .row3 b{font-weight:600;font-size:14.5px}.svd2 .row3 small{display:block;color:var(--dim);font-size:12.5px}`;document.head.appendChild(st)})();
+
+const rtInit=n=>esc(String(n||'?').trim().charAt(0).toUpperCase());
+const rtPic=(img,n,cls)=>img&&!PREVIEW?`<span class="${cls}" style="background-image:url('${esc(img)}')"></span>`:`<span class="${cls}">${rtInit(n)}</span>`;
+const rtPer=R=>R.drink?'100 ml':'100 g';
+// a price for a product: Open Prices (GBP) if someone logged one, else what you've paid before
+const RTPRICE={};
+function rtShopPrice(n){try{const k=String(n||'').toLowerCase();for(const st of (SHD().stores||[]))for(const x of (st.items||[]))if(x.p&&k&&String(x.n||'').toLowerCase()===k)return+x.p;for(const h of (SHD().hist||[]))for(const x of (h.items||[]))if(x.p&&String(x.n||'').toLowerCase()===k)return+x.p}catch(_){}return null}
+async function rtPrices(codes){codes=codes.filter(c=>c&&/^\d{8,14}$/.test(c)&&RTPRICE[c]===undefined);if(!codes.length||PREVIEW||navigator.onLine===false)return;
+ try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),7000);const r=await fetch(`https://prices.openfoodfacts.org/api/v1/prices?product_code__in=${codes.join(',')}&currency=GBP&order_by=-date&size=60`,{signal:ac.signal,headers:{Accept:'application/json'}});clearTimeout(to);
+  const j=await r.json();codes.forEach(c=>RTPRICE[c]=null);(j.items||[]).forEach(x=>{if(x&&x.product_code&&RTPRICE[x.product_code]==null&&+x.price>0)RTPRICE[x.product_code]=+x.price})}catch(_){}}
+// the page
+rtOpen=function(o){RTC=o;const O=rtScore(o.R),[bn,bc]=RTBAND(O.score),R=o.R;let i=0;const adds=O.adds.filter(a=>a.r>=0);
+ const lc=x=>x.sub.charAt(0).toLowerCase()+x.sub.slice(1);let bad=O.neg.filter(x=>x.lv===2);if(!bad.length)bad=O.neg.filter(x=>x.lv===1&&x.k!=='tst'&&x.k!=='nova');const good=O.pos.filter(x=>x.k!=='add'&&!(R.drink&&/sf|salt|fat/.test(x.k)));
+ const B=andL(bad.slice(0,2).map(lc)),G=andL(good.slice(0,2).map(lc));let v=O.score>=50?(G?G+(B?', but '+B:''):B):(B?B+(G?', though '+lc(good[0]):''):G);v=v?v.charAt(0).toUpperCase()+v.slice(1)+'.':'';
+ const saved=(S.rsave||[]).some(x=>x.c===o.code),canLog=!!(o.p&&(o.p.k100!=null||o.p.ks!=null)),swaps=O.score<75&&R.kind!=='supp'&&R.kind!=='protein';
+ const f=(x,d=1)=>x==null?'–':(Math.round(x*Math.pow(10,d))/Math.pow(10,d))+'';
+ const nut=`<div class="rtnt"><span>Energy</span><span>${R.kcal!=null?Math.round(R.kcal)+' kcal':'–'}</span><span>Protein</span><span>${f(R.prot)} g</span><span>Carbs</span><span>${f(R.carb)} g</span><span class="sub">of which sugars</span><span>${f(R.sug)} g</span><span>Fat</span><span>${f(R.fat)} g</span><span class="sub">of which saturates</span><span>${f(R.sf)} g</span><span>Fibre</span><span>${f(R.fib)} g</span><span>Salt</span><span>${f(R.salt,2)} g</span></div>`;
+ const missH=O.miss.length?`<div class="rtmiss" style="margin-top:10px">${O.miss.map(k=>`<label>${{sug:'Sugars',sf:'Saturates',salt:'Salt',kcal:'Calories',prot:'Protein'}[k]} per ${rtPer(R)}<input type="number" inputmode="decimal" data-rtm="${k}" placeholder="${k==='kcal'?'kcal':'g'}"></label>`).join('')}</div>`:'';
+ let o2=$('#rt');if(!o2){o2=document.createElement('div');o2.id='rt';o2.setAttribute('role','dialog');o2.setAttribute('aria-label','Product rating');document.body.appendChild(o2);try{lockOn()}catch(_){}}
+ o2.innerHTML=`<button class="rtx" data-a="rtx" aria-label="Close">×</button><div class="rtw2">
+ <div class="rth2">${rtPic(R.img,R.n,'im')}<div><b>${esc(R.n)}</b><small>${esc([R.b,R.kind==='protein'?'Protein powder':R.kind==='supp'?'Supplement':R.drink?'Drink':''].filter(Boolean).join(' · '))}</small></div></div>
+ <div class="rtsc"><div class="rgw">${rtRing(O.score,bc,1).replace('<svg ','<svg style="width:96px;height:96px" ')}<span class="rn" data-rtn>${LRM()?O.score:0}</span></div><div><span class="band" style="color:${bc}">${bn}${O.miss.length?' · partial':''}</span>${v?`<p>${esc(v)}</p>`:''}</div></div>
+ <div class="rtact">${canLog?'<button class="btn big on" data-a="rtlog">Add to today</button>':'<button class="btn big on" data-a="rtx">Done</button>'}<button class="btn big sv ${saved?'on':''}" data-a="svlater" aria-pressed="${saved}">${saved?'Saved':'Save for later'}</button></div>
+ ${swaps?`<h3 class="rt3">Better swaps<span data-rtsw>Looking…</span></h3><div class="rtcar" data-rtalt>${[0,1,2].map(()=>'<div class="rttile sk"><span class="pic"></span><b>.</b><small>.</small></div>').join('')}</div>`:''}
+ <div style="margin-top:18px">
+ <details class="rtd"><summary>Why it scored ${O.score}<em>${O.neg.length} to watch</em></summary><div class="in">${O.neg.sort((a,b)=>b.lv-a.lv).map(x=>rtRowH(x,i++)).join('')}${O.pos.map(x=>rtRowH(x,i++)).join('')}${missH}</div></details>
+ <details class="rtd"><summary>Nutrition<em>per ${rtPer(R)}</em></summary><div class="in">${nut}</div></details>
+ ${adds.length?`<details class="rtd"><summary>Additives<em>${adds.length}</em></summary><div class="in">${adds.map(a=>`<button class="rtrow" data-a="rtrow"><i style="background:${ADDC[a.r]}"></i><b>${esc(a.c.toUpperCase())} ${esc(a.n)}</b><em>${ADDN[a.r]}</em>${a.w?`<div class="det">${esc(a.w)}</div>`:''}</button>`).join('')}</div></details>`:''}
+ <details class="rtd"><summary>What to look for</summary><div class="in"><ul class="rtlook">${rtLook(R).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></details>
+ </div><p class="rtnote">${O.note?esc(O.note)+' ':''}Swell’s rating weighs nutrition (Nutri-Score 2023) 60%, additives 30% and organic 10%. It’s a guide, not medical advice.</p></div>`;
+ if(!LRM()){const arc=o2.querySelector('.rtarc'),n=o2.querySelector('[data-rtn]'),C=+arc.dataset.c,t0=performance.now(),D=850;const fr=t=>{const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);arc.setAttribute('stroke-dashoffset',C*(1-O.score/100*e));n.textContent=Math.round(O.score*e);if(k<1&&o2.isConnected)requestAnimationFrame(fr)};requestAnimationFrame(fr)}else{const arc=o2.querySelector('.rtarc');arc.setAttribute('stroke-dashoffset',+arc.dataset.c*(1-O.score/100))}
+ {const w2=o2.querySelector('.rtw2');if(w2)w2.scrollTop=0}rtHist(o,O.score);if(swaps)rtAlts(o,O.score)};
+// swaps: more of them, with the raw product kept so a swap can be added to today
+rtAlts=async function(o,mine){const cats=(o.R.cat||[]).filter(c=>/^en:/.test(c));if(PREVIEW&&RTSWAPDEMO(o))return;if(!cats.length||navigator.onLine===false)return rtAltDone(null);
+ RTQ=RTQ.filter(t=>Date.now()-t<60e3);if(RTQ.length>=8)return rtAltDone(null);let best=[];
+ for(const c of cats.slice(-2).reverse()){RTQ.push(Date.now());try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),8000);
+   const r=await fetch(`https://world.openfoodfacts.org/api/v2/search?categories_tags=${encodeURIComponent(c)}&countries_tags=en:united-kingdom&nutrition_grades_tags=a,b,c&fields=code,product_name,product_name_en,brands,nutriscore_grade,nutriscore_score,additives_tags,labels_tags,nutriments,categories_tags,image_front_small_url,nova_group,serving_quantity,serving_size,quantity&sort_by=popularity_key&page_size=40`,{signal:ac.signal});clearTimeout(to);
+   const j=await r.json();best=(j.products||[]).filter(p=>p.code!==o.code&&(p.product_name||p.product_name_en)).map(p=>{const R=rtFrom(p);R.kind=o.R.kind;R.drink=o.R.drink;return{code:p.code,R,raw:p,s:rtScore(R).score}}).filter(x=>x.s>=Math.max(50,mine+10)).sort((a,b)=>b.s-a.s).slice(0,8)}catch(_){}
+  if(best.length)break}
+ if(RTC!==o)return;rtAltDone(best);if(best.length){await rtPrices(best.map(x=>x.code));if(RTC===o)rtAltDone(best)}};
+rtAltDone=function(best){const b=$('#rt [data-rtalt]'),h=$('#rt [data-rtsw]');if(!b)return;if(!best||!best.length){b.outerHTML='<p class="rtnone">No better-rated swaps found for this one yet. “What to look for” below has tips.</p>';if(h)h.textContent='';return}
+ RTA=best;if(h)h.textContent='Swipe for more';b.innerHTML=best.map((x,i)=>{const [,bc]=RTBAND(x.s),pr=x.price!=null?x.price:RTPRICE[x.code]!=null?RTPRICE[x.code]:rtShopPrice(x.R.n);
+  return`<button class="rttile" data-a="swapo" data-i="${i}">${rtPic(x.R.img,x.R.n,'pic').replace('</span>',`<i style="background:${bc}">${x.s}</i></span>`)}<b>${esc(x.R.n)}</b><small>${x.R.kcal!=null?Math.round(x.R.kcal)+' kcal':''}${x.R.prot!=null?` · ${Math.round(x.R.prot)}g protein`:''}</small>${pr!=null?`<em>${money(pr)}</em>`:''}</button>`}).join('')};
+// tapping a swap opens it on the same page, ready to add
+window.addEventListener('click',e=>{const el=e.target.closest('#rt [data-a=swapo]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const x=RTA[+el.dataset.i];if(!x)return;let p=null;try{p=x.raw?bcProd({product:x.raw}):null;if(p){p.at=Date.now();S.bc=S.bc||{};S.bc[x.code]=p}}catch(_){}
+ rtOpen({R:x.R,code:x.code,log:!!p,p,alt:1})},true);
+// Save for later
+window.addEventListener('click',e=>{const el=e.target.closest('#rt [data-a=svlater]');if(!el||!RTC)return;e.stopImmediatePropagation();e.preventDefault();const o=RTC,L=S.rsave=S.rsave||[],k=L.findIndex(x=>x.c===o.code);
+ if(k>=0)L.splice(k,1);else L.unshift({c:o.code,n:o.R.n,b:o.R.b||'',s:rtScore(o.R).score,R:o.R,p:o.p||null,at:Date.now()});S.rsave=L.slice(0,40);save();const on=k<0;el.classList.toggle('on',on);el.textContent=on?'Saved':'Save for later';el.setAttribute('aria-pressed',on);try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}},true);
+// scanning a barcode for food now opens the rated page first; Add to today goes on to the portion sheet
+let RTLOG=0;
+{const _d=bcDone;bcDone=function(p){try{if(!RTLOG&&BC&&BC.mode==='food'&&p&&p.rt){const code=BC.code;bcClose();rtOpen({R:{...p.rt},code,log:true,p});return}}catch(_){}return _d.apply(this,arguments)}}
+window.addEventListener('pointerdown',e=>{const el=e.target.closest('#rt [data-a=rtlog]');if(!el)return;RTLOG=1;setTimeout(()=>RTLOG=0,1500)},true);
+// the Diet page: things you saved for later
+{const _d=diet;diet=function(){const h=_d.apply(this,arguments);try{const L=S.rsave||[];if(!L.length)return h;const T=document.createElement('template');T.innerHTML=h;const at=T.content.querySelector('.card.mfc')||T.content.querySelector('.card.fpc');if(!at)return h;
+  at.insertAdjacentHTML('afterend',`<div class="card svd2"><h2>Saved for later</h2>${L.slice(0,6).map((x,i)=>{const [,bc]=RTBAND(x.s);return`<button class="row3" data-a="rtsvopen" data-i="${i}" style="width:100%;background:none;border:0;color:inherit;font:inherit;text-align:left"><span class="sc" style="background:${bc}">${x.s}</span><span><b>${esc(x.n)}</b>${x.b?`<small>${esc(x.b)}</small>`:''}</span><span class="sm" style="margin:0">›</span></button>`}).join('')}</div>`);return T.innerHTML}catch(_){return h}}}
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=rtsvopen]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const x=(S.rsave||[])[+el.dataset.i];if(x)rtOpen({R:x.R,code:x.c,log:!!x.p,p:x.p})},true);
+// the Claude preview: sample swaps (it can't reach Open Food Facts)
+const RTSWAP={snack:[['Oat and nut bar',380,9,15,3.1,12,6,.1,58],['Fruit and nut bar, no added sugar',400,10,20,4,18,6,.02,79],['Protein bar, low sugar',360,30,12,5,3,9,.4,82],['Rice cakes, dark chocolate',470,7,22,13,20,3,.1,55]],
+ cola:[['Cola, zero sugar',.4,0,0,0,0,0,.02,64],['Sparkling water with lime',0,0,0,0,0,0,0,100],['Kombucha, ginger',18,0,0,0,4,0,0,86],['Sparkling apple and elderflower, no added sugar',19,0,0,0,4.5,0,0,72]],
+ yog:[['Natural Greek style yoghurt, 0% fat',57,10,0,0,3.6,0,.1,90],['Skyr, natural',63,11,.2,.1,4,0,.1,92]]};
+function RTSWAPDEMO(o){const c=(o.R.cat||[]).join(' '),k=/colas|sodas|carbonated/.test(c)?'cola':/bars|snacks/.test(c)?'snack':/yogurts|dairies/.test(c)?'yog':null;if(!k)return false;const pz=[.85,1.2,1.5,.9];
+ const best=RTSWAP[k].map(([n,kc,p,f,sf,sug,fib,salt,s],i)=>{const raw={product_name:n,brands:'Sample (preview)',categories_tags:o.R.cat,nutriments:{'energy-kcal_100g':kc,proteins_100g:p,fat_100g:f,'saturated-fat_100g':sf,sugars_100g:sug,fiber_100g:fib,salt_100g:salt,carbohydrates_100g:sug+5},nova_group:s>80?1:3,serving_quantity:k==='cola'?330:k==='yog'?150:35,serving_size:k==='cola'?'1 can':k==='yog'?'1 pot':'1 bar'};
+  const R=rtFrom(raw);R.kind=o.R.kind;R.drink=o.R.drink;return{code:'swap'+k+i,R,raw,s:Math.max(rtScore(R).score,s>50?Math.min(95,s):s),price:pz[i]}}).filter(x=>x.s>=Math.max(50,rtScore(o.R).score+10)).sort((a,b)=>b.s-a.s);
+ setTimeout(()=>{if(RTC===o)rtAltDone(best)},450);return true}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){const it=R.items.find(x=>x.h==='Scores when you scan');if(it)it.p='Scan a barcode and you get one page: the score, Add to today, Save for later, then healthier swaps to swipe through, with prices where they’re known.'}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
