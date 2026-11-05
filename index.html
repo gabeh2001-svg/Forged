@@ -10823,6 +10823,55 @@ window.addEventListener('click',e=>{const el=e.target.closest('[data-a=mwbrt]');
  {i:'<path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12"/>',h:'Strength levels',p:'Achievements now shows your estimated one-rep max for the big lifts and where it sits from beginner to elite.'},
  {i:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8"/>',h:'Mood, energy and breathing',p:'An optional Mood widget, and guided breathing in the Timer tab. You can also finish a workout with a breathing session.'})}
 
+/* ===== v136: the workout card checks today's session against your recovery map: a warning when it hits muscles that
+   are still recovering, and a one-tap swap to the session that suits today best ===== */
+// Research notes for this block:
+// - Training a muscle again before it has recovered lowers performance in that session; 48 to 72 hours between hard
+//   sessions for the same muscle is the usual guidance (NSCA Essentials; McLester et al. 2003, from memory), longer
+//   after sets to failure (Morán-Navarro et al. 2017, Eur J Appl Physiol). So "still recovering" means a primary muscle
+//   at 60% or more of its recovery time left (the red end of the map).
+// - Going lighter is a fair alternative to swapping: adjusting load to how recovered you are (autoregulation, e.g.
+//   reps in reserve) supports progress as well as fixed plans (Helms et al. 2016; Zourdos et al. 2016, from memory).
+// - A suggestion only appears when another session in your plan is clearly fresher (at least 20 points), so it doesn't
+//   nag over small differences; it never changes anything without a tap, and swapping just trades the two days.
+(function(){const st=document.createElement('style');st.textContent=`
+.wfit{margin-top:10px;padding:10px 12px;border-radius:14px;background:rgba(229,72,77,.1);border:1px solid rgba(229,72,77,.32);font-size:13.5px;line-height:1.4;color:#F3F1EC}
+.wfit.ok{background:rgba(127,214,160,.08);border-color:rgba(127,214,160,.28)}
+.wfit b{font-weight:800}.wfit .row5{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.wfit .row5 button{all:unset;cursor:pointer;font-size:13px;font-weight:800;padding:7px 12px;border-radius:10px;background:#F3F1EC;color:#141412}
+.wfit .row5 button.gh{background:rgba(255,255,255,.1);color:#F3F1EC}
+.mwfit{font-size:13px;line-height:1.4;margin:-4px 2px 12px;color:#F2A9A0}.mwfit.ok{color:#9AD38A}`;document.head.appendChild(st)})();
+
+// how well a session suits today: 100 = everything it works is fresh
+function muFit(day,M){M=M||muLoad();const w={};(day&&day.ex||[]).forEach(e=>{const m=muOf(e);if(!m)return;const s=+e.s||3;m.p.forEach(k=>w[k]=(w[k]||0)+s);(m.s||[]).forEach(k=>w[k]=(w[k]||0)+s*.5)});
+ const ks=Object.keys(w);if(!ks.length)return null;let tot=0,fresh=0;ks.forEach(k=>{const lv=(M.m[k]||{}).lv||0;tot+=w[k];fresh+=w[k]*(1-lv)});
+ const prim=new Set();(day.ex||[]).forEach(e=>{const m=muOf(e);if(m)m.p.forEach(k=>prim.add(k))});
+ const red=[...prim].filter(k=>((M.m[k]||{}).lv||0)>=.6).sort((a,b)=>M.m[b].lv-M.m[a].lv);
+ return{score:Math.round(fresh/tot*100),red,ready:red.length?Math.max(...red.map(k=>M.m[k].ready)):0}}
+function muBest(p,M,skip){let best=null;(p&&p.days||[]).forEach((d,i)=>{if(d===skip)return;const f=muFit(d,M);if(f&&(!best||f.score>best.f.score))best={d,i,f}});return best}
+const MUGRP={chest:'chest',uchest:'chest',fdelt:'shoulders',sdelt:'shoulders',rdelt:'shoulders'};const muNames=ks=>{const n=[...new Set(ks.map(k=>MUGRP[k]||MUS[k][0].toLowerCase()))];return n.length>3?n.slice(0,3).join(', ')+' and more':n.length>1?n.slice(0,-1).join(', ')+' and '+n[n.length-1]:n[0]||''};
+function muAdvice(){const t=today();if(t!==realToday())return null;let p=null,d=null;try{p=activePlan();d=dayWork(t)}catch(_){}if(!p||!d||(S.fd||{})[t])return null;
+ const M=muLoad(),f=muFit(d,M);if(!f)return null;const alt=muBest(p,M,d);const better=alt&&alt.f.score>=f.score+20&&!alt.f.red.length?alt:null;return{d,f,alt:better,p}}
+// the card on Home and the Workout page
+{const _w=wHero;wHero=function(){let h=_w.apply(this,arguments);try{const A=muAdvice();if(!A||!A.f.red.length)return h;const nm=muNames(A.f.red),cap=nm.charAt(0).toUpperCase()+nm.slice(1);
+  const box=`<div class="wfit"><b>${esc(cap)} ${A.f.red.length===1&&!/ and /.test(nm)?'is':'are'} still recovering</b> (ready ${muReady(A.f.ready)}). ${A.alt?`${esc(A.alt.d.name)} suits today better: ${A.alt.f.score}% fresh.`:'Go a little lighter today, or leave a rep or two in the tank.'}
+   <div class="row5">${A.alt?`<button data-a="muswap" data-i="${A.alt.i}">Swap to ${esc(A.alt.d.name)}</button>`:''}<button class="gh" data-a="muopen">See recovery</button></div></div>`;
+  return h.replace(/(<div class="whp">[\s\S]*)(<\/div><\/div>)$/,`$1${box}$2`)}catch(_){return h}}}
+// swapping: today's session trades places with the next day that has the fresher one
+window.addEventListener('click',e=>{const el=e.target.closest('[data-a=muswap]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const p=activePlan(),t=realToday(),i=+el.dataset.i;if(!p)return;ensureSched();
+ const L=p.days.length,cur=S.sch[t];let swapped=false;for(let k=1;k<=14;k++){const d=addDays(t,k),s=S.sch[d];if(s!=null&&s%L===i){S.sch[d]=cur;S.sch[t]=s;swapped=true;break}}
+ if(!swapped){const base=cur!=null?cur-((cur%L+L)%L):0;S.sch[t]=base+i}
+ save();try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}render();try{pressOk()}catch(_){}},true);
+// the start sheet: how the chosen session fits today
+{const _m=mwr;mwr=function(){_m.apply(this,arguments);try{const o=$('#mw');if(!o)return;const old=o.querySelector('.mwfit');if(old)old.remove();const k=W.k||defK();if(!k)return;const [pi,di]=k.split('|'),pl=S.plans.find(x=>x.id===pi),d=pl&&pl.days[+di];if(!d)return;
+  const M=muLoad(),f=muFit(d,M);if(!f)return;const sel=o.querySelector('label');if(!sel)return;
+  sel.insertAdjacentHTML('afterend',f.red.length?`<p class="mwfit">${esc(muNames(f.red).replace(/^./,c=>c.toUpperCase()))} still recovering (ready ${muReady(f.ready)}). ${(()=>{const b=muBest(pl,M,d);return b&&b.f.score>=f.score+20&&!b.f.red.length?`${esc(b.d.name)} is fresher.`:''})()}</p>`:`<p class="mwfit ok">Everything this session works is ready (${f.score}% fresh).</p>`)}catch(_){}}}
+document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('#mw select[data-b="W.k"]'))setTimeout(()=>{try{mwr()}catch(_){}},0)});
+// rest days: which session would suit if you train anyway
+{const _w=wHero;wHero=function(){let h=_w.apply(this,arguments);try{const t=today();if(t!==realToday())return h;let p=null,d=null;try{p=activePlan();d=dayWork(t)}catch(_){}if(!p||d||!/Rest day/.test(h))return h;const b=muBest(p,muLoad());if(!b||b.f.score<80)return h;
+  return h.replace(/(<div class="whp">[\s\S]*)(<\/div><\/div>)$/,`$1<div class="wfit ok">If you train anyway, <b>${esc(b.d.name)}</b> is ${b.f.score}% fresh.</div>$2`)}catch(_){return h}}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/>',h:'Train what’s fresh',p:'If today’s workout hits muscles that are still recovering, the workout card says so and offers to swap to the session that suits today better.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
