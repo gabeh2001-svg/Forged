@@ -1644,7 +1644,7 @@ const agoTxt=d=>{if(!d)return'Never backed up';const n=Math.round((new Date(real
 const RPI='<path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/>';
 {const _h=home;home=function(){return _h.apply(this,arguments).replace('<div style="display:flex;justify-content:center"><button class="btn setb" data-a="settings">',`<div class="pills2"><button class="btn setb" data-a="reports">${ico(RPI)}Reports</button><button class="btn setb" data-a="settings">`)}}
 function repList(kind){const R=Object.values(S.reports||{}).sort((a,b)=>a.ym<b.ym?1:-1),cur=ymOf(realToday()),live=mrep(cur);
- const sub=r=>kind==='diet'?`${r.logged} days logged, ${r.onT} on target${r.avgK?`, ${fmtN(r.avgK)} kcal a day`:''}`:kind==='work'?`${r.done} workout${r.done===1?'':'s'}${r.planned?` of ${r.planned} planned`:''}`:`${r.done} workouts, ${r.onT} days on target`;
+ const sub=r=>kind==='diet'?`${r.logged} day${r.logged===1?"":"s"} logged, ${r.onT} on target${r.avgK?`, ${fmtN(r.avgK)} kcal a day`:''}`:kind==='work'?`${r.done} workout${r.done===1?'':'s'}${r.planned?` of ${r.planned} planned`:''}`:`${r.done} workouts, ${r.onT} days on target`;
  const row=(r,lab,act)=>`<button class="rpr" data-a="${act}" data-i="${r.ym||r.y}" data-k="${kind}"><i>${r.ym?monName(r.ym).slice(0,3):'’'+String(r.y).slice(2)}</i><span><b>${lab}</b><small>${sub(r)}</small></span><span>›</span></button>`;
  const yrs=[...new Set(R.map(r=>r.ym.slice(0,4)))];
  return`<div class="rpl">${row(live,monName(cur)+' so far','wrm')}${R.map(r=>row(r,r.label,'wrm')).join('')}${kind==='all'?yrs.map(y=>{const Y=yrep(y);return Y&&Y.months>=2?row(Y,`Your ${y}`+(y===cur.slice(0,4)?' so far':''),'wry'):''}).join(''):''}</div>`}
@@ -10871,6 +10871,153 @@ document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('#m
   return h.replace(/(<div class="whp">[\s\S]*)(<\/div><\/div>)$/,`$1<div class="wfit ok">If you train anyway, <b>${esc(b.d.name)}</b> is ${b.f.score}% fresh.</div>$2`)}catch(_){return h}}}
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<path d="M4 12h16M14 6l6 6-6 6"/>',h:'Train what’s fresh',p:'If today’s workout hits muscles that are still recovering, the workout card says so and offers to swap to the session that suits today better.'})}
+
+/* ===== v137: a design pass over the shared pieces (floating tab bar, section rules, pills, steadier numbers, focus rings)
+   plus fixes found in a full check: the workout card no longer clips when it carries a recovery note, the week strip
+   only keeps room it uses, empty section headings hide, the tab bar no longer shows text through it ===== */
+// Research notes for this block:
+// - People judge an interface's credibility and quality within about 50 ms, mostly from visual consistency and
+//   clutter (Lindgaard et al. 2006, Behaviour & Information Technology), and things that look well made are also
+//   judged easier to use (Tractinsky, Katz and Ikar 2000, Interacting with Computers). So this pass removes
+//   one-off shapes (square buttons among pills, a boxed red warning) rather than adding decoration.
+// - A floating bar with a solid fade under it keeps content from showing through the controls: text behind
+//   translucent chrome lowers legibility (Apple HIG, Materials; WCAG 2.2, 1.4.3 contrast).
+// - Tabular figures stop numbers shifting as they count (Bringhurst, The Elements of Typographic Style, on
+//   lining tabular numerals in data). Visible keyboard focus is WCAG 2.2, 2.4.7.
+(function(){const st=document.createElement('style');st.textContent=`
+#app,#sheet,#fs,#aw,#rt{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--ac,#F07A4E);outline-offset:2px}
+html[data-look] .nav{left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:7px 8px;border-radius:28px;border:1px solid rgba(255,255,255,.10);border-top-color:rgba(255,255,255,.2);box-shadow:0 14px 34px -10px rgba(0,0,0,.7),0 2px 8px rgba(0,0,0,.35);max-width:520px;margin:0 auto;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0)),color-mix(in srgb,var(--tone0,#121212) 78%,#000)!important;backdrop-filter:blur(30px) saturate(1.3);-webkit-backdrop-filter:blur(30px) saturate(1.3)}
+html[data-look] .nav button{border-radius:21px}html[data-look] .nav .navhl{border-radius:21px!important}
+.navfade{position:fixed;left:0;right:0;bottom:0;height:calc(118px + env(safe-area-inset-bottom,0px));pointer-events:none;z-index:39;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--tone0,#121212) 88%,transparent) 62%,var(--tone0,#121212))}
+html[data-look] #app{padding-bottom:128px}
+h3.dsec{display:flex;align-items:center;gap:12px}h3.dsec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,currentColor,transparent);opacity:.22}
+h3.dsec.emp{display:none}
+html[data-look] .whp .go,.whp .go{border-radius:999px!important}
+.brl .dur{display:grid!important;grid-template-columns:repeat(4,1fr);gap:6px}.brl .dur .chip{margin:0;padding-left:0;padding-right:0;text-align:center;justify-content:center;white-space:nowrap}.brl .dur .chip.on{color:#141412}.brl .brs em{color:rgba(243,241,236,.6)}
+.whero.fit{height:auto!important}.whero.fit .whp{position:relative;left:auto;right:auto;bottom:auto;margin:40px 10px 10px}
+.whero.inw .wfit{display:none}
+.mwfit{margin:8px 2px 12px!important}
+.wfit{background:none;border:0;border-top:1px solid rgba(255,255,255,.1);border-radius:0;padding:11px 0 0 16px;margin-top:10px;position:relative;color:rgba(243,241,236,.82)}
+.wfit::before{content:'';position:absolute;left:1px;top:17px;width:7px;height:7px;border-radius:50%;background:#EF7D3C;box-shadow:0 0 0 4px rgba(239,125,60,.16)}
+.wfit.ok{background:none;border-color:rgba(255,255,255,.1)}.wfit.ok::before{background:#7FD6A0;box-shadow:0 0 0 4px rgba(127,214,160,.14)}
+.wfit b{color:#F3F1EC;font-weight:700}.wfit .row5{margin-left:-16px}.wfit .row5 button{border-radius:999px;padding:8px 14px}
+html[data-look] .cal .cday{min-height:104px}html[data-look] .cal.c1 .cday{min-height:84px}
+.brcard .on,.brcard [aria-pressed=true]{color:#141412}
+`;document.head.appendChild(st)})();
+{const _w=wHero;wHero=function(){let h=_w.apply(this,arguments);try{if(/class="wfit/.test(h))h=h.replace(/class="whero/,'class="whero fit')}catch(_){}return h}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const A=$('#app');if(A){
+  const c=A.querySelector('.cal');if(c)c.classList.toggle('c1',!c.querySelector('.cw7 .mpc'));
+  const hs=[...A.querySelectorAll(':scope>h3.dsec')];hs.forEach(h=>{let n=h.nextElementSibling;while(n&&(n.offsetParent===null&&!n.matches('.nav,.navfade')))n=n.nextElementSibling;h.classList.toggle('emp',!n||n.matches('h3.dsec,.nav,.navfade'))});
+  if(!document.querySelector('.navfade')){const f=document.createElement('div');f.className='navfade';document.body.appendChild(f)}
+  const nf=document.querySelector('.navfade'),nv=A.querySelector(':scope>.nav');if(nf)nf.style.display=nv&&getComputedStyle(nv).display!=='none'?'':'none'}}catch(_){}return r}}
+
+/* ===== v138: the recovery body, redrawn: one smooth figure that scans in, glows where you're still recovering, turns
+   front to back with a swipe, and draws a fine callout line to any muscle you tap ===== */
+// Research notes for this block:
+// - A soft heat map on a body outline is read faster and more accurately than a table of the same values, because
+//   position does the work (Cleveland and McGill 1984, JASA, on position vs. lookup; body-map heat scales are the
+//   standard in sports load reporting). Only muscles that are still recovering glow, so the eye lands on them:
+//   fewer marks, each one meaning something (Tufte, The Visual Display of Quantitative Information, data-ink).
+// - Callout lines that connect a label straight to the part it names remove the legend look-up step (Mayer's
+//   spatial contiguity principle, Multimedia Learning 2009).
+// - Motion is one short scan when the figure first comes into view, then only responses to a touch; animation
+//   that explains a change helps, decorative looping motion distracts (Nielsen Norman Group, animation
+//   guidance; Material motion guidelines). All of it is skipped under "reduce motion" (WCAG 2.2, 2.3.3).
+// - Colour is never the only signal: every callout carries the muscle's name, per cent recovered and when it's
+//   ready (WCAG 2.2, 1.4.1).
+(function(){const st=document.createElement('style');st.textContent=`
+.mux{position:relative;height:348px;margin:6px 0 0;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.muxfig{position:absolute;left:50%;top:4px;width:116px;height:340px;margin-left:-58px;transform-origin:50% 50%}
+.muxfig svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.muxfig svg.ht path[data-mu]{cursor:pointer}
+.mux.pend svg.ht .heat{opacity:0}
+.mux.go svg.ht .heat{animation:muxrev 1.25s cubic-bezier(.65,0,.35,1) both}
+@keyframes muxrev{from{clip-path:inset(0 0 100% 0);opacity:1}to{clip-path:inset(0 0 0 0);opacity:1}}
+.muxscan{position:absolute;left:-26px;right:-26px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--ac,#F07A4E) 30%,#fff 50%,var(--ac,#F07A4E) 70%,transparent);box-shadow:0 0 14px 2px color-mix(in srgb,var(--ac,#F07A4E) 60%,transparent);opacity:0;pointer-events:none}
+.mux.go .muxscan{animation:muxsc 1.25s cubic-bezier(.65,0,.35,1) both}
+@keyframes muxsc{0%{top:0;opacity:0}8%{opacity:1}92%{opacity:1}100%{top:100%;opacity:0}}
+.muxln{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.muxln path{fill:none;stroke:rgba(243,241,236,.5);stroke-width:1;vector-effect:non-scaling-stroke}
+.muxln circle.d{fill:#F3F1EC}.muxln circle.r{fill:none;stroke:#F3F1EC;stroke-width:1;opacity:.5}
+.muxlb{position:absolute;width:104px;pointer-events:none;line-height:1.2}
+.muxlb.R{text-align:right}
+.muxlb b{display:block;font-size:13px;font-weight:650;color:#F3F1EC;letter-spacing:.01em}
+.muxlb span{display:block;font-size:11.5px;color:rgba(243,241,236,.62);margin-top:2px;white-space:nowrap}
+.muxlb span i{font-style:normal;font-weight:700}
+.muxrd{min-height:36px;margin:8px 2px 0;font-size:13px;line-height:1.4;color:rgba(243,241,236,.72);text-align:center}
+.muxrd b{color:#F3F1EC;font-weight:650}
+.muxsd{display:flex;justify-content:center;gap:4px;margin:6px 0 2px}
+.muxsd button{all:unset;cursor:pointer;font-size:12.5px;font-weight:650;padding:6px 14px;border-radius:999px;color:rgba(243,241,236,.55);transition:color .2s,background .2s}
+.muxsd button.on{color:#141412;background:#F3F1EC}
+.mucard .mulg{margin-top:10px}
+.mulg i{height:3px;border-radius:2px;background:linear-gradient(90deg,#E5484D,#EF7D3C 35%,#E9B44C 65%,rgba(126,146,170,.55))}
+@media(prefers-reduced-motion:reduce){.mux.go svg.ht .heat,.mux.go .muxscan{animation:none}.mux.pend svg.ht .heat{opacity:1}}
+`;document.head.appendChild(st)})();
+
+// one smooth outline, drawn through points on the left half and mirrored
+const MUXP=[[80,6],[72,9],[68,18],[68,27],[71,35],[75,40],[75,47],[66,52],[54,56],[46,61],[42,70],[41,84],[40,100],[38,118],[36,134],[34,152],[33,168],[31,178],[31,188],[35,194],[40,192],[43,183],[44,170],[47,152],[50,134],[51,120],[53,104],[55,90],[57,82],[57,98],[58,114],[60,130],[58,146],[55,162],[53,180],[53,200],[55,222],[58,244],[57,258],[56,276],[58,296],[61,314],[62,326],[58,336],[56,342],[62,345],[72,345],[74,338],[72,326],[73,306],[75,286],[74,266],[74,252],[76,232],[78,212],[80,198]];
+const muxCR=P=>{let d=`M${P[0][0]},${P[0][1]}`;for(let i=0;i<P.length-1;i++){const a=P[i-1]||P[i],b=P[i],c=P[i+1],e=P[i+2]||c,r=n=>Math.round(n*10)/10;d+=` C${r(b[0]+(c[0]-a[0])/6)},${r(b[1]+(c[1]-a[1])/6)} ${r(c[0]-(e[0]-b[0])/6)},${r(c[1]-(e[1]-b[1])/6)} ${c[0]},${c[1]}`}return d};
+const MUXL=muxCR(MUXP),MUXR=muxCR(MUXP.map(p=>[160-p[0],p[1]]));
+let MUXN=0;
+// layers: 'base' = body and outline, 'heat' = glow and touch targets, 'all' = both in one drawing (widgets)
+function muxSvg(B,L,layer){const id='mx'+(++MUXN),parts=Object.entries(B.parts);
+ const defs=`<defs><clipPath id="${id}c"><path d="${MUXL} L80.6,198 L80.6,6 Z"/><path d="${MUXR} L79.4,198 L79.4,6 Z"/></clipPath><filter id="${id}b" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur stdDeviation="3.4"/></filter><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset=".55" stop-color="#fff" stop-opacity=".07"/><stop offset="1" stop-color="#fff" stop-opacity=".03"/></linearGradient><pattern id="${id}p" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height=".5" fill="#fff" opacity=".07"/></pattern></defs>`;
+ const base=`<g clip-path="url(#${id}c)"><rect x="20" y="0" width="120" height="352" fill="url(#${id}g)"/><rect x="20" y="0" width="120" height="352" fill="url(#${id}p)"/><g fill="none" stroke="#fff" stroke-opacity=".07" stroke-width=".6">${parts.map(([k,d])=>`<path d="${d}"/><path d="${MIR(d)}"/>`).join('')}</g></g><g fill="none" stroke="#F3F1EC" stroke-opacity=".42" stroke-width=".8" stroke-linejoin="round"><path d="${MUXL}"/><path d="${MUXR}"/></g>`;
+ const hot=parts.filter(([k])=>((L[k]||{}).lv||0)>.05);
+ const heat=`<g class="heat"><g clip-path="url(#${id}c)"><g filter="url(#${id}b)">${hot.map(([k,d])=>{const lv=L[k].lv,c=muCol(lv),o=(.38+.62*lv).toFixed(2);return`<path d="${d}" fill="${c}" opacity="${o}"/><path d="${MIR(d)}" fill="${c}" opacity="${o}"/>`}).join('')}</g><g opacity=".5">${hot.map(([k,d])=>{const c=muCol(L[k].lv);return`<path d="${d}" fill="${c}" opacity="${(.15+.3*L[k].lv).toFixed(2)}"/><path d="${MIR(d)}" fill="${c}" opacity="${(.15+.3*L[k].lv).toFixed(2)}"/>`}).join('')}</g></g></g>`;
+ const hit=layer==='heat'?`<g fill="transparent">${parts.map(([k,d])=>`<path d="${d}" data-mu="${k}" data-s="L"><title>${MUS[k][0]}</title></path><path d="${MIR(d)}" data-mu="${k}" data-s="R"><title>${MUS[k][0]}</title></path>`).join('')}</g>`:'';
+ return`<svg viewBox="20 0 120 352" ${layer==='heat'?'class="ht"':'role="img" aria-label="Muscle recovery"'}>${defs}${layer!=='heat'?base:''}${layer!=='base'?heat:''}${hit}</svg>`}
+muFig=function(B,L){return muxSvg(B,L,'all')};
+
+const MUX={side:null,sel:null,seen:0};
+const muxSideLv=(B,L)=>Object.keys(B.parts).reduce((a,k)=>a+((L[k]||{}).lv||0),0);
+function muxFigHTML(L){const B=MUX.side==='b'?BODYB:BODYF;return muxSvg(B,L,'base')+muxSvg(B,L,'heat')+'<i class="muxscan"></i>'}
+function muxHTML(L){if(!MUX.side)MUX.side=muxSideLv(BODYB,L)>muxSideLv(BODYF,L)?'b':'f';
+ return`<div class="mux" tabindex="-1"><div class="muxfig">${muxFigHTML(L)}</div><svg class="muxln"></svg></div><div class="muxsd" role="tablist"><button data-a="muxside" data-i="f" class="${MUX.side==='f'?'on':''}">Front</button><button data-a="muxside" data-i="b" class="${MUX.side==='b'?'on':''}">Back</button></div><div class="muxrd"></div>`}
+muBody=function(L,lab){return lab?muxHTML(L):`<div class="mubody"><div>${muFig(BODYF,L)}</div><div>${muFig(BODYB,L)}</div></div>`};
+muCard=function(){const M=muLoad(),miss=muMissing();
+ return`<div class="card mucard"><div class="mut"><h2>Recovery</h2><button data-a="muopen">Details</button></div>${muxHTML(M.m)}${muLegend()}
+ ${miss.length?`<div class="munudge"><span>${miss.length===1?`Swell can’t tell what “${esc(miss[0].n)}” works.`:`${miss.length} exercises need their muscles picked.`}</span><button class="btn" data-a="mufix">Pick</button></div>`:''}</div>`};
+
+// callouts: the three most worked muscles on this side, or the one you tapped
+function muxDraw(el,anim){const M=muLoad(),L=M.m,B=MUX.side==='b'?BODYB:BODYF,ln=el.querySelector('.muxln'),rd=el.parentElement.querySelector('.muxrd');if(!ln)return;
+ el.querySelectorAll('.muxlb').forEach(x=>x.remove());const W=el.clientWidth,H=el.clientHeight,er=el.getBoundingClientRect();ln.setAttribute('viewBox',`0 0 ${W} ${H}`);
+ let ks=MUX.sel&&B.parts[MUX.sel]?[MUX.sel]:Object.keys(B.parts).filter(k=>((L[k]||{}).lv||0)>.05).sort((a,b)=>L[b].lv-L[a].lv).slice(0,3);
+ const items=ks.map((k,i)=>{const s=i%2?'R':'L',p=el.querySelector(`svg.ht [data-mu="${k}"][data-s="${s}"]`);if(!p)return null;const r=p.getBoundingClientRect();return{k,s,ax:r.left+r.width/2-er.left,ay:r.top+r.height/2-er.top}}).filter(Boolean);
+ ['L','R'].forEach(s=>{const g=items.filter(x=>x.s===s).sort((a,b)=>a.ay-b.ay);let last=-99;g.forEach(x=>{x.ly=Math.max(34,Math.min(H-8,Math.max(x.ay-10,last+46)));last=x.ly})});
+ let svg='';items.forEach((x,i)=>{const o=L[x.k]||{},lv=o.lv||0,pc=Math.round((1-lv)*100),lw=104,x0=x.s==='L'?0:W,x1=x.s==='L'?lw+4:W-lw-4,dly=anim?i*140:0;
+  const d=`M${x.ax.toFixed(1)},${x.ay.toFixed(1)} L${x1},${x.ly} L${x0},${x.ly}`;
+  svg+=`<circle class="r" cx="${x.ax.toFixed(1)}" cy="${x.ay.toFixed(1)}" r="5" data-d="${dly}"/><circle class="d" cx="${x.ax.toFixed(1)}" cy="${x.ay.toFixed(1)}" r="1.8"/><path d="${d}" data-d="${dly}"/>`;
+  const lb=document.createElement('div');lb.className='muxlb '+x.s;lb.style.cssText=`${x.s==='L'?'left:0':'right:0'};bottom:${H-x.ly+5}px`;
+  lb.innerHTML=`<b>${esc(MUS[x.k][0])}</b><span>${lv>.05?`<i style="color:${muCol(lv)}">${pc}%</i> · ${muReady(o.ready)}`:'Ready'}</span>`;el.appendChild(lb);
+  if(anim&&!MRM())lb.animate([{opacity:0,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:320,delay:dly+260,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})});
+ ln.innerHTML=svg;
+ if(anim&&!MRM()){ln.querySelectorAll('path').forEach(p=>{const n=p.getTotalLength();p.style.strokeDasharray=n;p.animate([{strokeDashoffset:n},{strokeDashoffset:0}],{duration:420,delay:+p.dataset.d,easing:'cubic-bezier(.65,0,.35,1)',fill:'backwards'})});
+  ln.querySelectorAll('circle.r').forEach(c=>c.animate([{r:1,opacity:.9},{r:9,opacity:0}],{duration:700,delay:+c.dataset.d,easing:'ease-out',fill:'both'}))}
+ if(rd){if(MUX.sel&&MUS[MUX.sel]){const k=MUX.sel,o=L[k]||{},lv=o.lv||0,w=Math.round((M.wk[k]||0)*10)/10;
+   rd.innerHTML=`<b>${esc(MUS[k][0])}</b> ${lv>.05?`${Math.round((1-lv)*100)}% recovered, ready ${muReady(o.ready)}`:'is ready to train'}. ${o.last?`Last trained ${new Date(o.last).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}, `:''}${w} set${w===1?'':'s'} this week.`}
+  else{const all=Object.keys(MUS),avg=Math.round(all.reduce((a,k)=>a+(1-((L[k]||{}).lv||0)),0)/all.length*100);rd.innerHTML=`<b>${avg}% recovered</b> overall. ${items.length?'Tap a muscle for detail.':'Everything on this side is ready to train.'}`}}}
+function muxStart(el){el.dataset.i=1;const fresh=Date.now()-MUX.seen>90000&&!MRM();
+ if(!fresh){muxDraw(el,false);return}
+ el.classList.add('pend');const go=()=>{if(el.dataset.go)return;el.dataset.go=1;MUX.seen=Date.now();el.classList.remove('pend');el.classList.add('go');try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}setTimeout(()=>{if(el.isConnected)muxDraw(el,true)},900)};
+ if('IntersectionObserver'in window){const io=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)){io.disconnect();go()}},{threshold:.55});io.observe(el)}else go()}
+{let q=0;const scan=()=>{q=0;document.querySelectorAll('.mux:not([data-i])').forEach(el=>{try{muxStart(el)}catch(_){}})};
+ new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.body,{childList:true,subtree:true});
+ addEventListener('resize',()=>document.querySelectorAll('.mux[data-i]').forEach(el=>{try{muxDraw(el,false)}catch(_){}}))}
+// turning: the figure narrows to an edge, swaps side and opens again
+function muxTurn(el,side){if(side===MUX.side)return;MUX.side=side;MUX.sel=null;const f=el.querySelector('.muxfig'),L=muLoad().m;
+ el.parentElement.querySelectorAll('.muxsd button').forEach(b=>b.classList.toggle('on',b.dataset.i===side));el.querySelectorAll('.muxlb').forEach(x=>x.remove());el.querySelector('.muxln').innerHTML='';el.classList.remove('go','pend');
+ const fin=()=>{f.innerHTML=muxFigHTML(L);muxDraw(el,true)};try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}
+ if(MRM()){fin();return}
+ f.animate([{transform:'scaleX(1)',filter:'brightness(1)'},{transform:'scaleX(.02)',filter:'brightness(1.8)'}],{duration:170,easing:'cubic-bezier(.55,0,.9,.45)'}).onfinish=()=>{f.innerHTML=muxFigHTML(L);f.animate([{transform:'scaleX(.02)',filter:'brightness(1.8)'},{transform:'scaleX(1)',filter:'brightness(1)'}],{duration:260,easing:'cubic-bezier(.16,1,.3,1)'}).onfinish=()=>muxDraw(el,true)}}
+window.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;const sd=t.closest('[data-a=muxside]');
+ if(sd){e.stopImmediatePropagation();e.preventDefault();const el=sd.parentElement.parentElement.querySelector('.mux');if(el)muxTurn(el,sd.dataset.i);return}
+ const el=t.closest('.mux');if(!el||MUX.sw)return;e.stopImmediatePropagation();const m=t.closest('[data-mu]');const k=m?m.dataset.mu:null;MUX.sel=k&&k!==MUX.sel?k:null;try{navigator.vibrate&&navigator.vibrate(4)}catch(_){}muxDraw(el,true)},true);
+{let s=null;addEventListener('touchstart',e=>{const el=e.target.closest&&e.target.closest('.mux');s=el?{el,x:e.touches[0].clientX,y:e.touches[0].clientY}:null;MUX.sw=0},{passive:true});
+ addEventListener('touchend',e=>{if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(Math.abs(dx)>44&&Math.abs(dx)>Math.abs(dy)*1.5){MUX.sw=1;setTimeout(()=>MUX.sw=0,350);muxTurn(s.el,MUX.side==='f'?'b':'f')}s=null},{passive:true})}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:WIS.body.replace(/^<svg[^>]*>|<\/svg>$/g,''),h:'A new recovery body',p:'One clean figure that glows where you’re still recovering. Tap a muscle for its detail, and swipe to turn it round.'});R.items.push({i:'<path d="M4 7h16M4 12h10M4 17h13"/>',h:'A tidier look',p:'A floating tab bar, calmer cards and fixes across every page.'})}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
