@@ -11153,13 +11153,16 @@ try{WIS.cup=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',h:'Tidier widgets',p:'Every widget now fits each of its three sizes, Achievements has its own widget, and Home stays still after a tap.'})}
 
-/* ===== v140: the recovery body becomes a real 3D scan: a neutral figure built from level contour rings that you can
-   turn with a finger, that scans in, glows where you're recovering, and peels back to the muscle when you tap a part ===== */
+/* ===== v140: the recovery body becomes a real 3D figure: a plain, softly shaded grey form with a neutral build that you can
+   turn with a finger, that scans in, warms where you're recovering, and peels back to the muscle when you tap a part ===== */
 // Research notes for this block:
 // - Optical body scanners and DEXA reports show the body as an anonymous form: a mesh or contour avatar with no
 //   face, skin or sex markers (Styku, Fit3D and ShapeScale use plain mesh avatars; DEXA reports use a greyscale
 //   outline with regions boxed). Swell follows that: one average, unmarked figure made of measurement lines, so
 //   nobody enters size or anything else to see themselves in it. (Products named from memory, not re-checked.)
+// - It is shaded like an artist's mannequin: matte grey, one soft light, no face or detail. Simple, abstract human
+//   figures avoid the unease that near-realistic ones cause (Mori's 'uncanny valley', 1970; MacDorman and Ishiguro
+//   2006), and a neutral average build doesn't ask anyone to match it.
 // - Being able to turn an object yourself gives a better understanding of its shape than fixed views
 //   (Harman, Humphrey and Goodale 1999, Current Biology, on active rotation and object learning).
 // - Zoom and peel instead of a new page: "overview first, zoom and filter, then details on demand"
@@ -11191,10 +11194,10 @@ const M3K=Object.keys(MUS);
 const M3=(()=>{const cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t),T=[];
  const tube=(seg,s,st,K,dy)=>{const R=[];for(let i=0;i<st.length-1;i++){const p0=st[i-1]||st[i],p1=st[i],p2=st[i+1],p3=st[i+2]||p2,n=Math.max(1,Math.round((p1[0]-p2[0])/dy));for(let j=0;j<n;j++){const t=j/n;R.push([0,1,2,3,4].map(q=>cr(p0[q],p1[q],p2[q],p3[q],t)))}}
   R.push(st[st.length-1].slice());R.forEach(r=>{r[1]*=s||1;r[2]=Math.max(.3,r[2]);r[3]=Math.max(.3,r[3])});T.push({seg,s:s||0,R,K})};
- tube('head',0,[[100,0,.6,.7,0],[99.1,0,2.9,3.3,0],[97.2,0,4.5,5.2,0],[94.6,0,5.2,6,0],[92.2,0,5.1,5.8,.2],[90.2,0,4.4,5,.5],[88.6,0,3.5,3.9,.6]],26,1.3);
+ tube('head',0,[[99.4,0,.6,.7,0],[98.6,0,2.7,3.1,0],[96.9,0,4.1,4.8,0],[94.5,0,4.7,5.5,0],[92.2,0,4.6,5.3,.2],[90.2,0,4,4.6,.5],[88.6,0,3.3,3.7,.6]],28,1.1);
  tube('neck',0,[[88.2,0,3.1,3.4,.2],[86,0,3,3.2,0],[84,0,3.9,3.5,0]],22,1.3);
- tube('torso',0,[[83.8,0,6.6,4.4,0],[81.6,0,12,5.6,0],[78,0,12.7,6.8,.4],[74,0,12.1,7,.5],[70,0,10.9,6.4,.3],[66,0,9.9,5.8,0],[62,0,10.1,6,0],[58,0,11.3,6.8,-.3],[54.5,0,11.9,7.2,-.5],[51.5,0,11.5,6.9,-.4],[49.6,0,10.2,6.1,-.2]],44,1.3);
- [1,-1].forEach(s=>{tube('arm',s,[[83.3,13.1,1.5,2.1,0],[81.6,14.9,3.5,4.2,0],[79,15.8,4.1,4.6,0],[75,16.2,3.8,4.2,0],[71,16.6,3.5,3.8,.2],[67.5,17,3.1,3.3,.2],[64.5,17.4,2.8,2.9,.1],[62,17.8,3,3,.3],[58,18.3,2.8,2.7,.6],[53,18.9,2.2,2,.9],[49.5,19.3,1.7,1.4,1.1],[47,19.6,2,1.2,1.3],[43.5,19.9,1.8,1,1.5],[41,20,1,.7,1.6]],20,1.3);
+ tube('torso',0,[[84.9,0,3.9,3.5,0],[83.8,0,6.1,4.3,0],[81.6,0,10.8,5.5,0],[78,0,11.7,6.7,.4],[74,0,11.3,6.9,.5],[70,0,10.5,6.3,.3],[66,0,9.9,5.8,0],[62,0,10.1,6,0],[58,0,11.1,6.8,-.3],[54.5,0,11.6,7.2,-.5],[51.5,0,11.3,6.9,-.4],[49.6,0,10.1,6.1,-.2]],44,1.3);
+ [1,-1].forEach(s=>{tube('arm',s,[[83.3,12.1,1.5,2.1,0],[81.6,13.7,3.2,3.9,0],[79,14.6,3.7,4.2,0],[75,15.1,3.5,3.9,0],[71,15.6,3.3,3.6,.2],[67.5,16.1,3,3.2,.2],[64.5,16.6,2.7,2.8,.1],[62,17,2.9,2.9,.3],[58,17.5,2.7,2.6,.6],[53,18.1,2.2,2,.9],[49.5,18.5,1.7,1.4,1.1],[47,18.8,2,1.2,1.3],[43.5,19.1,1.8,1,1.5],[41,19.2,1,.7,1.6]],22,1.3);
   tube('leg',s,[[51.6,6.1,5.8,6.6,-.3],[46,6.2,5.5,6.2,0],[40,5.9,4.9,5.5,.2],[34,5.5,4.2,4.8,.2],[29.5,5.2,3.6,4,.2],[27,5.1,3.4,3.7,0],[22.5,5,3.7,4.4,-.8],[17,4.8,3.1,3.6,-.6],[11,4.6,2.2,2.6,-.2],[6.5,4.5,1.8,2.2,0],[4,4.5,2,3.2,1.2],[1.6,4.6,2.3,4.8,2.6],[.4,4.6,2.1,4.6,2.8]],26,1.3)});
  // which muscle a point belongs to: f = how far forward it faces, a = how far out to the side, o = outward on a limb
  const mus=(seg,s,y,th)=>{const f=Math.sin(th),c=Math.cos(th),a=Math.abs(c),o=c*(s||1);
@@ -11210,36 +11213,55 @@ const M3=(()=>{const cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+
  T.forEach(t=>{const K=t.K,R=t.R,pt=(r,j)=>{const th=j/K*6.2832;return[r[1]+r[2]*Math.cos(th),r[0],r[4]+r[3]*Math.sin(th)]},nm=(r,th)=>{const x=Math.cos(th)/r[2],z=Math.sin(th)/r[3],l=Math.hypot(x,z)||1;return[x/l,z/l]};
   R.forEach((r,i)=>{for(let j=0;j<K;j++){const thm=(j+.5)/K*6.2832,a=pt(r,j),b=pt(r,j+1),n=nm(r,thm),k=mus(t.seg,t.s,r[0],thm);add(G,k||'',[a[0],a[1],a[2],b[0],b[1],b[2],n[0],n[1],t.s]);
     if(k&&i<R.length-1){const q=pt(R[i+1],j),n2=nm(r,j/K*6.2832),k2=mus(t.seg,t.s,(r[0]+R[i+1][0])/2,j/K*6.2832);if(k2)add(ST,k2,[a[0],a[1],a[2],q[0],q[1],q[2],n2[0],n2[1],t.s])}}})});
+ // the surface: one small panel between each pair of rings, with the way it faces, for shading
+ const QA=[],QM=[],QT=[];T.forEach(t=>{QT.push({o:QM.length,K:t.K,n:t.R.length-1});const K=t.K,R=t.R,pt=(r,j)=>{const th=j/K*6.2832;return[r[1]+r[2]*Math.cos(th),r[0],r[4]+r[3]*Math.sin(th)]};
+  for(let i=0;i<R.length-1;i++){const r=R[i],q=R[i+1],dy=Math.max(.2,r[0]-q[0]);for(let j=0;j<K;j++){const thm=(j+.5)/K*6.2832,a=pt(r,j),b=pt(r,j+1),c=pt(q,j+1),d=pt(q,j);let nx=Math.cos(thm)/((r[2]+q[2])/2),nz=Math.sin(thm)/((r[3]+q[3])/2);const l=Math.hypot(nx,nz)||1;nx/=l;nz/=l;
+    const rr=(Math.hypot(q[2]*Math.cos(thm),q[3]*Math.sin(thm))-Math.hypot(r[2]*Math.cos(thm),r[3]*Math.sin(thm)))/dy,ny=Math.max(-1.2,Math.min(1.2,rr)),ln=Math.hypot(1,ny);
+    QA.push(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2],d[0],d[1],d[2],nx/ln,ny/ln,nz/ln,t.s);QM.push(mus(t.seg,t.s,(r[0]+q[0])/2,thm)||'')}}});
+ const quad=new Float32Array(QA),qmus=QM;
  const pack=M=>{const o={};M.forEach((a,k)=>{const f=new Float32Array(a.length*9);a.forEach((v,i)=>f.set(v,i*9));o[k]=f});return o};
  const seg=pack(G),str=pack(ST),info={};
  Object.keys(seg).forEach(k=>{if(!k)return;const f=seg[k],I={};[1,-1,0].forEach(s=>{let n=0,x=0,y=0,z=0,nx=0,nz=0,y0=1e9,y1=-1e9,x0=1e9,x1=-1e9;for(let i=0;i<f.length;i+=9){if(s&&f[i+8]&&f[i+8]!==s)continue;if(s&&!f[i+8]&&Math.sign(f[i])!==s&&Math.abs(f[i])>1)continue;n++;x+=f[i];y+=f[i+1];z+=f[i+2];nx+=f[i+6];nz+=f[i+7];y0=Math.min(y0,f[i+1]);y1=Math.max(y1,f[i+1]);x0=Math.min(x0,f[i]);x1=Math.max(x1,f[i])}
    if(n)I[s]={c:[x/n,y/n,z/n],n:[nx/n,nz/n],h:y1-y0,w:x1-x0,y0,y1}});info[k]=I});
- return{seg,str,info}})();
+ return{seg,str,info,quad,qmus,qn:QM.length,qt:QT}})();
 
 // ---- drawing
 const M3S={yaw:0,base:0,sel:null,ss:1,seen:0,inst:null};
 function m3Proj(v){const sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),fx=v.f[0]*cy-v.f[2]*sy,fd=v.f[0]*sy+v.f[2]*cy,fy=v.f[1]*cp-fd*sp,k=v.s*v.z;
  return(x,y,z)=>{const rx=x*cy-z*sy,d=x*sy+z*cy,ry=y*cp-d*sp;return[v.X+(rx-fx)*k,v.Y-(ry-fy)*k,d]}}
-function m3Paint(ctx,W,H,v,L,o){o=o||{};const dpr=o.dpr||1,sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),P=m3Proj(v),sel=o.sel,pl=o.peel||0,scan=o.scan==null?-1:o.scan,dim=sel?.4:1,ink='#F3F1EC',ac=o.ac||'#F07A4E';
- ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.lineCap='round';
- const keys=Object.keys(M3.seg);
- for(let pass=0;pass<2;pass++){const front=pass===1;
-  for(const k of keys){const f=M3.seg[k],lv=k?((L[k]||{}).lv||0):0,hot=lv>.05,isSel=sel&&k===sel;
-   let a=front?(hot?.95:.36):(hot?.16:.06);if(sel&&!isSel)a*=dim;
-   ctx.beginPath();let any=false;
-   for(let i=0;i<f.length;i+=9){if(scan>=0&&f[i+1]<scan)continue;if(isSel&&o.side&&f[i+8]&&f[i+8]!==o.side)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==front)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);if(p[0]<-20&&q[0]<-20||p[0]>W+20&&q[0]>W+20||p[1]<-20&&q[1]<-20||p[1]>H+20&&q[1]>H+20)continue;ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);any=true}
-   if(any){const col=hot?muCol(lv):ink;if(isSel)a*=(1-.7*pl);ctx.strokeStyle=col;if(hot&&front&&!o.thin&&!(sel&&!isSel)){ctx.globalAlpha=a*.16;ctx.lineWidth=4.2;ctx.stroke()}ctx.globalAlpha=o.thin?a*.8:a;ctx.lineWidth=o.thin?.5:hot?1.1:.8;ctx.stroke()}
-   // the other side of a selected pair stays as plain rings
-   if(isSel&&o.side){ctx.beginPath();for(let i=0;i<f.length;i+=9){if(!f[i+8]||f[i+8]===o.side)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==front)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}ctx.strokeStyle=hot?muCol(lv):ink;ctx.globalAlpha=(front?(hot?.95:.36):(hot?.16:.06))*dim;ctx.lineWidth=.9;ctx.stroke()}}}
- // a faint mesh down the body so it reads as a surface, not a stack
- if(!o.thin){ctx.beginPath();for(const k of Object.keys(M3.str)){const f=M3.str[k];for(let i=0;i<f.length;i+=18){if(scan>=0&&f[i+1]<scan)continue;if(f[i+6]*sy+f[i+7]*cy<=.1)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}}ctx.strokeStyle=ink;ctx.globalAlpha=.1*dim;ctx.lineWidth=.6;ctx.stroke()}
- // the muscle layer: strands running down the selected part, drawn in from the top
- if(sel&&pl>0&&M3.str[sel]){const f=M3.str[sel],I=(M3.info[sel]||{})[o.side||0]||(M3.info[sel]||{})[0],lv=(L[sel]||{}).lv||0,col=lv>.05?muCol(lv):'#A9BED3',yc=I?I.y1-(I.y1-I.y0+1)*pl:-1;
-  for(let pass=0;pass<2;pass++){ctx.beginPath();for(let i=0;i<f.length;i+=9){if(o.side&&f[i+8]&&f[i+8]!==o.side)continue;if(f[i+1]<yc)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==(pass===1))continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}
-   ctx.strokeStyle=col;if(pass){ctx.globalAlpha=.2;ctx.lineWidth=3.6;ctx.stroke()}ctx.globalAlpha=pass?1:.2;ctx.lineWidth=1.1;ctx.stroke()}}
+const M3RGB=h=>[parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
+let M3ORD=null,M3DEP=null,M3HT=null;
+// where it's warm: each muscle's colour, softened across its edges so it reads as warmth, not a painted panel
+function m3Heat(L){const sig=M3K.map(k=>(((L[k]||{}).lv||0)).toFixed(2)).join();if(M3HT&&M3HT.sig===sig)return M3HT;const N=M3.qn,a=new Float32Array(N*4),b=new Float32Array(N*4),hk={};
+ for(const k of M3K){const lv=(L[k]||{}).lv||0;if(lv>.05){const c=M3RGB(muCol(lv)),m=Math.min(.95,.45+.6*lv);hk[k]=[c[0]*m,c[1]*m,c[2]*m,m]}}
+ for(let q=0;q<N;q++){const h=hk[M3.qmus[q]];if(h){a[q*4]=h[0];a[q*4+1]=h[1];a[q*4+2]=h[2];a[q*4+3]=h[3]}}
+ let src=a,dst=b;for(let pass=0;pass<3;pass++){for(const t of M3.qt){for(let i=0;i<t.n;i++)for(let j=0;j<t.K;j++){const q=t.o+i*t.K+j,l=t.o+i*t.K+(j+t.K-1)%t.K,r=t.o+i*t.K+(j+1)%t.K,u=i?q-t.K:q,d=i<t.n-1?q+t.K:q;for(let c=0;c<4;c++)dst[q*4+c]=(src[q*4+c]*2+src[l*4+c]+src[r*4+c]+src[u*4+c]+src[d*4+c])/6}}const x=src;src=dst;dst=x}
+ return M3HT={sig,h:src}}
+function m3Paint(ctx,W,H,v,L,o){o=o||{};const dpr=o.dpr||1,sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),P=m3Proj(v),sel=o.sel,pl=o.peel||0,scan=o.scan==null?-1:o.scan,ac=o.ac||'#6FB7DA';
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.lineCap='round';ctx.lineJoin='round';ctx.globalAlpha=1;
+ const Q=M3.quad,N=M3.qn,qm=M3.qmus;if(!M3ORD){M3ORD=new Int32Array(N);M3DEP=new Float32Array(N)}
+ // light from the upper left, a little in front; a soft rim so the edges don't go flat
+ const LX=-.42,LY=.5,LZ=.76;let n=0;
+ for(let q=0;q<N;q++){const i=q*16,nx=Q[i+12],ny=Q[i+13],nz=Q[i+14],rz0=nx*sy+nz*cy,rz=rz0*cp+ny*sp;if(rz<=-.02)continue;if(scan>=0&&Q[i+1]<scan)continue;M3DEP[q]=(Q[i]+Q[i+6])*.5*sy+(Q[i+2]+Q[i+8])*.5*cy;M3ORD[n++]=q}
+ const ord=M3ORD.subarray(0,n);ord.sort((a,b)=>M3DEP[a]-M3DEP[b]);
+ const HT=m3Heat(L).h;
+ const selSide=o.side||0;
+ for(let u=0;u<n;u++){const q=ord[u],i=q*16,nx=Q[i+12],ny=Q[i+13],nz=Q[i+14],rx=nx*cy-nz*sy,rz0=nx*sy+nz*cy,ry=ny*cp-rz0*sp,rz=rz0*cp+ny*sp;
+  let sh=.2+.6*Math.max(0,rx*LX+ry*LY+rz*LZ)+.2*Math.pow(1-Math.max(0,rz),3);const k=qm[q],hm=HT[q*4+3],isSel=sel&&k===sel&&(!selSide||!Q[i+15]||Q[i+15]===selSide);
+  let r=sh*222,g=sh*220,b=sh*216,al=1;if(hm>.02){const f=(.42+.78*sh)/hm;r+=(HT[q*4]*f-r)*hm;g+=(HT[q*4+1]*f-g)*hm;b+=(HT[q*4+2]*f-b)*hm}
+  if(sel&&!isSel){r*=.5;g*=.5;b*=.5}if(isSel)al=1-.86*pl;
+  const p0=P(Q[i],Q[i+1],Q[i+2]),p1=P(Q[i+3],Q[i+4],Q[i+5]),p2=P(Q[i+6],Q[i+7],Q[i+8]),p3=P(Q[i+9],Q[i+10],Q[i+11]);if(p0[0]<-30&&p1[0]<-30||p0[0]>W+30&&p1[0]>W+30||p0[1]<-30&&p3[1]<-30||p0[1]>H+30&&p3[1]>H+30)continue;
+  const col=`rgb(${r|0},${g|0},${b|0})`;ctx.globalAlpha=al;ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.lineTo(p3[0],p3[1]);ctx.closePath();ctx.fill();if(al>.5)ctx.stroke()}
+ ctx.globalAlpha=1;
+ // under the surface: strands running down the chosen muscle, drawn in from the top
+ if(sel&&pl>0&&M3.str[sel]){const f=M3.str[sel],I=(M3.info[sel]||{})[selSide]||(M3.info[sel]||{})[0],lv=(L[sel]||{}).lv||0,col=lv>.05?muCol(lv):'#A9C4DA',yc=I?I.y1-(I.y1-I.y0+1)*pl:-1;
+  // cross bands first, so the strands read as fibres over a form
+  if(M3.seg[sel]){const g=M3.seg[sel];ctx.beginPath();for(let i=0;i<g.length;i+=9){if(selSide&&g[i+8]&&g[i+8]!==selSide)continue;if(g[i+1]<yc)continue;if(g[i+6]*sy+g[i+7]*cy<=0)continue;const p=P(g[i],g[i+1],g[i+2]),q=P(g[i+3],g[i+4],g[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}ctx.strokeStyle=col;ctx.globalAlpha=.28;ctx.lineWidth=.8;ctx.stroke()}
+  ctx.beginPath();for(let i=0;i<f.length;i+=9){if(selSide&&f[i+8]&&f[i+8]!==selSide)continue;if(f[i+1]<yc)continue;if(f[i+6]*sy+f[i+7]*cy<=0)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}
+  ctx.strokeStyle=col;ctx.globalAlpha=.2;ctx.lineWidth=3.4;ctx.stroke();ctx.globalAlpha=1;ctx.lineWidth=1.05;ctx.stroke()}
  // the scan line
- if(scan>=0&&scan<100){ctx.beginPath();for(const k of keys){const f=M3.seg[k];for(let i=0;i<f.length;i+=9){if(Math.abs(f[i+1]-scan)>.9)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}}
-  ctx.strokeStyle=ac;ctx.globalAlpha=.35;ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='#fff';ctx.globalAlpha=1;ctx.lineWidth=1.3;ctx.stroke()}
+ if(scan>=0&&scan<100){ctx.beginPath();for(const k of Object.keys(M3.seg)){const f=M3.seg[k];for(let i=0;i<f.length;i+=9){if(Math.abs(f[i+1]-scan)>.9)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}}
+  ctx.strokeStyle=ac;ctx.globalAlpha=.4;ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='#fff';ctx.globalAlpha=1;ctx.lineWidth=1.2;ctx.stroke()}
  ctx.globalAlpha=1}
 const m3View=(W,H)=>({yaw:0,pitch:.16,z:1,s:H*.9/100,X:W/2,Y:H*.49,f:[0,50,0]});
 // small, still figures for widgets
@@ -11390,8 +11412,6 @@ window.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;const 
 .cls .opt span{flex:1;min-width:0}.cls .opt b{display:block;font-size:16px;font-weight:650}.cls .opt small{display:block;font-size:12.5px;color:rgba(243,241,236,.6);margin-top:2px;line-height:1.3}
 .cls .opt svg{width:18px;height:18px;flex:none;opacity:.45}
 .cls .more{all:unset;cursor:pointer;display:block;margin:10px auto 0;font-size:13px;font-weight:650;color:rgba(243,241,236,.6);padding:8px 12px}
-#br{color:#F3F1EC;background:radial-gradient(120% 90% at 50% 32%,color-mix(in srgb,var(--ac,#F07A4E) 16%,#151312) 0%,#100F0E 55%,#0A0A09 100%)}
-#br .orb{background:radial-gradient(circle at 38% 32%,rgba(255,244,232,.96),color-mix(in srgb,var(--ac,#F07A4E) 55%,#F7D9C4) 42%,color-mix(in srgb,var(--ac,#F07A4E) 24%,transparent) 68%,transparent 72%);box-shadow:0 0 90px color-mix(in srgb,var(--ac,#F07A4E) 32%,transparent)}
 @media(prefers-reduced-motion:reduce){.corb,.corb::before,.corb::after{animation:none}}
 `;document.head.appendChild(st)})();
 
@@ -11438,6 +11458,120 @@ window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest(
 {const _d=brDone;brDone=function(){try{if(BR&&BR.b){const m=BR.b.power?3:Math.max(1,Math.round((S.brDur||3)));(S.brLog=S.brLog||[]).unshift({t:Date.now(),k:BR.k,m});S.brLog=S.brLog.slice(0,60);save()}}catch(_){}return _d.apply(this,arguments)}}
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/>',h:'Calm',p:'The Mood widget is now Calm: a slow breathing orb. Tap it and pick what you need, from calming down to a body scan.'});R.items.push({i:'<path d="M4 18a8 8 0 0116 0"/><circle cx="12" cy="10" r="1.6"/>',h:'Clearer Goal and Meal prep',p:'The large Goal widget shows an arc from start to target with a mark for where you’d need to be today. Meal prep shows the week, today’s jobs and what gets cooked.'})}}
+
+/* ===== v142: streamlining. Sections fold away (weekly and set-once things start folded), each page gets a small
+   set-up button, Goal is redrawn at every size and for every goal type, the Calm orb becomes a slow tide in a glass
+   circle, mood is removed, and the green tick after a tap is gone ===== */
+// Research notes for this block:
+// - Show the smallest useful set for the task and reveal the rest on request (progressive disclosure, Nielsen
+//   Norman Group 2006); decision time grows with the number of options on screen (Hick 1952; Hyman 1953). So
+//   daily things stay open, weekly things fold to a heading, and set-once things sit behind one button per page.
+// - Fewer than 5% of people change defaults (cited in Uxcel, "8 design tips to reduce cognitive load", read
+//   14/11/2026), so what starts folded matters more than the option to fold.
+// - Confirmation should come from the thing itself changing (a ticked box, a moved number), not an extra badge:
+//   redundant feedback adds noise (Nielsen's heuristic 1, visibility of system status, satisfied by the state
+//   change; Tufte on non-data ink). The tick badge is replaced by a light haptic only.
+// - Calm orb: paced-breathing visuals work by giving one slow, continuous motion to follow, in then out, with no
+//   sudden change (the approach used by watch breathing apps and resonance-breathing pacers; Lehrer and Gevirtz
+//   2014). Swell's version is its own: water rising and falling in a glass circle, about 5.5 breaths a minute.
+//   Cool blues are rated as calmer than warm hues (Valdez and Mehrabian 1994, J. Exp. Psychology: General).
+(function(){const st=document.createElement('style');st.textContent=`
+.fhid{display:none!important}
+#app>h3.dsec.fd{cursor:pointer;-webkit-tap-highlight-color:transparent;padding-top:6px;padding-bottom:6px}
+#app>h3.dsec.fd .fch{order:3;width:16px;height:16px;flex:none;opacity:.55;transition:transform .25s cubic-bezier(.16,1,.3,1)}
+#app>h3.dsec.fd.shut .fch{transform:rotate(-90deg)}
+#app>h3.dsec.fd{white-space:nowrap}#app>h3.dsec.fd .fct{order:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58%;font-weight:500;letter-spacing:0;text-transform:none;opacity:.6;font-size:12px}
+#app>h3.dsec.fd::after{order:1}
+.pgcog{all:unset;box-sizing:border-box;cursor:pointer;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#F3F1EC;flex:none}
+.pgcog svg{width:18px;height:18px}
+.pgs .opt{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:14px 2px;border-top:1px solid rgba(255,255,255,.08)}
+.pgs .opt:first-of-type{border-top:0}.pgs .opt span{flex:1;min-width:0}.pgs .opt b{display:block;font-size:16px;font-weight:650}.pgs .opt small{display:block;font-size:12.5px;color:rgba(243,241,236,.6);margin-top:2px}
+.pgs .opt svg{width:18px;height:18px;flex:none;opacity:.45}
+.tide{display:block;width:100%;height:100%;overflow:visible}
+.tide .lv{animation:tdlv 10.9s cubic-bezier(.45,0,.55,1) infinite}
+.tide .w1{animation:tdx 7s linear infinite}.tide .w2{animation:tdx 11s linear infinite reverse}.tide .w3{animation:tdx 16s linear infinite}
+@keyframes tdlv{0%,100%{transform:translateY(13px)}50%{transform:translateY(-15px)}}
+@keyframes tdx{from{transform:translateX(0)}to{transform:translateX(-50px)}}
+.corb{background:none!important;animation:none!important;border-radius:50%;filter:drop-shadow(0 0 10px rgba(96,170,220,.28))}
+.corb::before,.corb::after{display:none!important}
+.clw .orbw{overflow:hidden;padding:4px}.clw .corb{width:70px;height:70px}.clw.m .corb{width:64px;height:64px}.clw.l .corb{width:118px;height:118px}
+.cls .corb{width:84px!important;height:84px!important}
+#br .orb{background:none!important;box-shadow:none!important;filter:drop-shadow(0 0 40px rgba(110,190,240,.3))}
+#br .end .chips,#br .end p.mdq{display:none}
+#br .orb .tide{opacity:.78}#br{text-shadow:0 1px 14px rgba(4,12,22,.85)}
+.gv{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden;cursor:pointer}.gv>*{flex:none}
+.gv .garcw{position:relative;margin:0 auto;width:100%}
+.gv .garcw svg{display:block;width:100%;height:auto;overflow:visible}
+.gv .gmid{position:absolute;left:0;right:0;bottom:4%;text-align:center;line-height:1}
+.gv .gmid b{display:block;font-family:'Archivo',system-ui,sans-serif;font-stretch:72%;font-weight:900;letter-spacing:-.01em}
+.gv .gmid span{display:block;color:rgba(243,241,236,.65);margin-top:5px}
+.gv .gnm{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gv .gsb{color:rgba(243,241,236,.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gv.s .garcw{max-width:98px;margin-top:auto}.gv.s .gmid b{font-size:17px}.gv.s .gmid span{display:none}.gv.s .gnm{font-size:13px;text-align:center;margin-top:6px}.gv.s .gsb{font-size:11.5px;text-align:center;margin-top:1px}
+.gv.m{flex-direction:row;align-items:center;gap:16px}.gv.m .garcw{width:44%;max-width:150px;margin:0}.gv.m .gmid b{font-size:22px}.gv.m .gmid span{display:none}.gv.m .tx{flex:1;min-width:0}.gv.m .gnm{font-size:16px;margin-top:6px}.gv.m .gsb{font-size:13px;margin-top:3px}.gv.m .gpc{font-size:12.5px;color:rgba(243,241,236,.7);margin-top:6px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+.gv.l .gnm{font-size:15px;margin-top:6px}.gv.l .garcw{max-width:232px}.gv.l .gmid b{font-size:34px}.gv.l .gmid span{font-size:12.5px}
+.gv .ends{display:flex;justify-content:space-between;font-size:12px;color:rgba(243,241,236,.6);max-width:264px;width:100%;margin:2px auto 0}.gv .ends b{color:#F3F1EC;font-weight:650}
+.gv .st3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:9px;border-top:1px solid rgba(255,255,255,.09);padding-top:10px}
+.gv .st3 div{min-width:0;padding:0 8px;border-left:1px solid rgba(255,255,255,.09)}.gv .st3 div:first-child{border-left:0;padding-left:0}
+.gv .st3 b{display:block;font-size:16px;font-weight:700;white-space:nowrap}.gv .st3 span{display:block;font-size:11.5px;color:rgba(243,241,236,.58);margin-top:2px}
+.gv .pace{font-size:13px;line-height:1.35;color:rgba(243,241,236,.72);margin-top:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}.gv .pace b{color:#F3F1EC;font-weight:650}
+@media(prefers-reduced-motion:reduce){.tide .lv,.tide .w1,.tide .w2,.tide .w3{animation:none}}
+`;document.head.appendChild(st)})();
+
+// ---- no tick badge after a tap: the thing you tapped changing is the confirmation
+pressOk=function(){try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}};
+
+// ---- the tide: water rising as you breathe in and settling as you breathe out
+let TDN=0;
+function tideSvg(){const id='td'+(++TDN),wave=(y,a)=>{let d=`M-100,${y}`;for(let x=-100;x<200;x+=25)d+=` q6.25,${-a} 12.5,0 t12.5,0`;return d+' V160 H-100 Z'};
+ return`<svg class="tide" viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="${id}c"><circle cx="50" cy="50" r="46"/></clipPath><radialGradient id="${id}b" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#17364E"/><stop offset="1" stop-color="#0A1826"/></radialGradient><linearGradient id="${id}w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE6F7"/><stop offset=".5" stop-color="#5FAEDB"/><stop offset="1" stop-color="#2C6C9C"/></linearGradient><radialGradient id="${id}s" cx=".32" cy=".24" r=".6"><stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset=".5" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+ <circle cx="50" cy="50" r="46" fill="url(#${id}b)"/><g clip-path="url(#${id}c)"><g class="lv"><path class="w3" d="${wave(47,3.2)}" fill="#3F86B8" opacity=".5"/><path class="w2" d="${wave(51,4.4)}" fill="#6DB6DE" opacity=".5"/><path class="w1" d="${wave(55,3.4)}" fill="url(#${id}w)" opacity=".82"/></g></g>
+ <circle cx="50" cy="50" r="46" fill="url(#${id}s)"/><circle cx="50" cy="50" r="46" fill="none" stroke="#DDF1FB" stroke-opacity=".3" stroke-width=".8"/></svg>`}
+{let q=0;const fill=()=>{q=0;document.querySelectorAll('.corb:not([data-t]),#br .orb:not([data-t])').forEach(el=>{el.dataset.t=1;el.innerHTML=tideSvg()});const e=document.querySelector('#br .end');if(e&&!e.dataset.t){e.dataset.t=1;e.querySelectorAll('p').forEach(p=>{if(/feel/i.test(p.textContent))p.remove()});e.querySelectorAll('.chips').forEach(c=>c.remove())}};
+ new MutationObserver(()=>{if(!q)q=requestAnimationFrame(fill)}).observe(document.body,{childList:true,subtree:true})}
+// the Timer page keeps one calm row instead of the long list
+brList=function(){const wkm=calmWeek();return`<div class="clw m" data-a="bropen" style="margin-top:6px"><div class="orbw"><i class="corb"></i></div><div class="tx"><div class="ct">Take a minute</div><div class="cs">${wkm?wkm+' min this week':'Breathing, stillness or a body scan'}</div></div></div>`};
+// mood is gone: nothing reads or writes it any more
+try{delete FSX.mood}catch(_){}
+
+// ---- Goal at every size and for every kind of goal: an arc from start to target
+function gArc(pct,el,thin){const R=132,cx=150,cy=146,pt=(f,r)=>{const a=Math.PI*(1-f);return[cx+(r||R)*Math.cos(a),cy-(r||R)*Math.sin(a)]},arc=f=>{const [x,y]=pt(f);return`M${cx-R},${cy} A${R},${R} 0 0 1 ${x.toFixed(1)},${y.toFixed(1)}`},[px,py]=pt(pct),w=thin?7:4;
+ let tick='';if(el!=null){const a=pt(el,R+10),b=pt(el,R-10);tick=`<path d="M${a[0].toFixed(1)},${a[1].toFixed(1)} L${b[0].toFixed(1)},${b[1].toFixed(1)}" stroke="rgba(243,241,236,.75)" stroke-width="${thin?3:1.5}" stroke-linecap="round"/>`}
+ return`<svg viewBox="0 0 300 158" aria-hidden="true"><path d="${arc(1)}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="${thin?4:2}" stroke-linecap="round"/><path d="${arc(Math.max(.004,pct))}" fill="none" stroke="var(--ac,#F07A4E)" stroke-width="${w}" stroke-linecap="round"/>${tick}<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${thin?15:9}" fill="var(--ac,#F07A4E)" opacity=".22"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${thin?8:4.5}" fill="#F3F1EC"/></svg>`}
+{const _g=goalW;goalW=function(l){const G=S.goal2;if(!G||!l||(G.due&&G.due<=realToday()))return _g.apply(this,arguments);
+ try{const c=gCalc(G),pct=Math.max(0,Math.min(1,c.pct||0)),t=realToday(),tot=G.sd&&G.due?Math.max(1,dn(G.due)-dn(G.sd)):0,el0=tot?Math.max(0,Math.min(1,(dn(t)-dn(G.sd))/tot)):null,cus=G.type==='Custom',dev=G.type==='Develop',keep=!!c.tol,el=cus||keep?null:el0;
+  const big=cus?Math.round(pct*100)+'%':dev?`${c.now!=null?c.now:0}/${c.target}`:c.now!=null?c.fmt(c.now):Math.round(pct*100)+'%',left=c.left!=null?`${c.left} day${c.left===1?'':'s'} left`:'Ongoing';
+  const mid=cus?'of the time gone':dev?'sessions done':keep?'now':`${Math.round(pct*100)}% of the way`,behind=el!=null?el-pct:0,r1x=v=>Math.round(v*10)/10;
+  const pace=keep?`Holding within <b>±${c.tol}${c.u}</b> of ${c.fmt(c.start)}.`:pct>=1&&!cus?'<b>Target reached.</b>':el==null?esc(c.sugg||''):behind>.12?`<b>Behind the line.</b> ${esc(c.sugg||'')}`:behind<-.05?`<b>Ahead of the line.</b> ${esc(c.sugg||'')}`:`<b>On the line.</b> ${esc(c.sugg||'')}`;
+  const arcw=thin=>`<div class="garcw">${gArc(pct,el,thin)}<div class="gmid"><b>${big}</b><span>${mid}</span></div></div>`;
+  if(l.w===1&&l.h===1)return`<div class="gv s" data-a="gopen">${wlab('flag','Goal')}${arcw(1)}<div class="gnm">${esc(G.name)}</div><div class="gsb">${left}</div></div>`;
+  if(l.h===1)return`<div class="gv m" data-a="gopen">${arcw(1)}<div class="tx">${wlab('flag','Goal')}<div class="gnm">${esc(G.name)}</div><div class="gsb">${cus||dev||keep||c.now==null?left:`${c.fmt(c.now)} of ${c.fmt(c.target)}, ${left}`}</div><div class="gpc">${pace}</div></div></div>`;
+  const gap=dev?Math.max(0,c.target-(c.now||0)):c.now!=null?Math.abs(c.target-c.now):null,wk=gap!=null&&c.left>0?gap/(c.left/7):null,u=dev?'':c.u;
+  const st=cus?`<div><b>${Math.round(pct*100)}%</b><span>time gone</span></div><div><b>${c.left!=null?c.left:'-'}</b><span>day${c.left===1?'':'s'} left</span></div><div><b>${G.due?new Date(G.due+'T12:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'-'}</b><span>deadline</span></div>`
+   :`<div><b>${keep||gap==null?'-':r1x(gap)+u}</b><span>${dev?'sessions to go':'to go'}</span></div><div><b>${wk!=null&&!keep?r1x(wk)+u:'-'}</b><span>a week needed</span></div><div><b>${c.left!=null?c.left:'-'}</b><span>day${c.left===1?'':'s'} left</span></div>`;
+  return`<div class="gv l" data-a="gopen">${wlab('flag','Goal')}<div class="gnm">${esc(G.name)}</div>${arcw(0)}${cus?'':`<div class="ends"><span>Start <b>${dev?0:c.fmt(c.start)}</b></span><span>${keep?'Range':'Target'} <b>${keep?'±'+c.tol+c.u:dev?c.target:c.fmt(c.target)}</b></span></div>`}<div class="st3">${st}</div><div class="pace">${pace}</div></div>`}catch(_){return _g.apply(this,arguments)}}}
+
+// ---- sections fold. Weekly and set-once sections start folded; your choice is remembered.
+const FOLD0={'diet:Nutrition':1,'diet:Body and habits':1,'plan:Your plans':1,'plan:Reports':1};
+function foldApply(){const A=$('#app');if(!A)return;S.fold=S.fold||{};const hs=[...A.querySelectorAll(':scope>h3.dsec')];hs.forEach(h=>{if(h.classList.contains('emp'))return;let ttl=h.dataset.t;if(!ttl){ttl=h.dataset.t=h.textContent.trim();h.classList.add('fd');h.setAttribute('role','button');h.tabIndex=0;h.insertAdjacentHTML('beforeend','<span class="fct"></span><svg class="fch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>')}
+  const key=tab+':'+ttl,shut=S.fold[key]!=null?!!S.fold[key]:!!FOLD0[key];let n=h.nextElementSibling,c=0;const names=[];while(n&&!n.matches('h3.dsec,.nav,.navfade')){n.classList.toggle('fhid',shut);if(n.matches('.card,.sr')){c++;const t=n.querySelector('h2,.nm');if(t)names.push(t.textContent.replace(/\s*·.*$/,'').trim())}n=n.nextElementSibling}
+  h.classList.toggle('shut',shut);h.setAttribute('aria-expanded',shut?'false':'true');const ct=h.querySelector('.fct');if(ct)ct.textContent=shut&&names.length?names.slice(0,3).join(', ')+(names.length>3?' and more':''):''})}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{foldApply();pgCog()}catch(_){}return r}}
+window.addEventListener('click',e=>{const h=e.target.closest&&e.target.closest('#app>h3.dsec.fd');if(!h)return;e.stopImmediatePropagation();e.preventDefault();const key=tab+':'+h.dataset.t,shut=!h.classList.contains('shut');S.fold=S.fold||{};S.fold[key]=shut?1:0;save();foldApply();try{navigator.vibrate&&navigator.vibrate(4)}catch(_){}
+ if(!shut){let n=h.nextElementSibling,i=0;while(n&&!n.matches('h3.dsec,.nav,.navfade')){if(!MRM())n.animate([{opacity:0,transform:'translateY(-6px)'},{opacity:1,transform:'none'}],{duration:280,delay:i++*40,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});n=n.nextElementSibling}}},true);
+
+// ---- one set-up button per page for the things you set once
+const PGSET={diet:[['estopen','Calorie and macro goals','Work them out again or change them'],['dietpref','How you eat','Diet style and foods to avoid'],['mpopen','Meal prep','Prep days and what gets cooked'],['fstset','Fasting','Eating window and reminders'],['npopen','Reminders','Which nudges you get, and when']],
+ plan:[['gopen','Goal','What you’re working towards'],['mufix','Exercise muscles','Tell Swell what an exercise works'],['npopen','Reminders','Which nudges you get, and when']]};
+function pgCog(){const L=PGSET[tab];if(!L)return;const row=$('#app>.hdr>.row')||$('#app>.hdr');if(!row||row.querySelector('.pgcog'))return;const b=document.createElement('button');b.className='pgcog';b.dataset.a='pgset';b.setAttribute('aria-label','Set up this page');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
+ const stk=row.querySelector('.stkb');if(stk)stk.insertAdjacentElement('beforebegin',b);else row.appendChild(b)}
+window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-a=pgset]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const L=PGSET[tab]||[];
+ sheet(`<div class="pgs"><h2>${tab==='diet'?'Diet':'Workout'} set-up</h2>${L.map(([a,n,d])=>`<button class="opt" data-a="${a}"><span><b>${n}</b><small>${d}</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>`).join('')}</div>`)},true);
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items=R.items.filter(x=>x.h!=='Calm'&&x.h!=='Clearer Goal and Meal prep'&&x.h!=='Mood and energy');
+ R.items.push({i:'<circle cx="12" cy="12" r="9"/><path d="M4 13c2-2 4-2 6 0s4 2 6 0 3-1.5 4-.5"/>',h:'Calm',p:'Mood is replaced by Calm: water rising and falling in a glass circle. Tap it and pick what you need, from calming down to a body scan.'});
+ R.items.push({i:'<path d="M4 18a8 8 0 0116 0"/><circle cx="12" cy="10" r="1.6"/>',h:'A clearer Goal',p:'Every size of the Goal widget now shows an arc from start to target, with a mark for where you’d need to be today.'});
+ R.items.push({i:'<path d="M6 9l6 6 6-6"/>',h:'Tidier pages',p:'Tap a section heading to fold it away. Diet and Workout each have a small set-up button for the things you only set once.'})}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
