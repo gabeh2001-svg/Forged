@@ -10927,11 +10927,16 @@ html[data-look] .cal .cday{min-height:104px}html[data-look] .cal.c1 .cday{min-he
 // - Tapping a muscle zooms and pans to it instead of opening a separate page: a continuous zoom keeps people
 //   oriented because they see where the detail sits in the whole (Bederson and Boltzman 1999, zoomable interfaces and
 //   animation; Shneiderman 1996, 'overview first, zoom and filter, then details on demand').
+// - The figure is drawn as level contour bands, the way optical 3D body scanners show a body (a point cloud turned
+//   into a mesh avatar; Styku and Fit3D use a plain mannequin-style avatar, ShapeScale a mesh). It is one neutral
+//   outline with no skin, face or sex markers, so nobody has to enter size or anything else to see themselves in it.
+// - Zooming peels the surface back to the muscle with its fibre direction, like an anatomy atlas plate: layered
+//   reveal shows detail only when asked for (progressive disclosure, Nielsen 2006).
 // - Colour is never the only signal: every callout carries the muscle's name, per cent recovered and when it's
 //   ready (WCAG 2.2, 1.4.1).
 (function(){const st=document.createElement('style');st.textContent=`
 .mux{position:relative;height:348px;margin:6px 0 0;touch-action:pan-y;user-select:none;-webkit-user-select:none}
-.muxfig{position:absolute;left:50%;top:4px;width:116px;height:340px;margin-left:-58px;transform-origin:50% 50%}
+.muxfig{position:absolute;left:50%;top:4px;width:128px;height:340px;margin-left:-64px;transform-origin:50% 50%}
 .muxfig svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
 .muxfig svg.ht path[data-mu]{cursor:pointer}
 .mux.pend svg.ht .heat{opacity:0}
@@ -10964,7 +10969,7 @@ html[data-look] .cal .cday{min-height:104px}html[data-look] .cal.c1 .cday{min-he
 .mux.zm::before{opacity:1}
 .muxfig,.muxfig svg{will-change:transform}
 .mux.zm .muxfig svg:not(.ht){opacity:.8}
-.muxfig svg .selp{fill-opacity:.2;stroke:#F3F1EC;stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:none}
+.muxfig svg .selp{fill-opacity:.14;stroke:#F3F1EC;stroke-width:1;vector-effect:non-scaling-stroke;stroke-linejoin:round;pointer-events:none}
 .muxfig svg .selr{fill:none;stroke:#F3F1EC;stroke-opacity:.45;stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:1.5 4;pointer-events:none}
 .muxpn{position:absolute;right:2px;z-index:2;top:50%;width:45%;transform:translateY(-50%);pointer-events:none;line-height:1.2}
 .muxpn .zsc{font-size:11.5px;font-weight:650;color:rgba(243,241,236,.55)}
@@ -10976,25 +10981,38 @@ html[data-look] .cal .cday{min-height:104px}html[data-look] .cal.c1 .cday{min-he
 .muxpn .zbr i{display:block;height:100%;border-radius:1px;transform-origin:0 50%}
 .muxpn dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12.5px}
 .muxpn dt{color:rgba(243,241,236,.55)}.muxpn dd{margin:0;text-align:right;color:#F3F1EC;font-weight:600}
+.muxpn .zly{display:flex;align-items:center;gap:6px;margin:10px 0 2px;font-size:11.5px;color:rgba(243,241,236,.55)}.muxpn .zly i{width:6px;height:6px;border-radius:50%;border:1px solid rgba(243,241,236,.5)}.muxpn .zly i.on{background:#F3F1EC;border-color:#F3F1EC;margin-left:8px}
+.mux svg.ht .heat>g{animation:muxbr 5.2s ease-in-out infinite}@keyframes muxbr{50%{opacity:.8}}
 .muxbk{all:unset;position:absolute;left:0;top:14px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:650;color:rgba(243,241,236,.8);padding:7px 12px 7px 8px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}
 .muxbk svg{width:14px;height:14px}
 .muxrd{transition:opacity .25s}.mux.zm~.muxrd{opacity:0}
-@media(prefers-reduced-motion:reduce){.muxfig,.muxfig svg{transition:none!important}.mux.go svg.ht .heat,.mux.go .muxscan{animation:none}.mux.pend svg.ht .heat{opacity:1}}
+@media(prefers-reduced-motion:reduce){.mux svg.ht .heat>g{animation:none}.muxfig,.muxfig svg{transition:none!important}.mux.go svg.ht .heat,.mux.go .muxscan{animation:none}.mux.pend svg.ht .heat{opacity:1}}
 `;document.head.appendChild(st)})();
 
-// one smooth outline, drawn through points on the left half and mirrored
-const MUXP=[[80,6],[72,9],[68,18],[68,27],[71,35],[75,40],[75,47],[66,52],[54,56],[46,61],[42,70],[41,84],[40,100],[38,118],[36,134],[34,152],[33,168],[31,178],[31,188],[35,194],[40,192],[43,183],[44,170],[47,152],[50,134],[51,120],[53,104],[55,90],[57,82],[57,98],[58,114],[60,130],[58,146],[55,162],[53,180],[53,200],[55,222],[58,244],[57,258],[56,276],[58,296],[61,314],[62,326],[58,336],[56,342],[62,345],[72,345],[74,338],[72,326],[73,306],[75,286],[74,266],[74,252],[76,232],[78,212],[80,198]];
+const MUXW=1.1;
+// one smooth outline, drawn through points on the left half and mirrored; a neutral, average build
+const MUXP=[[80,6],[72,9],[68,18],[68,27],[71,35],[75,40],[75,47],[66,52],[54,56],[46,61],[42,70],[41,84],[40,100],[38,118],[36,134],[34,152],[33,168],[31,178],[31,188],[35,194],[40,192],[43,183],[44,170],[47,152],[50,134],[51,120],[53,104],[55,90],[57,82],[57,98],[58,114],[60,130],[58,146],[55,162],[53,180],[53,200],[55,222],[58,244],[57,258],[56,276],[58,296],[61,314],[62,326],[58,336],[56,342],[62,345],[72,345],[74,338],[72,326],[73,306],[75,286],[74,266],[74,252],[76,232],[78,212],[80,198]].map(([x,y])=>[y<50?x:Math.round((80-(80-x)*MUXW)*10)/10,y]);
 const muxCR=P=>{let d=`M${P[0][0]},${P[0][1]}`;for(let i=0;i<P.length-1;i++){const a=P[i-1]||P[i],b=P[i],c=P[i+1],e=P[i+2]||c,r=n=>Math.round(n*10)/10;d+=` C${r(b[0]+(c[0]-a[0])/6)},${r(b[1]+(c[1]-a[1])/6)} ${r(c[0]-(e[0]-b[0])/6)},${r(c[1]-(e[1]-b[1])/6)} ${c[0]},${c[1]}`}return d};
 const MUXL=muxCR(MUXP),MUXR=muxCR(MUXP.map(p=>[160-p[0],p[1]]));
+// the scan: level contour bands across the body, each bowed a little so the figure reads as a solid form
+const MUXCT=(()=>{const P=MUXP,pl=[];for(let i=0;i<P.length-1;i++){const a=P[i-1]||P[i],b=P[i],c=P[i+1],e=P[i+2]||c,c1=[b[0]+(c[0]-a[0])/6,b[1]+(c[1]-a[1])/6],c2=[c[0]-(e[0]-b[0])/6,c[1]-(e[1]-b[1])/6];for(let t=0;t<1;t+=.125){const u=1-t;pl.push([u*u*u*b[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*c[0],u*u*u*b[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*c[1]])}}pl.push(P[P.length-1]);
+ let d='',d5='',n=0;for(let y=9;y<345;y+=2.7,n++){const xs=[];for(let i=0;i<pl.length-1;i++){const a=pl[i],b=pl[i+1];if((a[1]<=y&&b[1]>y)||(b[1]<=y&&a[1]>y))xs.push(a[0]+(y-a[1])/(b[1]-a[1])*(b[0]-a[0]))}xs.sort((a,b)=>a-b);
+  const sg=[];if(xs.length%2){const x=xs.pop();sg.push([x,160-x])}for(let i=0;i+1<xs.length;i+=2){sg.push([xs[i],xs[i+1]]);sg.push([160-xs[i+1],160-xs[i]])}
+  sg.forEach(([a,b])=>{const w=b-a;if(w<1.4)return;const bow=Math.min(4.6,w*.16),s=`M${a.toFixed(1)},${y.toFixed(1)}Q${((a+b)/2).toFixed(1)},${(y+bow).toFixed(1)} ${b.toFixed(1)},${y.toFixed(1)}`;if(n%6===0)d5+=s;else d+=s})}return[d,d5]})();
+// which way each muscle's fibres run (degrees from level), for the layer under the surface
+const MUXFA={chest:12,uchest:24,fdelt:74,sdelt:88,rdelt:34,traps:56,lats:60,ubk:14,lbk:88,bic:90,tri:90,fore:90,abs:0,obl:50,glu:34,abd:70,quad:90,ham:90,add:80,calf:90,hipf:70};
 let MUXN=0;
 // layers: 'base' = body and outline, 'heat' = glow and touch targets, 'all' = both in one drawing (widgets)
-function muxSvg(B,L,layer){const id='mx'+(++MUXN),parts=Object.entries(B.parts);
- const defs=`<defs><clipPath id="${id}c"><path d="${MUXL} L80.6,198 L80.6,6 Z"/><path d="${MUXR} L79.4,198 L79.4,6 Z"/></clipPath><filter id="${id}b" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur stdDeviation="3.4"/></filter><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset=".55" stop-color="#fff" stop-opacity=".07"/><stop offset="1" stop-color="#fff" stop-opacity=".03"/></linearGradient><pattern id="${id}p" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height=".5" fill="#fff" opacity=".07"/></pattern></defs>`;
- const base=`<g clip-path="url(#${id}c)"><rect x="20" y="0" width="120" height="352" fill="url(#${id}g)"/><rect x="20" y="0" width="120" height="352" fill="url(#${id}p)"/><g fill="none" stroke="#fff" stroke-opacity=".07" stroke-width=".6">${parts.map(([k,d])=>`<path d="${d}"/><path d="${MIR(d)}"/>`).join('')}</g></g><g fill="none" stroke="#F3F1EC" stroke-opacity=".42" stroke-width=".8" stroke-linejoin="round"><path d="${MUXL}"/><path d="${MUXR}"/></g>`;
+function muxSvg(B,L,layer){const id='mx'+(++MUXN),parts=Object.entries(B.parts),SX=`transform="translate(80 0) scale(${MUXW} 1) translate(-80 0)"`,deep=layer==='base';
+ const angs=deep?[...new Set(parts.flatMap(([k])=>{const a=MUXFA[k]==null?90:MUXFA[k];return[a,180-a]}))]:[];
+ const defs=`<defs><clipPath id="${id}c"><path d="${MUXL} L80.6,198 L80.6,6 Z"/><path d="${MUXR} L79.4,198 L79.4,6 Z"/></clipPath><filter id="${id}b" x="-30%" y="-10%" width="160%" height="120%"><feGaussianBlur stdDeviation="3.6"/></filter><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".5" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#fff" stop-opacity=".02"/></linearGradient>${deep?`<clipPath id="${id}k"><circle class="zc" r="0"/></clipPath><mask id="${id}m" maskUnits="userSpaceOnUse" x="14" y="0" width="132" height="352"><rect x="14" y="0" width="132" height="352" fill="#fff"/><circle class="zc" r="0" fill="#000"/></mask>${angs.map(a=>`<pattern id="${id}f${a}" width="2.2" height="2.2" patternUnits="userSpaceOnUse" patternTransform="rotate(${a})"><rect width="2.2" height=".5" fill="#F3F1EC" opacity=".34"/></pattern>`).join('')}`:''}</defs>`;
+ const surf=`<g clip-path="url(#${id}c)"><rect x="14" y="0" width="132" height="352" fill="url(#${id}g)"/><path d="${MUXCT[0]}" fill="none" stroke="#F3F1EC" stroke-opacity=".2" stroke-width=".4"/><path d="${MUXCT[1]}" fill="none" stroke="#F3F1EC" stroke-opacity=".42" stroke-width=".5"/></g>`;
+ const under=deep?`<g class="mlay" clip-path="url(#${id}k)"><g clip-path="url(#${id}c)"><rect x="14" y="0" width="132" height="352" fill="#fff" opacity=".03"/><g ${SX} stroke="#F3F1EC" stroke-opacity=".5" stroke-width=".45" stroke-linejoin="round">${parts.map(([k,d])=>{const a=MUXFA[k]==null?90:MUXFA[k];return`<path d="${d}" fill="url(#${id}f${a})"/><path d="${MIR(d)}" fill="url(#${id}f${180-a})"/>`}).join('')}</g></g></g>`:'';
+ const base=`${deep?`<g class="ctr" mask="url(#${id}m)">${surf}</g>`:surf}${under}<g fill="none" stroke="#F3F1EC" stroke-opacity=".5" stroke-width=".7" stroke-linejoin="round"><path d="${MUXL}"/><path d="${MUXR}"/></g>`;
  const hot=parts.filter(([k])=>((L[k]||{}).lv||0)>.05);
- const heat=`<g class="heat"><g clip-path="url(#${id}c)"><g filter="url(#${id}b)">${hot.map(([k,d])=>{const lv=L[k].lv,c=muCol(lv),o=(.38+.62*lv).toFixed(2);return`<path d="${d}" fill="${c}" opacity="${o}"/><path d="${MIR(d)}" fill="${c}" opacity="${o}"/>`}).join('')}</g><g opacity=".5">${hot.map(([k,d])=>{const c=muCol(L[k].lv);return`<path d="${d}" fill="${c}" opacity="${(.15+.3*L[k].lv).toFixed(2)}"/><path d="${MIR(d)}" fill="${c}" opacity="${(.15+.3*L[k].lv).toFixed(2)}"/>`}).join('')}</g></g></g>`;
- const hit=layer==='heat'?`<g fill="transparent">${parts.map(([k,d])=>`<path d="${d}" data-mu="${k}" data-s="L"><title>${MUS[k][0]}</title></path><path d="${MIR(d)}" data-mu="${k}" data-s="R"><title>${MUS[k][0]}</title></path>`).join('')}</g>`:'';
- return`<svg viewBox="20 0 120 352" ${layer==='heat'?'class="ht"':'role="img" aria-label="Muscle recovery"'}>${defs}${layer!=='heat'?base:''}${layer!=='base'?heat:''}${hit}</svg>`}
+ const heat=`<g class="heat"><g clip-path="url(#${id}c)"><g filter="url(#${id}b)" ${SX}>${hot.map(([k,d])=>{const lv=L[k].lv,c=muCol(lv),o=(.42+.58*lv).toFixed(2);return`<path d="${d}" fill="${c}" opacity="${o}"/><path d="${MIR(d)}" fill="${c}" opacity="${o}"/>`}).join('')}</g></g></g>`;
+ const hit=layer==='heat'?`<g class="hitg" fill="transparent" ${SX}>${parts.map(([k,d])=>`<path d="${d}" data-mu="${k}" data-s="L"><title>${MUS[k][0]}</title></path><path d="${MIR(d)}" data-mu="${k}" data-s="R"><title>${MUS[k][0]}</title></path>`).join('')}</g>`:'';
+ return`<svg viewBox="14 0 132 352" ${layer==='heat'?'class="ht"':'role="img" aria-label="Muscle recovery"'}>${defs}${layer==='heat'?'':layer==='all'?heat+base:base}${layer==='heat'?heat:''}${hit}</svg>`}
 muFig=function(B,L){return muxSvg(B,L,'all')};
 
 const MUX={side:null,sel:null,seen:0};
@@ -11030,19 +11048,21 @@ function muxDraw(el,anim){const M=muLoad(),L=M.m,B=MUX.side==='b'?BODYB:BODYF,ln
 // zooming: the figure glides so the muscle sits left of centre, turned a little, with its readout on the right
 const MUXE='cubic-bezier(.16,1,.3,1)';
 function muxUnzoom(el){if(!el.classList.contains('zm'))return false;el.classList.remove('zm');const f=el.querySelector('.muxfig');f.style.transform='translate(0px,0px) scale(1)';f.querySelectorAll('svg').forEach(s=>s.style.transform='');
- el.querySelectorAll('.selp,.selr,.muxpn,.muxbk').forEach(x=>x.remove());el.querySelector('.muxln').innerHTML='';return true}
+ el.querySelectorAll('.selp,.selr,.muxpn,.muxbk').forEach(x=>x.remove());el.querySelectorAll('.zc').forEach(c=>c.setAttribute('r',0));el.querySelector('.muxln').innerHTML='';return true}
 function muxZoom(el,M,anim){const k=MUX.sel,L=M.m,f=el.querySelector('.muxfig'),ln=el.querySelector('.muxln'),ht=f.querySelector('svg.ht'),p=ht&&(ht.querySelector(`[data-mu="${k}"][data-s="${MUX.ss||'L'}"]`)||ht.querySelector(`[data-mu="${k}"]`));if(!p)return;
- const W=el.clientWidth,H=el.clientHeight,bb=p.getBBox(),u=f.clientWidth/120,px=(bb.x+bb.width/2-20)*u,py=(bb.y+bb.height/2)*u,z=Math.max(1.9,Math.min(3.3,118/(Math.max(bb.width,bb.height*.8)*u))),X=W*.3,Y=H*.47,mv=anim&&!MRM();
+ const W=el.clientWidth,H=el.clientHeight,b0=p.getBBox(),bb={x:80+(b0.x-80)*MUXW,y:b0.y,width:b0.width*MUXW,height:b0.height},u=f.clientWidth/132,px=(bb.x+bb.width/2-14)*u,py=(bb.y+bb.height/2)*u,z=Math.max(1.9,Math.min(3.3,118/(Math.max(bb.width,bb.height*.8)*u))),X=W*.3,Y=H*.47,mv=anim&&!MRM();
  el.querySelectorAll('.muxlb,.selp,.selr,.muxpn,.muxbk').forEach(x=>x.remove());ln.innerHTML='';ln.setAttribute('viewBox',`0 0 ${W} ${H}`);el.classList.remove('pend');el.classList.add('zm');
  const tr=mv?`transform .72s ${MUXE}`:'none';f.style.transformOrigin='0 0';f.style.transition=tr;f.style.transform=`translate(${(X-f.offsetLeft-z*px).toFixed(1)}px,${(Y-f.offsetTop-z*py).toFixed(1)}px) scale(${z.toFixed(3)})`;
  const right=MUX.ss==='R';f.querySelectorAll('svg').forEach(s=>{s.style.transformOrigin=`${px.toFixed(1)}px ${py.toFixed(1)}px`;s.style.transition=tr;s.style.transform=`perspective(560px) rotateY(${right?-20:-14}deg) rotateX(5deg)`});
  const NS='http://www.w3.org/2000/svg',o=L[k]||{},lv=o.lv||0,col=lv>.05?muCol(lv):'#8FA3B8',sp=document.createElementNS(NS,'path');sp.setAttribute('d',p.getAttribute('d'));sp.setAttribute('class','selp');sp.setAttribute('fill',col);
- const rg=document.createElementNS(NS,'circle');rg.setAttribute('class','selr');rg.setAttribute('cx',bb.x+bb.width/2);rg.setAttribute('cy',bb.y+bb.height/2);const rr=Math.max(bb.width,bb.height)/2+5;rg.setAttribute('r',rr);ht.appendChild(rg);ht.appendChild(sp);
+ const rg=document.createElementNS(NS,'circle');rg.setAttribute('class','selr');rg.setAttribute('cx',bb.x+bb.width/2);rg.setAttribute('cy',bb.y+bb.height/2);const rr=Math.max(bb.width,bb.height)/2+5;rg.setAttribute('r',rr);ht.appendChild(rg);(ht.querySelector('.hitg')||ht).appendChild(sp);
+ // the surface peels back inside the ring to show the muscle underneath
+ f.querySelectorAll('.zc').forEach(c=>{c.setAttribute('cx',bb.x+bb.width/2);c.setAttribute('cy',bb.y+bb.height/2);c.setAttribute('r',rr);c.style.transformBox='fill-box';c.style.transformOrigin='center';if(mv)c.animate([{transform:'scale(0)'},{transform:'scale(1)'}],{duration:900,delay:560,easing:'cubic-bezier(.65,0,.35,1)',fill:'backwards'})});
  const pc=Math.round((1-lv)*100),w=Math.round((M.wk[k]||0)*10)/10,pn=document.createElement('div');pn.className='muxpn';
- pn.innerHTML=`${MUS[k][1]!==MUS[k][0]?`<div class="zsc">${esc(MUS[k][1])}</div>`:''}<div class="znm">${esc(MUS[k][0])}</div><div class="zpc"><b style="color:${lv>.05?col:'#F3F1EC'}">${pc}%</b><span>recovered</span></div><div class="zbr"><i style="width:${pc}%;background:${lv>.05?col:'#7FD6A0'}"></i></div><dl><dt>Ready</dt><dd>${lv>.05?muReady(o.ready):'now'}</dd><dt>Last trained</dt><dd>${o.last?new Date(o.last).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'Not lately'}</dd><dt>This week</dt><dd>${w} set${w===1?'':'s'}</dd></dl>`;el.appendChild(pn);
+ pn.innerHTML=`${MUS[k][1]!==MUS[k][0]?`<div class="zsc">${esc(MUS[k][1])}</div>`:''}<div class="znm">${esc(MUS[k][0])}</div><div class="zpc"><b style="color:${lv>.05?col:'#F3F1EC'}">${pc}%</b><span>recovered</span></div><div class="zbr"><i style="width:${pc}%;background:${lv>.05?col:'#7FD6A0'}"></i></div><div class="zly"><i></i>Surface<i class="on"></i>Muscle</div><dl><dt>Ready</dt><dd>${lv>.05?muReady(o.ready):'now'}</dd><dt>Last trained</dt><dd>${o.last?new Date(o.last).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'Not lately'}</dd><dt>This week</dt><dd>${w} set${w===1?'':'s'}</dd></dl>`;el.appendChild(pn);
  const bk=document.createElement('button');bk.className='muxbk';bk.dataset.a='muxout';bk.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Whole body';el.appendChild(bk);
  const x1=X+rr*u*z*.72,x2=W-pn.offsetWidth-8;ln.innerHTML=x2>x1+6?`<circle class="d" cx="${x1.toFixed(1)}" cy="${Y}" r="1.8"/><path d="M${x1.toFixed(1)},${Y} L${x2},${Y}"/>`:'';
- if(mv){const n=sp.getTotalLength();sp.style.strokeDasharray=n;sp.animate([{strokeDashoffset:n,fillOpacity:0},{strokeDashoffset:0,fillOpacity:.2}],{duration:700,delay:260,easing:'cubic-bezier(.65,0,.35,1)',fill:'backwards'});
+ if(mv){const n=sp.getTotalLength();sp.style.strokeDasharray=n;sp.animate([{strokeDashoffset:n,fillOpacity:0},{strokeDashoffset:0,fillOpacity:.14}],{duration:700,delay:260,easing:'cubic-bezier(.65,0,.35,1)',fill:'backwards'});
   rg.animate([{opacity:0,transform:'scale(1.5)'},{opacity:1,transform:'scale(1)'}],{duration:600,delay:200,easing:MUXE,fill:'backwards'});rg.style.transformOrigin=`${bb.x+bb.width/2}px ${bb.y+bb.height/2}px`;
   ln.querySelectorAll('path').forEach(q=>{const m=q.getTotalLength();q.style.strokeDasharray=m;q.animate([{strokeDashoffset:m},{strokeDashoffset:0}],{duration:380,delay:480,easing:'cubic-bezier(.65,0,.35,1)',fill:'backwards'})});ln.querySelectorAll('circle').forEach(c=>c.animate([{opacity:0},{opacity:1}],{duration:200,delay:460,fill:'backwards'}));
   pn.animate([{opacity:0,transform:'translate(12px,-50%)'},{opacity:1,transform:'translate(0,-50%)'}],{duration:460,delay:420,easing:MUXE,fill:'backwards'});bk.animate([{opacity:0},{opacity:1}],{duration:300,delay:420,fill:'backwards'});
@@ -11132,6 +11152,96 @@ try{WIS.cup=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
   return`<div class="nuw l2">${lab}<div class="hn" style="margin-top:6px"><b>${n}</b><span>of ${tot} hit today</span></div><div class="ai">Closest to done</div>${todo.slice(0,5).map(bar).join('')}</div>`}catch(_){return _wd.apply(this,arguments)}}}
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',h:'Tidier widgets',p:'Every widget now fits each of its three sizes, Achievements has its own widget, and Home stays still after a tap.'})}
+
+/* ===== v140: Calm replaces the Mood widget (a slow orb that opens breathing and a quiet sit); Meal prep and Goal
+   widgets redrawn at the large size ===== */
+// Research notes for this block:
+// - Slow breathing at about six breaths a minute raises heart-rate variability and lowers reported stress
+//   (Zaccaro et al. 2018, Frontiers in Human Neuroscience, systematic review); five minutes a day of cyclic sighing
+//   improved mood more than mindfulness meditation in a randomised trial (Balban et al. 2023, Cell Reports Medicine).
+//   Brief mindfulness practice also lowers stress (Goyal et al. 2014, JAMA Internal Medicine, meta-analysis), so
+//   "Stillness" sits alongside the breathing patterns. The orb drifts at roughly that six-a-minute pace.
+// - Mood logging was dropped from Home: the owner saw no use for it, and self-tracking that asks for input without
+//   giving anything back is the commonest reason people abandon trackers (Epstein et al. 2016, CHI, "Beyond
+//   Abandonment"). The old entries stay in storage.
+// - Goal: showing where you are against where the plan says you should be today ("pace") is goal-gradient feedback,
+//   which keeps effort up as the target nears (Kivetz, Urminsky and Zheng 2006, J. Marketing Research), and progress
+//   monitoring itself improves goal attainment (Harkin et al. 2016, Psychological Bulletin, meta-analysis).
+// - Meal prep: the widget leads with what is left to do today and keeps the next cook as a compact summary below,
+//   one idea per size (Apple HIG, Widgets).
+(function(){const st=document.createElement('style');st.textContent=`
+.cmorb{position:relative;flex:none;width:58px;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--ac,#F07A4E) 22%,#fff) 0%,var(--ac,#F07A4E) 42%,color-mix(in srgb,var(--ac,#F07A4E) 52%,#3A2460) 78%,#2A1B45 100%);box-shadow:0 0 30px 4px color-mix(in srgb,var(--ac,#F07A4E) 34%,transparent),inset 0 0 16px rgba(255,255,255,.22);animation:cmb 10s cubic-bezier(.45,.05,.55,.95) infinite}
+.cmorb::after{content:'';position:absolute;inset:-9px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ac,#F07A4E) 60%,#fff);opacity:0;animation:cmr 10s cubic-bezier(.45,.05,.55,.95) infinite}
+@keyframes cmb{0%,100%{transform:scale(.84)}45%{transform:scale(1.04)}}
+@keyframes cmr{0%{opacity:0;transform:scale(.8)}45%{opacity:.35;transform:scale(1.06)}100%{opacity:0;transform:scale(1.3)}}
+@media(prefers-reduced-motion:reduce){.cmorb,.cmorb::after{animation:none}}
+.cmw{display:flex;flex-direction:column;height:100%;min-height:0;cursor:pointer}
+.cmw .ob{flex:1;min-height:0;display:grid;place-items:center}
+.cmw .tx b{display:block;font-size:17px;font-weight:700;line-height:1.2}.cmw .tx small{display:block;font-size:12.5px;color:rgba(243,241,236,.65);margin-top:2px}
+.cmw.s .cmorb{width:50px}.cmw.s .tx b{font-size:15px}
+.cmw.m{flex-direction:row;align-items:center;gap:18px}.cmw.m .cmorb{width:66px;margin-left:8px}.cmw.m .tx{min-width:0}.cmw.m .tx .wl{margin-bottom:6px}
+.cmw.l .cmorb{width:112px}.cmw.l .tx{text-align:center}.cmw.l .tx b{font-size:20px}
+.cmw .qk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.cmw .qk button{all:unset;cursor:pointer;text-align:center;padding:10px 4px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);font-size:13px;font-weight:650;line-height:1.25}
+.cmw .qk button small{display:block;font-size:11.5px;font-weight:500;color:rgba(243,241,236,.6)}
+.cmhd{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 4px}.cmhd .cmorb{width:84px;margin:6px 0 20px}.cmhd h2{margin:0}.cmhd p{margin:4px 0 8px}
+.mp3 .pg{display:flex;align-items:center;gap:10px;margin:8px 0 2px}.mp3 .pg .pgb{flex:1;display:flex;gap:4px}.mp3 .pg .pgb i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.14);transition:background .3s}.mp3 .pg .pgb i.on{background:#7FD6A0}
+.mp3 .pg span{font-size:12.5px;color:rgba(243,241,236,.66);white-space:nowrap}
+.mp3 .hd3{font-size:20px;font-weight:700;line-height:1.2;margin-top:8px}
+.mp3 .rws{margin-top:6px}.mp3 .rw{min-height:36px;border-top:1px solid rgba(255,255,255,.07)}.mp3 .rw:first-child{border-top:0}.mp3 .rw span{font-size:14.5px}
+.mp3 .rw em{font-style:normal;font-size:11.5px;font-weight:650;letter-spacing:0;text-transform:none;color:#7FD6A0;background:rgba(127,214,160,.12);padding:3px 8px;border-radius:999px}
+.mp3 .nx3{margin-top:auto;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.mp3 .nx3 .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.mp3 .nx3 .t b{font-size:14.5px;font-weight:700}.mp3 .nx3 .t small{font-size:12.5px;color:rgba(243,241,236,.62)}
+.mp3 .nx3 .dy{display:flex;gap:5px;margin-top:8px}.mp3 .nx3 .dy i{font-style:normal;font-size:11.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(243,241,236,.85)}
+.mp3 .nx3 .rc{margin-top:8px;font-size:13px;color:rgba(243,241,236,.75);line-height:1.45}.mp3 .nx3 .rc div{display:flex;justify-content:space-between;gap:10px}.mp3 .nx3 .rc span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mp3 .nx3 .rc em{font-style:normal;color:rgba(243,241,236,.55);white-space:nowrap}
+.gw3{display:flex;flex-direction:column;height:100%;min-height:0;cursor:pointer}
+.gw3 .tp{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.gw3 .tp b{font-size:16px;font-weight:700;line-height:1.25;min-width:0}.gw3 .tp em{flex:none;font-style:normal;font-size:12px;font-weight:650;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(243,241,236,.85);white-space:nowrap}
+.gw3 .tp em.ok{background:rgba(127,214,160,.14);color:#9BE0B4}.gw3 .tp em.bh{background:rgba(239,125,60,.14);color:#F2A27A}
+.gw3 .nw{display:flex;align-items:baseline;gap:10px;margin-top:14px}.gw3 .nw b{font-family:'Archivo',system-ui,sans-serif;font-stretch:72%;font-size:50px;font-weight:900;line-height:.9;letter-spacing:-.01em}.gw3 .nw span{font-size:14px;color:rgba(243,241,236,.7)}
+.gw3 .trk{position:relative;height:34px;margin:22px 6px 0}
+.gw3 .trk .ln{position:absolute;left:0;right:0;top:9px;height:2px;border-radius:1px;background:rgba(255,255,255,.14)}
+.gw3 .trk .fl{position:absolute;left:0;top:9px;height:2px;border-radius:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--ac,#F07A4E) 40%,transparent),var(--ac,#F07A4E))}
+.gw3 .trk .dot{position:absolute;top:10px;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#F3F1EC;box-shadow:0 0 0 4px color-mix(in srgb,var(--ac,#F07A4E) 30%,transparent),0 0 14px color-mix(in srgb,var(--ac,#F07A4E) 60%,transparent)}
+.gw3 .trk .pc{position:absolute;top:2px;width:1px;height:16px;background:rgba(243,241,236,.6)}
+.gw3 .trk .pc::after{content:'Plan';position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:10.5px;color:rgba(243,241,236,.6)}
+.gw3 .trk .en{position:absolute;top:5px;width:2px;height:10px;background:rgba(255,255,255,.3)}
+.gw3 .ends{display:flex;justify-content:space-between;font-size:12px;color:rgba(243,241,236,.6);margin:2px 0 0}.gw3 .ends b{color:#F3F1EC;font-weight:650}
+.gw3 .st3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.gw3 .st3 b{display:block;font-size:16px;font-weight:700}.gw3 .st3 span{display:block;font-size:11.5px;color:rgba(243,241,236,.6);margin-top:2px}
+`;document.head.appendChild(st)})();
+
+// ---- Calm ----
+BRS.still={n:'Stillness',d:'A quiet sit. Rest your attention on the breath and let the orb set the pace.',ph:[['Breathe in',5,1],['Breathe out',6,.6]]};
+WDESC.mood=['Calm','Breathing and a quiet sit, a tap away.','calm','Body'];
+try{WIS.calm='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/></svg>'}catch(_){}
+function calmLast(){const L=S.brl||[];if(!L.length)return'Take a minute';const x=L[0],t=realToday(),n=L.filter(y=>y.d===t).length;if(x.d===t)return n>1?`${n} sessions today`:'One session today';const dd=Math.round((new Date(t)-new Date(x.d))/864e5);return dd===1?'Last one yesterday':`Last one ${dd} days ago`}
+{const _wd=wd;wd=function(l){if(!l||l.id!=='mood')return _wd.apply(this,arguments);try{const lab=wlab('calm','Calm'),D=S.brDur||3;
+  if(l.w===1&&l.h===1)return`<div class="cmw s" data-a="bropen">${lab}<div class="ob"><div class="cmorb"></div></div><div class="tx"><b>Breathe</b><small>${esc(calmLast())}</small></div></div>`;
+  if(l.h===1)return`<div class="cmw m" data-a="bropen"><div class="cmorb"></div><div class="tx">${lab}<b>Take a minute</b><small>${esc(calmLast())}</small></div></div>`;
+  return`<div class="cmw l" data-a="bropen">${lab}<div class="ob"><div class="cmorb"></div></div><div class="tx"><b>Take a minute</b><small>${esc(calmLast())}</small></div><div class="qk"><button data-a="calmgo" data-i="sigh|1">Sigh<small>1 min</small></button><button data-a="calmgo" data-i="coh|${D}">Even breath<small>${D} min</small></button><button data-a="calmgo" data-i="still|5">Stillness<small>5 min</small></button></div></div>`}catch(_){return _wd.apply(this,arguments)}}}
+window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-a=calmgo]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const [k,m]=el.dataset.i.split('|');brOpen(k,+m)},true);
+brSheet=function(){sheet(`<div class="cmhd"><div class="cmorb"></div><h2>Take a minute</h2><p class="sm">Pick a length, then a way to settle. Follow the orb.</p></div>${brList()}`)};
+
+// ---- Meal prep, large ----
+{const _wd=wd;wd=function(l){if(!l||l.id!=='prep'||!(l.w===2&&l.h===2))return _wd.apply(this,arguments);try{const t=today(),np=nextPrepFrom(t),Tk=mpTasks(t);if(!np&&!Tk.length)return _wd.apply(this,arguments);
+  const left=Tk.filter(x=>!x.done),isT=np===t,P=np?prepList(np):null,dn=Tk.length-left.length;
+  const top=Tk.length?`<div class="pg"><div class="pgb">${Tk.map((x,i)=>`<i class="${i<dn?'on':''}"></i>`).join('')}</div><span>${dn} of ${Tk.length} done</span></div><div class="rws">${[...left,...Tk.filter(x=>x.done)].slice(0,4).map(x=>tRow(t,x)).join('')}</div>`:`<div class="hd3">Nothing to prep today</div>`;
+  const nx=np&&P?`<div class="nx3"><div class="t"><b>${isT?'Today’s cook':'Next cook'}</b><small>${isT?`${P.portions} portions`:esc(whenLbl(np))}</small></div><div class="dy">${P.days.slice(0,7).map(d=>`<i>${shortDay(d)}</i>`).join('')}</div>${P.L.length?`<div class="rc">${P.L.slice(0,2).map(o=>`<div><span>${esc(o.r.name||o.r.n||'Recipe')}</span><em>${o.n} portion${o.n===1?'':'s'}</em></div>`).join('')}${P.L.length>2?`<div><span>and ${P.L.length-2} more</span></div>`:''}</div>`:'<div class="rc">Nothing to batch cook yet.</div>'}</div>`:'';
+  return`<div class="mpw w22 mp3">${wHead('Meal prep',left.length?`${left.length} to prep`:Tk.length?'All prepped':'')}${top}${nx}</div>`}catch(_){return _wd.apply(this,arguments)}}}
+
+// ---- Goal, large: where you are, where the plan says you should be, and what's left ----
+{const _wd=wd;wd=function(l){if(!l||l.id!=='goal'||!(l.w===2&&l.h===2))return _wd.apply(this,arguments);try{const G=S.goal2;if(!G||G.type==='Custom'||(G.due&&G.due<=realToday()))return _wd.apply(this,arguments);
+  const c=gCalc(G);if(c.now==null||!isFinite(c.start)||!isFinite(c.target)||c.target===c.start)return _wd.apply(this,arguments);
+  const cl=v=>Math.max(0,Math.min(1,v)),p=cl((c.now-c.start)/(c.target-c.start)),tot=G.due&&G.sd?Math.max(1,dn(G.due)-dn(G.sd)):0,pace=tot?cl((dn(realToday())-dn(G.sd))/tot):null,
+   togo=Math.abs(c.target-c.now),wk=c.left!=null?Math.max(c.left,1)/7:null,rate=wk?togo/wk:null,on=pace==null?null:p>=pace-.05,done=p>=1;
+  const chip=done?'<em class="ok">Reached</em>':on==null?'<em>Ongoing</em>':on?'<em class="ok">On pace</em>':'<em class="bh">Behind plan</em>';
+  return`<div class="gw3" data-a="gopen">${wlab('goal','Goal')}<div class="tp"><b>${esc(G.name)}</b>${chip}</div>
+   <div class="nw"><b>${c.fmt(c.now)}</b><span>${done?'target reached':`${c.fmt(r1(togo))} to go`}</span></div>
+   <div class="trk"><div class="ln"></div><div class="fl" style="width:${(p*100).toFixed(1)}%"></div><i class="en" style="left:0"></i><i class="en" style="right:0"></i>${pace!=null&&!done?`<i class="pc" style="left:${(pace*100).toFixed(1)}%"></i>`:''}<i class="dot" style="left:${(p*100).toFixed(1)}%"></i></div>
+   <div class="ends"><span>Start <b>${c.fmt(c.start)}</b></span><span>Target <b>${c.fmt(c.target)}</b></span></div>
+   <div class="st3"><div><b>${Math.round(p*100)}%</b><span>of the way</span></div><div><b>${c.left!=null?c.left:'–'}</b><span>day${c.left===1?'':'s'} left</span></div><div><b>${rate!=null&&!done?c.fmt(r1(rate)):'–'}</b><span>a week needed</span></div></div></div>`}catch(_){return _wd.apply(this,arguments)}}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/>',h:'Calm',p:'The Mood widget is now Calm: tap the orb for breathing or a quiet sit.'});R.items.push({i:'<path d="M4 12h16M12 4v16"/>',h:'Clearer Goal and Meal prep',p:'The large Goal widget shows your pace against the plan, and Meal prep shows what’s left and the next cook.'})}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
