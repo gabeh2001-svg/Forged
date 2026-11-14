@@ -11573,6 +11573,54 @@ window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest(
  R.items.push({i:'<path d="M4 18a8 8 0 0116 0"/><circle cx="12" cy="10" r="1.6"/>',h:'A clearer Goal',p:'Every size of the Goal widget now shows an arc from start to target, with a mark for where you’d need to be today.'});
  R.items.push({i:'<path d="M6 9l6 6 6-6"/>',h:'Tidier pages',p:'Tap a section heading to fold it away. Diet and Workout each have a small set-up button for the things you only set once.'})}}
 
+/* ===== v143: the opening tour shows how to add widgets, and Home offers a widget (once, with one tap to add) when
+   you start using something that has one ===== */
+// Research notes for this block:
+// - Help lands best at the moment it's relevant: contextual, just-in-time prompts are used far more than up-front
+//   instruction, which people skip and forget (Nielsen Norman Group, "Onboarding tutorials vs. contextual help";
+//   Carroll and Rosson 1987, "Paradox of the active user". From memory).
+// - A prompt works when motivation and ability are both there (Fogg 2009, behaviour model): someone who has just
+//   set prep days already wants the thing, and "Add" is one tap.
+// - To stay calm it offers one widget at a time, at most one new offer a day, and never again once declined
+//   (interruptions cost attention: Mark, Gudith and Klocke 2008, CHI).
+(function(){const st=document.createElement('style');st.textContent=`
+.wofr{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.wofr .ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.07);color:#F3F1EC}.wofr .ic svg{width:19px;height:19px}
+.wofr .tx{flex:1;min-width:0;line-height:1.25}.wofr .tx b{display:block;font-size:14.5px;font-weight:650}.wofr .tx span{display:block;font-size:12.5px;color:rgba(243,241,236,.65);margin-top:2px}
+.wofr button{all:unset;cursor:pointer;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;flex:none}
+.wofr .ad{background:#F3F1EC;color:#141412}.wofr .no{color:rgba(243,241,236,.6);padding:8px 6px}
+`;document.head.appendChild(st)})();
+
+// what counts as "using it", the line shown, and the size it's added at
+const WSUG={prep:[()=>!!nextPrepFrom(today()),'You’ve set a prep day','See what to prep from Home.',2,1],
+ caf:[()=>coffeeMeals()>=2||cafLog(today()).length>0,'You’re logging coffees','Keep an eye on caffeine and your cut-off time.',2,1],
+ supp:[()=>SUP().list.length>0,'You take supplements','Tick them off from Home.',1,1],
+ food:[()=>[0,1,2,3,4,5,6].some(i=>fpOf(addDays(today(),i)).length>0),'You’ve got a food plan','See today’s meals on Home.',2,1],
+ musc:[()=>(S.wlog||[]).length>0,'You’ve logged a workout','See which muscles are ready to train.',2,1],
+ mood:[()=>(S.brLog||[]).length>0,'You’ve done a calm session','Keep the breathing orb a tap away.',1,1],
+ ach:[()=>(S.prl||[]).length>0,'You’ve set a personal best','Keep your bests and wins on Home.',1,1],
+ sleep:[()=>Object.keys(S.sleep||{}).length>0,'You’re logging sleep','See last night at a glance.',1,1],
+ water:[()=>Object.keys(S.water||{}).length>0,'You’re logging water','Add a glass in one tap from Home.',1,1],
+ goal:[()=>!!S.goal2,'You’ve set a goal','Watch your progress from Home.',2,1]};
+function wsugPick(){if(!S.lay||!S.setup||!S.setup.done)return null;const no=S.wsugNo||{},t=realToday(),on=new Set(S.lay.map(l=>l.id));let av=[];try{av=wAvail()}catch(_){}
+ if(S.wsugCur&&!on.has(S.wsugCur)&&!no[S.wsugCur]&&WSUG[S.wsugCur])return S.wsugCur;if(S.wsugAt===t)return null;
+ for(const k of Object.keys(WSUG)){if(on.has(k)||no[k]||!av.includes(k))continue;let u=false;try{u=WSUG[k][0]()}catch(_){}if(u){S.wsugCur=k;S.wsugAt=t;try{save()}catch(_){}return k}}return null}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{const A=$('#app');if(A&&tab==='home'&&!A.querySelector('.wofr')&&!(typeof ED!=='undefined'&&ED)&&!(typeof TU!=='undefined'&&TU!=null)&&today()===realToday()){const k=wsugPick(),g=A.querySelector(':scope>.grid');if(k&&g){const d=WDESC[k]||[NM[k]],w=WSUG[k];
+   g.insertAdjacentHTML('beforebegin',`<div class="wofr" role="note"><span class="ic">${WIS[d[2]]||WIS[k]||''}</span><div class="tx"><b>${w[1]}</b><span>Add the ${esc(d[0])} widget to Home?</span></div><button class="no" data-a="wsugno" data-i="${k}" aria-label="Not now">Not now</button><button class="ad" data-a="wsugadd" data-i="${k}">Add</button></div>`)}}}catch(_){}return r}}
+window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-a=wsugadd],[data-a=wsugno]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const k=el.dataset.i,w=WSUG[k];S.wsugNo=S.wsugNo||{};S.wsugNo[k]=1;S.wsugCur=null;
+ if(el.dataset.a==='wsugadd'&&w&&!S.lay.some(l=>l.id===k)){S.lay.push({id:k,w:w[3],h:w[4]});save();render();const n=document.querySelector(`#app .wd[data-id="${k}"]`);if(n){n.scrollIntoView({block:'center',behavior:MRM()?'auto':'smooth'});if(!MRM())n.animate([{boxShadow:'0 0 0 0 rgba(243,241,236,0)'},{boxShadow:'0 0 0 2px rgba(243,241,236,.7)',offset:.3},{boxShadow:'0 0 0 2px rgba(243,241,236,0)'}],{duration:1400,easing:'ease-out'})}return}
+ save();const c=el.closest('.wofr');if(c&&!MRM()){c.animate([{opacity:1,height:c.offsetHeight+'px',marginBottom:'12px'},{opacity:0,height:'0px',marginBottom:'0px',paddingTop:'0px',paddingBottom:'0px'}],{duration:260,easing:'cubic-bezier(.4,0,.2,1)'}).onfinish=()=>c.remove();c.style.overflow='hidden'}else if(c)c.remove()},true);
+// the old one-off tip for the caffeine widget is replaced by the offer above
+try{const i=TIPS.findIndex(x=>x.id==='u-caf');if(i>=0)TIPS.splice(i,1)}catch(_){}
+
+// ---- the tour: how to add widgets, straight after how to move them
+{const step={t:'home',q:'.grid',h:'Add more widgets',p:'There are more to choose from. Hold any widget, then tap + Add widget to see them all, each in three sizes. Swell will also offer one when you start using something that has a widget.'};
+ try{const i=FULLTOUR.findIndex(x=>x.h==='Widgets');if(i>=0&&!FULLTOUR.some(x=>x.h===step.h))FULLTOUR.splice(i+1,0,{...step})}catch(_){}
+ try{const i=FULLTOUR.findIndex(x=>x.h==='Your turn'&&/^Hold any widget/.test(x.p||''));if(i>=0&&FULLTOUR.filter(x=>x.h===step.h).length<1)FULLTOUR.splice(i+1,0,{...step})}catch(_){}
+ try{if(typeof ESS!=='undefined'&&!ESS.some(x=>x.h===step.h)){const i=ESS.findIndex(x=>x.h==='Your turn'&&/^Hold any widget/.test(x.p||''));ESS.splice(i>=0?i+1:Math.min(4,ESS.length),0,{...step});if(typeof TOURESS!=='undefined'&&TOURESS)tourSet(ESS)}}catch(_){}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><path d="M16.5 14v5M14 16.5h5"/>',h:'Widgets when you need them',p:'When you start using something that has a widget, Home offers to add it in one tap. To browse them all, hold any widget and tap + Add widget.'})}
+
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
 if(PREVIEW){
