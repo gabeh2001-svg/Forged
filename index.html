@@ -11153,95 +11153,291 @@ try{WIS.cup=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',h:'Tidier widgets',p:'Every widget now fits each of its three sizes, Achievements has its own widget, and Home stays still after a tap.'})}
 
-/* ===== v140: Calm replaces the Mood widget (a slow orb that opens breathing and a quiet sit); Meal prep and Goal
-   widgets redrawn at the large size ===== */
+/* ===== v140: the recovery body becomes a real 3D scan: a neutral figure built from level contour rings that you can
+   turn with a finger, that scans in, glows where you're recovering, and peels back to the muscle when you tap a part ===== */
 // Research notes for this block:
-// - Slow breathing at about six breaths a minute raises heart-rate variability and lowers reported stress
-//   (Zaccaro et al. 2018, Frontiers in Human Neuroscience, systematic review); five minutes a day of cyclic sighing
-//   improved mood more than mindfulness meditation in a randomised trial (Balban et al. 2023, Cell Reports Medicine).
-//   Brief mindfulness practice also lowers stress (Goyal et al. 2014, JAMA Internal Medicine, meta-analysis), so
-//   "Stillness" sits alongside the breathing patterns. The orb drifts at roughly that six-a-minute pace.
-// - Mood logging was dropped from Home: the owner saw no use for it, and self-tracking that asks for input without
-//   giving anything back is the commonest reason people abandon trackers (Epstein et al. 2016, CHI, "Beyond
-//   Abandonment"). The old entries stay in storage.
-// - Goal: showing where you are against where the plan says you should be today ("pace") is goal-gradient feedback,
-//   which keeps effort up as the target nears (Kivetz, Urminsky and Zheng 2006, J. Marketing Research), and progress
-//   monitoring itself improves goal attainment (Harkin et al. 2016, Psychological Bulletin, meta-analysis).
-// - Meal prep: the widget leads with what is left to do today and keeps the next cook as a compact summary below,
-//   one idea per size (Apple HIG, Widgets).
+// - Optical body scanners and DEXA reports show the body as an anonymous form: a mesh or contour avatar with no
+//   face, skin or sex markers (Styku, Fit3D and ShapeScale use plain mesh avatars; DEXA reports use a greyscale
+//   outline with regions boxed). Swell follows that: one average, unmarked figure made of measurement lines, so
+//   nobody enters size or anything else to see themselves in it. (Products named from memory, not re-checked.)
+// - Being able to turn an object yourself gives a better understanding of its shape than fixed views
+//   (Harman, Humphrey and Goodale 1999, Current Biology, on active rotation and object learning).
+// - Zoom and peel instead of a new page: "overview first, zoom and filter, then details on demand"
+//   (Shneiderman 1996); a continuous move keeps people oriented (Bederson and Boltzman 1999).
+// - Premium feel comes from restraint: few colours, slow purposeful motion that responds to the hand, nothing
+//   decorative looping fast (see the sources listed in the v141 notes). The figure only drifts a few degrees at
+//   rest, and stops entirely under "reduce motion" (WCAG 2.2, 2.3.3) or when it's off screen.
 (function(){const st=document.createElement('style');st.textContent=`
-.cmorb{position:relative;flex:none;width:58px;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--ac,#F07A4E) 22%,#fff) 0%,var(--ac,#F07A4E) 42%,color-mix(in srgb,var(--ac,#F07A4E) 52%,#3A2460) 78%,#2A1B45 100%);box-shadow:0 0 30px 4px color-mix(in srgb,var(--ac,#F07A4E) 34%,transparent),inset 0 0 16px rgba(255,255,255,.22);animation:cmb 10s cubic-bezier(.45,.05,.55,.95) infinite}
-.cmorb::after{content:'';position:absolute;inset:-9px;border-radius:50%;border:1px solid color-mix(in srgb,var(--ac,#F07A4E) 60%,#fff);opacity:0;animation:cmr 10s cubic-bezier(.45,.05,.55,.95) infinite}
-@keyframes cmb{0%,100%{transform:scale(.84)}45%{transform:scale(1.04)}}
-@keyframes cmr{0%{opacity:0;transform:scale(.8)}45%{opacity:.35;transform:scale(1.06)}100%{opacity:0;transform:scale(1.3)}}
-@media(prefers-reduced-motion:reduce){.cmorb,.cmorb::after{animation:none}}
-.cmw{display:flex;flex-direction:column;height:100%;min-height:0;cursor:pointer}
-.cmw .ob{flex:1;min-height:0;display:grid;place-items:center}
-.cmw .tx b{display:block;font-size:17px;font-weight:700;line-height:1.2}.cmw .tx small{display:block;font-size:12.5px;color:rgba(243,241,236,.65);margin-top:2px}
-.cmw.s .cmorb{width:50px}.cmw.s .tx b{font-size:15px}
-.cmw.m{flex-direction:row;align-items:center;gap:18px}.cmw.m .cmorb{width:66px;margin-left:8px}.cmw.m .tx{min-width:0}.cmw.m .tx .wl{margin-bottom:6px}
-.cmw.l .cmorb{width:112px}.cmw.l .tx{text-align:center}.cmw.l .tx b{font-size:20px}
-.cmw .qk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.cmw .qk button{all:unset;cursor:pointer;text-align:center;padding:10px 4px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);font-size:13px;font-weight:650;line-height:1.25}
-.cmw .qk button small{display:block;font-size:11.5px;font-weight:500;color:rgba(243,241,236,.6)}
-.cmhd{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 4px}.cmhd .cmorb{width:84px;margin:6px 0 20px}.cmhd h2{margin:0}.cmhd p{margin:4px 0 8px}
-.mp3 .pg{display:flex;align-items:center;gap:10px;margin:8px 0 2px}.mp3 .pg .pgb{flex:1;display:flex;gap:4px}.mp3 .pg .pgb i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.14);transition:background .3s}.mp3 .pg .pgb i.on{background:#7FD6A0}
-.mp3 .pg span{font-size:12.5px;color:rgba(243,241,236,.66);white-space:nowrap}
-.mp3 .hd3{font-size:20px;font-weight:700;line-height:1.2;margin-top:8px}
-.mp3 .rws{margin-top:6px}.mp3 .rw{min-height:36px;border-top:1px solid rgba(255,255,255,.07)}.mp3 .rw:first-child{border-top:0}.mp3 .rw span{font-size:14.5px}
-.mp3 .rw em{font-style:normal;font-size:11.5px;font-weight:650;letter-spacing:0;text-transform:none;color:#7FD6A0;background:rgba(127,214,160,.12);padding:3px 8px;border-radius:999px}
-.mp3 .nx3{margin-top:auto;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
-.mp3 .nx3 .t{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.mp3 .nx3 .t b{font-size:14.5px;font-weight:700}.mp3 .nx3 .t small{font-size:12.5px;color:rgba(243,241,236,.62)}
-.mp3 .nx3 .dy{display:flex;gap:5px;margin-top:8px}.mp3 .nx3 .dy i{font-style:normal;font-size:11.5px;font-weight:650;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(243,241,236,.85)}
-.mp3 .nx3 .rc{margin-top:8px;font-size:13px;color:rgba(243,241,236,.75);line-height:1.45}.mp3 .nx3 .rc div{display:flex;justify-content:space-between;gap:10px}.mp3 .nx3 .rc span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mp3 .nx3 .rc em{font-style:normal;color:rgba(243,241,236,.55);white-space:nowrap}
-.gw3{display:flex;flex-direction:column;height:100%;min-height:0;cursor:pointer}
-.gw3 .tp{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.gw3 .tp b{font-size:16px;font-weight:700;line-height:1.25;min-width:0}.gw3 .tp em{flex:none;font-style:normal;font-size:12px;font-weight:650;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.08);color:rgba(243,241,236,.85);white-space:nowrap}
-.gw3 .tp em.ok{background:rgba(127,214,160,.14);color:#9BE0B4}.gw3 .tp em.bh{background:rgba(239,125,60,.14);color:#F2A27A}
-.gw3 .nw{display:flex;align-items:baseline;gap:10px;margin-top:14px}.gw3 .nw b{font-family:'Archivo',system-ui,sans-serif;font-stretch:72%;font-size:50px;font-weight:900;line-height:.9;letter-spacing:-.01em}.gw3 .nw span{font-size:14px;color:rgba(243,241,236,.7)}
-.gw3 .trk{position:relative;height:34px;margin:22px 6px 0}
-.gw3 .trk .ln{position:absolute;left:0;right:0;top:9px;height:2px;border-radius:1px;background:rgba(255,255,255,.14)}
-.gw3 .trk .fl{position:absolute;left:0;top:9px;height:2px;border-radius:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--ac,#F07A4E) 40%,transparent),var(--ac,#F07A4E))}
-.gw3 .trk .dot{position:absolute;top:10px;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#F3F1EC;box-shadow:0 0 0 4px color-mix(in srgb,var(--ac,#F07A4E) 30%,transparent),0 0 14px color-mix(in srgb,var(--ac,#F07A4E) 60%,transparent)}
-.gw3 .trk .pc{position:absolute;top:2px;width:1px;height:16px;background:rgba(243,241,236,.6)}
-.gw3 .trk .pc::after{content:'Plan';position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:10.5px;color:rgba(243,241,236,.6)}
-.gw3 .trk .en{position:absolute;top:5px;width:2px;height:10px;background:rgba(255,255,255,.3)}
-.gw3 .ends{display:flex;justify-content:space-between;font-size:12px;color:rgba(243,241,236,.6);margin:2px 0 0}.gw3 .ends b{color:#F3F1EC;font-weight:650}
-.gw3 .st3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
-.gw3 .st3 b{display:block;font-size:16px;font-weight:700}.gw3 .st3 span{display:block;font-size:11.5px;color:rgba(243,241,236,.6);margin-top:2px}
+.m3{position:relative;height:372px;margin:6px 0 0;border-radius:18px;overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+.m3 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+.m3.zm canvas{cursor:pointer}
+.m3::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:linear-gradient(90deg,transparent 46%,rgba(12,12,12,.86) 70%)}
+.m3.zm::after{opacity:1}
+.m3 .muxln,.m3 .muxpn,.m3 .muxbk,.m3 .muxlb{z-index:2}
+.m3 .muxlb{transition:opacity .25s}.m3.drag .muxlb,.m3.drag .muxln{opacity:0}
+.m3 .muxln{transition:opacity .25s}
+.m3hint{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);font-size:11.5px;color:rgba(243,241,236,.45);pointer-events:none;white-space:nowrap;transition:opacity .4s;z-index:2}
+.m3.zm .m3hint,.m3.drag .m3hint{opacity:0}
+.m3.zm~.muxrd{opacity:0}
+canvas.m3s{display:block;width:100%;height:100%}
+.mubody canvas.m3s{width:100%;height:100%}
+.muw .mubody>div{aspect-ratio:.42}.muw.big .mubody>div{aspect-ratio:.42;height:100%}
+.muw.s1 .rw1 canvas.m3s{height:94px;width:42px;flex:none}
+.muw:not(.big):not(.s1) .mubody{width:112px!important}
 `;document.head.appendChild(st)})();
 
-// ---- Calm ----
-BRS.still={n:'Stillness',d:'A quiet sit. Rest your attention on the breath and let the orb set the pace.',ph:[['Breathe in',5,1],['Breathe out',6,.6]]};
-WDESC.mood=['Calm','Breathing and a quiet sit, a tap away.','calm','Body'];
-try{WIS.calm='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/></svg>'}catch(_){}
-function calmLast(){const L=S.brl||[];if(!L.length)return'Take a minute';const x=L[0],t=realToday(),n=L.filter(y=>y.d===t).length;if(x.d===t)return n>1?`${n} sessions today`:'One session today';const dd=Math.round((new Date(t)-new Date(x.d))/864e5);return dd===1?'Last one yesterday':`Last one ${dd} days ago`}
-{const _wd=wd;wd=function(l){if(!l||l.id!=='mood')return _wd.apply(this,arguments);try{const lab=wlab('calm','Calm'),D=S.brDur||3;
-  if(l.w===1&&l.h===1)return`<div class="cmw s" data-a="bropen">${lab}<div class="ob"><div class="cmorb"></div></div><div class="tx"><b>Breathe</b><small>${esc(calmLast())}</small></div></div>`;
-  if(l.h===1)return`<div class="cmw m" data-a="bropen"><div class="cmorb"></div><div class="tx">${lab}<b>Take a minute</b><small>${esc(calmLast())}</small></div></div>`;
-  return`<div class="cmw l" data-a="bropen">${lab}<div class="ob"><div class="cmorb"></div></div><div class="tx"><b>Take a minute</b><small>${esc(calmLast())}</small></div><div class="qk"><button data-a="calmgo" data-i="sigh|1">Sigh<small>1 min</small></button><button data-a="calmgo" data-i="coh|${D}">Even breath<small>${D} min</small></button><button data-a="calmgo" data-i="still|5">Stillness<small>5 min</small></button></div></div>`}catch(_){return _wd.apply(this,arguments)}}}
-window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-a=calmgo]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();const [k,m]=el.dataset.i.split('|');brOpen(k,+m)},true);
-brSheet=function(){sheet(`<div class="cmhd"><div class="cmorb"></div><h2>Take a minute</h2><p class="sm">Pick a length, then a way to settle. Follow the orb.</p></div>${brList()}`)};
+// ---- the model: tubes of level rings. Stations are [height, centre x, half width, half depth, centre z], feet at 0, crown at 100
+const M3K=Object.keys(MUS);
+const M3=(()=>{const cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t),T=[];
+ const tube=(seg,s,st,K,dy)=>{const R=[];for(let i=0;i<st.length-1;i++){const p0=st[i-1]||st[i],p1=st[i],p2=st[i+1],p3=st[i+2]||p2,n=Math.max(1,Math.round((p1[0]-p2[0])/dy));for(let j=0;j<n;j++){const t=j/n;R.push([0,1,2,3,4].map(q=>cr(p0[q],p1[q],p2[q],p3[q],t)))}}
+  R.push(st[st.length-1].slice());R.forEach(r=>{r[1]*=s||1;r[2]=Math.max(.3,r[2]);r[3]=Math.max(.3,r[3])});T.push({seg,s:s||0,R,K})};
+ tube('head',0,[[100,0,.6,.7,0],[99.1,0,2.9,3.3,0],[97.2,0,4.5,5.2,0],[94.6,0,5.2,6,0],[92.2,0,5.1,5.8,.2],[90.2,0,4.4,5,.5],[88.6,0,3.5,3.9,.6]],26,1.3);
+ tube('neck',0,[[88.2,0,3.1,3.4,.2],[86,0,3,3.2,0],[84,0,3.9,3.5,0]],22,1.3);
+ tube('torso',0,[[83.8,0,6.6,4.4,0],[81.6,0,12,5.6,0],[78,0,12.7,6.8,.4],[74,0,12.1,7,.5],[70,0,10.9,6.4,.3],[66,0,9.9,5.8,0],[62,0,10.1,6,0],[58,0,11.3,6.8,-.3],[54.5,0,11.9,7.2,-.5],[51.5,0,11.5,6.9,-.4],[49.6,0,10.2,6.1,-.2]],44,1.3);
+ [1,-1].forEach(s=>{tube('arm',s,[[83.3,13.1,1.5,2.1,0],[81.6,14.9,3.5,4.2,0],[79,15.8,4.1,4.6,0],[75,16.2,3.8,4.2,0],[71,16.6,3.5,3.8,.2],[67.5,17,3.1,3.3,.2],[64.5,17.4,2.8,2.9,.1],[62,17.8,3,3,.3],[58,18.3,2.8,2.7,.6],[53,18.9,2.2,2,.9],[49.5,19.3,1.7,1.4,1.1],[47,19.6,2,1.2,1.3],[43.5,19.9,1.8,1,1.5],[41,20,1,.7,1.6]],20,1.3);
+  tube('leg',s,[[51.6,6.1,5.8,6.6,-.3],[46,6.2,5.5,6.2,0],[40,5.9,4.9,5.5,.2],[34,5.5,4.2,4.8,.2],[29.5,5.2,3.6,4,.2],[27,5.1,3.4,3.7,0],[22.5,5,3.7,4.4,-.8],[17,4.8,3.1,3.6,-.6],[11,4.6,2.2,2.6,-.2],[6.5,4.5,1.8,2.2,0],[4,4.5,2,3.2,1.2],[1.6,4.6,2.3,4.8,2.6],[.4,4.6,2.1,4.6,2.8]],26,1.3)});
+ // which muscle a point belongs to: f = how far forward it faces, a = how far out to the side, o = outward on a limb
+ const mus=(seg,s,y,th)=>{const f=Math.sin(th),c=Math.cos(th),a=Math.abs(c),o=c*(s||1);
+  if(seg==='neck')return f<-.2?'traps':null;
+  if(seg==='torso'){if(f>.15){if(y>=80.6)return'traps';if(y>=76.6)return a>.9?'lats':'uchest';if(y>=71)return a>.9?'lats':'chest';if(y>=57)return a<.62?'abs':'obl';return y>=53.5&&a<.3?'abs':'hipf'}
+   if(f<-.15){if(y>=77)return a<.6?'traps':'ubk';if(y>=70)return a<.48?'ubk':'lats';if(y>=62)return a<.42?'lbk':'lats';if(y>=57)return'lbk';return a<.86?'glu':'abd'}
+   return y>=71?'lats':y>=57?'obl':'abd'}
+  if(seg==='arm'){if(y>=75.6)return f>.4?'fdelt':f<-.4?'rdelt':o>0?'sdelt':null;if(y>=64.6)return f>0?'bic':'tri';if(y>=49.6)return'fore';return null}
+  if(seg==='leg'){if(y>=46.2){if(f<-.1)return'glu';if(Math.abs(f)<=.3&&o>0)return'abd'}if(y>=29.6){if(f>.25)return o<-.6?'add':'quad';if(f<-.25)return o<-.7?'add':'ham';return o>0?'quad':'add'}if(y>=11&&y<27)return f<.2?'calf':null}
+  return null};
+ // flatten to segments (ring pieces) and strands (lines down the body), grouped by muscle
+ const G=new Map(),ST=new Map(),add=(M,k,v)=>{let a=M.get(k);if(!a)M.set(k,a=[]);a.push(v)};
+ T.forEach(t=>{const K=t.K,R=t.R,pt=(r,j)=>{const th=j/K*6.2832;return[r[1]+r[2]*Math.cos(th),r[0],r[4]+r[3]*Math.sin(th)]},nm=(r,th)=>{const x=Math.cos(th)/r[2],z=Math.sin(th)/r[3],l=Math.hypot(x,z)||1;return[x/l,z/l]};
+  R.forEach((r,i)=>{for(let j=0;j<K;j++){const thm=(j+.5)/K*6.2832,a=pt(r,j),b=pt(r,j+1),n=nm(r,thm),k=mus(t.seg,t.s,r[0],thm);add(G,k||'',[a[0],a[1],a[2],b[0],b[1],b[2],n[0],n[1],t.s]);
+    if(k&&i<R.length-1){const q=pt(R[i+1],j),n2=nm(r,j/K*6.2832),k2=mus(t.seg,t.s,(r[0]+R[i+1][0])/2,j/K*6.2832);if(k2)add(ST,k2,[a[0],a[1],a[2],q[0],q[1],q[2],n2[0],n2[1],t.s])}}})});
+ const pack=M=>{const o={};M.forEach((a,k)=>{const f=new Float32Array(a.length*9);a.forEach((v,i)=>f.set(v,i*9));o[k]=f});return o};
+ const seg=pack(G),str=pack(ST),info={};
+ Object.keys(seg).forEach(k=>{if(!k)return;const f=seg[k],I={};[1,-1,0].forEach(s=>{let n=0,x=0,y=0,z=0,nx=0,nz=0,y0=1e9,y1=-1e9,x0=1e9,x1=-1e9;for(let i=0;i<f.length;i+=9){if(s&&f[i+8]&&f[i+8]!==s)continue;if(s&&!f[i+8]&&Math.sign(f[i])!==s&&Math.abs(f[i])>1)continue;n++;x+=f[i];y+=f[i+1];z+=f[i+2];nx+=f[i+6];nz+=f[i+7];y0=Math.min(y0,f[i+1]);y1=Math.max(y1,f[i+1]);x0=Math.min(x0,f[i]);x1=Math.max(x1,f[i])}
+   if(n)I[s]={c:[x/n,y/n,z/n],n:[nx/n,nz/n],h:y1-y0,w:x1-x0,y0,y1}});info[k]=I});
+ return{seg,str,info}})();
 
-// ---- Meal prep, large ----
-{const _wd=wd;wd=function(l){if(!l||l.id!=='prep'||!(l.w===2&&l.h===2))return _wd.apply(this,arguments);try{const t=today(),np=nextPrepFrom(t),Tk=mpTasks(t);if(!np&&!Tk.length)return _wd.apply(this,arguments);
-  const left=Tk.filter(x=>!x.done),isT=np===t,P=np?prepList(np):null,dn=Tk.length-left.length;
-  const top=Tk.length?`<div class="pg"><div class="pgb">${Tk.map((x,i)=>`<i class="${i<dn?'on':''}"></i>`).join('')}</div><span>${dn} of ${Tk.length} done</span></div><div class="rws">${[...left,...Tk.filter(x=>x.done)].slice(0,4).map(x=>tRow(t,x)).join('')}</div>`:`<div class="hd3">Nothing to prep today</div>`;
-  const nx=np&&P?`<div class="nx3"><div class="t"><b>${isT?'Today’s cook':'Next cook'}</b><small>${isT?`${P.portions} portions`:esc(whenLbl(np))}</small></div><div class="dy">${P.days.slice(0,7).map(d=>`<i>${shortDay(d)}</i>`).join('')}</div>${P.L.length?`<div class="rc">${P.L.slice(0,2).map(o=>`<div><span>${esc(o.r.name||o.r.n||'Recipe')}</span><em>${o.n} portion${o.n===1?'':'s'}</em></div>`).join('')}${P.L.length>2?`<div><span>and ${P.L.length-2} more</span></div>`:''}</div>`:'<div class="rc">Nothing to batch cook yet.</div>'}</div>`:'';
-  return`<div class="mpw w22 mp3">${wHead('Meal prep',left.length?`${left.length} to prep`:Tk.length?'All prepped':'')}${top}${nx}</div>`}catch(_){return _wd.apply(this,arguments)}}}
+// ---- drawing
+const M3S={yaw:0,base:0,sel:null,ss:1,seen:0,inst:null};
+function m3Proj(v){const sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),fx=v.f[0]*cy-v.f[2]*sy,fd=v.f[0]*sy+v.f[2]*cy,fy=v.f[1]*cp-fd*sp,k=v.s*v.z;
+ return(x,y,z)=>{const rx=x*cy-z*sy,d=x*sy+z*cy,ry=y*cp-d*sp;return[v.X+(rx-fx)*k,v.Y-(ry-fy)*k,d]}}
+function m3Paint(ctx,W,H,v,L,o){o=o||{};const dpr=o.dpr||1,sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),P=m3Proj(v),sel=o.sel,pl=o.peel||0,scan=o.scan==null?-1:o.scan,dim=sel?.4:1,ink='#F3F1EC',ac=o.ac||'#F07A4E';
+ ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.lineCap='round';
+ const keys=Object.keys(M3.seg);
+ for(let pass=0;pass<2;pass++){const front=pass===1;
+  for(const k of keys){const f=M3.seg[k],lv=k?((L[k]||{}).lv||0):0,hot=lv>.05,isSel=sel&&k===sel;
+   let a=front?(hot?.95:.36):(hot?.16:.06);if(sel&&!isSel)a*=dim;
+   ctx.beginPath();let any=false;
+   for(let i=0;i<f.length;i+=9){if(scan>=0&&f[i+1]<scan)continue;if(isSel&&o.side&&f[i+8]&&f[i+8]!==o.side)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==front)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);if(p[0]<-20&&q[0]<-20||p[0]>W+20&&q[0]>W+20||p[1]<-20&&q[1]<-20||p[1]>H+20&&q[1]>H+20)continue;ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);any=true}
+   if(any){const col=hot?muCol(lv):ink;if(isSel)a*=(1-.7*pl);ctx.strokeStyle=col;if(hot&&front&&!o.thin&&!(sel&&!isSel)){ctx.globalAlpha=a*.16;ctx.lineWidth=4.2;ctx.stroke()}ctx.globalAlpha=o.thin?a*.8:a;ctx.lineWidth=o.thin?.5:hot?1.1:.8;ctx.stroke()}
+   // the other side of a selected pair stays as plain rings
+   if(isSel&&o.side){ctx.beginPath();for(let i=0;i<f.length;i+=9){if(!f[i+8]||f[i+8]===o.side)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==front)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}ctx.strokeStyle=hot?muCol(lv):ink;ctx.globalAlpha=(front?(hot?.95:.36):(hot?.16:.06))*dim;ctx.lineWidth=.9;ctx.stroke()}}}
+ // a faint mesh down the body so it reads as a surface, not a stack
+ if(!o.thin){ctx.beginPath();for(const k of Object.keys(M3.str)){const f=M3.str[k];for(let i=0;i<f.length;i+=18){if(scan>=0&&f[i+1]<scan)continue;if(f[i+6]*sy+f[i+7]*cy<=.1)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}}ctx.strokeStyle=ink;ctx.globalAlpha=.1*dim;ctx.lineWidth=.6;ctx.stroke()}
+ // the muscle layer: strands running down the selected part, drawn in from the top
+ if(sel&&pl>0&&M3.str[sel]){const f=M3.str[sel],I=(M3.info[sel]||{})[o.side||0]||(M3.info[sel]||{})[0],lv=(L[sel]||{}).lv||0,col=lv>.05?muCol(lv):'#A9BED3',yc=I?I.y1-(I.y1-I.y0+1)*pl:-1;
+  for(let pass=0;pass<2;pass++){ctx.beginPath();for(let i=0;i<f.length;i+=9){if(o.side&&f[i+8]&&f[i+8]!==o.side)continue;if(f[i+1]<yc)continue;const fc=f[i+6]*sy+f[i+7]*cy;if((fc>0)!==(pass===1))continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}
+   ctx.strokeStyle=col;if(pass){ctx.globalAlpha=.2;ctx.lineWidth=3.6;ctx.stroke()}ctx.globalAlpha=pass?1:.2;ctx.lineWidth=1.1;ctx.stroke()}}
+ // the scan line
+ if(scan>=0&&scan<100){ctx.beginPath();for(const k of keys){const f=M3.seg[k];for(let i=0;i<f.length;i+=9){if(Math.abs(f[i+1]-scan)>.9)continue;const p=P(f[i],f[i+1],f[i+2]),q=P(f[i+3],f[i+4],f[i+5]);ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1])}}
+  ctx.strokeStyle=ac;ctx.globalAlpha=.35;ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='#fff';ctx.globalAlpha=1;ctx.lineWidth=1.3;ctx.stroke()}
+ ctx.globalAlpha=1}
+const m3View=(W,H)=>({yaw:0,pitch:.16,z:1,s:H*.9/100,X:W/2,Y:H*.49,f:[0,50,0]});
+// small, still figures for widgets
+function m3Still(c){const W=c.clientWidth,H=c.clientHeight;if(!W||!H)return;const dpr=Math.min(3,window.devicePixelRatio||1);c.width=W*dpr;c.height=H*dpr;const v=m3View(W,H);v.yaw=(+c.dataset.yaw||0)*Math.PI/180;v.pitch=.1;m3Paint(c.getContext('2d'),W,H,v,muLoad().m,{dpr,thin:H<150});c.dataset.i=1}
+muFig=function(B){return`<canvas class="m3s" data-yaw="${B===BODYB?180:0}" role="img" aria-label="Muscle recovery, ${B===BODYB?'back':'front'}"></canvas>`};
+muBody=function(L,lab){return lab?m3HTML():`<div class="mubody"><div>${muFig(BODYF)}</div><div>${muFig(BODYB)}</div></div>`};
 
-// ---- Goal, large: where you are, where the plan says you should be, and what's left ----
-{const _wd=wd;wd=function(l){if(!l||l.id!=='goal'||!(l.w===2&&l.h===2))return _wd.apply(this,arguments);try{const G=S.goal2;if(!G||G.type==='Custom'||(G.due&&G.due<=realToday()))return _wd.apply(this,arguments);
-  const c=gCalc(G);if(c.now==null||!isFinite(c.start)||!isFinite(c.target)||c.target===c.start)return _wd.apply(this,arguments);
-  const cl=v=>Math.max(0,Math.min(1,v)),p=cl((c.now-c.start)/(c.target-c.start)),tot=G.due&&G.sd?Math.max(1,dn(G.due)-dn(G.sd)):0,pace=tot?cl((dn(realToday())-dn(G.sd))/tot):null,
-   togo=Math.abs(c.target-c.now),wk=c.left!=null?Math.max(c.left,1)/7:null,rate=wk?togo/wk:null,on=pace==null?null:p>=pace-.05,done=p>=1;
-  const chip=done?'<em class="ok">Reached</em>':on==null?'<em>Ongoing</em>':on?'<em class="ok">On pace</em>':'<em class="bh">Behind plan</em>';
-  return`<div class="gw3" data-a="gopen">${wlab('goal','Goal')}<div class="tp"><b>${esc(G.name)}</b>${chip}</div>
-   <div class="nw"><b>${c.fmt(c.now)}</b><span>${done?'target reached':`${c.fmt(r1(togo))} to go`}</span></div>
-   <div class="trk"><div class="ln"></div><div class="fl" style="width:${(p*100).toFixed(1)}%"></div><i class="en" style="left:0"></i><i class="en" style="right:0"></i>${pace!=null&&!done?`<i class="pc" style="left:${(pace*100).toFixed(1)}%"></i>`:''}<i class="dot" style="left:${(p*100).toFixed(1)}%"></i></div>
-   <div class="ends"><span>Start <b>${c.fmt(c.start)}</b></span><span>Target <b>${c.fmt(c.target)}</b></span></div>
-   <div class="st3"><div><b>${Math.round(p*100)}%</b><span>of the way</span></div><div><b>${c.left!=null?c.left:'–'}</b><span>day${c.left===1?'':'s'} left</span></div><div><b>${rate!=null&&!done?c.fmt(r1(rate)):'–'}</b><span>a week needed</span></div></div></div>`}catch(_){return _wd.apply(this,arguments)}}}
+// ---- the interactive figure
+function m3HTML(){return`<div class="m3" tabindex="-1"><canvas aria-label="Your body, coloured by how recovered each muscle is. Drag to turn it, tap a muscle to look closer." role="img"></canvas><svg class="muxln"></svg>${S.m3h?'':'<span class="m3hint">Drag to turn</span>'}</div><div class="muxsd" role="tablist"><button data-a="m3side" data-i="0" class="${Math.cos(M3S.base)>=0?'on':''}">Front</button><button data-a="m3side" data-i="180" class="${Math.cos(M3S.base)<0?'on':''}">Back</button></div><div class="muxrd"></div>`}
+muCard=function(){const miss=muMissing();
+ return`<div class="card mucard"><div class="mut"><h2>Recovery</h2><button data-a="muopen">Details</button></div>${m3HTML()}${muLegend()}
+ ${miss.length?`<div class="munudge"><span>${miss.length===1?`Swell can’t tell what “${esc(miss[0].n)}” works.`:`${miss.length} exercises need their muscles picked.`}</span><button class="btn" data-a="mufix">Pick</button></div>`:''}</div>`};
+const m3Wrap=a=>{a=(a+Math.PI)%(2*Math.PI);if(a<0)a+=2*Math.PI;return a-Math.PI};
+function m3Start(el){el.dataset.i=1;const c=el.querySelector('canvas'),ctx=c.getContext('2d'),ln=el.querySelector('.muxln'),rd=el.parentElement.querySelector('.muxrd'),rm=MRM();
+ const I={el,c,W:0,H:0,dpr:1,v:null,t:null,drag:null,vel:0,vis:false,raf:0,peel:0,scan:-1,scanT:0,labels:[],t0:performance.now(),dirty:true,lab:0};M3S.inst=I;
+ const size=()=>{I.W=el.clientWidth;I.H=el.clientHeight;I.dpr=Math.min(3,window.devicePixelRatio||1);c.width=I.W*I.dpr;c.height=I.H*I.dpr;const yaw=I.v?I.v.yaw:M3S.yaw;I.v=m3View(I.W,I.H);I.v.yaw=yaw;I.t=m3Target(I);if(M3S.sel){Object.assign(I.v,{z:I.t.z,X:I.t.X,Y:I.t.Y,f:I.t.f.slice(),yaw:I.t.yaw,pitch:I.t.pitch});I.peel=1;el.classList.add('zm')}ln.setAttribute('viewBox',`0 0 ${I.W} ${I.H}`);I.dirty=true};
+ size();
+ if(Date.now()-M3S.seen>90000&&!rm){M3S.sel=null;el.classList.remove('zm');I.t=m3Target(I);I.scan=100;I.pending=true}
+ const L=()=>muLoad();
+ const frame=now=>{I.raf=0;if(!el.isConnected){return}const v=I.v,t=I.t,M=L();let moving=false;
+  if(I.pending){m3Paint(ctx,I.W,I.H,v,M.m,{dpr:I.dpr,scan:100});if(I.vis){I.pending=false;I.scanT=now;M3S.seen=Date.now();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}I.raf=requestAnimationFrame(frame);return}
+  if(I.scanT){const p=Math.min(1,(now-I.scanT)/1500),e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;I.scan=100-101*e;if(p>=1){I.scan=-1;I.scanT=0;I.lab=0}moving=true}
+  if(I.drag){moving=true}else{const sway=!rm&&!M3S.sel?Math.sin((now-I.t0)/2600)*.13:0,ty=t.yaw+sway,k=rm?1:.12;
+   if(Math.abs(I.vel)>.0005){t.yaw=M3S.base=m3Wrap(t.yaw+I.vel);I.vel*=.92;v.yaw=m3Wrap(v.yaw+I.vel);moving=true}else{const d=m3Wrap(ty-v.yaw);v.yaw=m3Wrap(v.yaw+d*k);if(Math.abs(d)>.002)moving=true}
+   ['z','X','Y','pitch'].forEach(q=>{const d=t[q]-v[q];v[q]+=d*k;if(Math.abs(d)>(q==='z'||q==='pitch'?.002:.3))moving=true});for(let i=0;i<3;i++){const d=t.f[i]-v.f[i];v.f[i]+=d*k;if(Math.abs(d)>.05)moving=true}
+   const pt=M3S.sel&&Math.abs(t.z-v.z)<t.z*.25?1:0;if(I.peel!==pt){I.peel+=Math.sign(pt-I.peel)*(rm?1:.035);I.peel=Math.max(0,Math.min(1,I.peel));moving=true}
+   if(sway||!rm&&!M3S.sel)moving=true}
+  M3S.yaw=v.yaw;m3Paint(ctx,I.W,I.H,v,M.m,{dpr:I.dpr,sel:M3S.sel,side:M3S.sel?M3S.ss:0,peel:I.peel,scan:I.scan});
+  m3Labels(I,M,now);
+  if(I.vis&&(moving||I.dirty)){I.dirty=false;I.raf=requestAnimationFrame(frame)}};
+ I.kick=()=>{if(!I.raf)I.raf=requestAnimationFrame(frame)};
+ if('IntersectionObserver'in window){new IntersectionObserver(es=>{I.vis=es.some(e=>e.isIntersecting&&e.intersectionRatio>.35);if(I.vis)I.kick()},{threshold:[0,.35,.6]}).observe(el)}else I.vis=true;
+ // turning with a finger, tapping to pick
+ c.addEventListener('pointerdown',e=>{I.drag={x:e.clientX,y:e.clientY,yaw:I.v.yaw,mv:0,lx:e.clientX,lt:performance.now(),lock:0};I.vel=0});
+ c.addEventListener('pointermove',e=>{const d=I.drag;if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(!d.lock){if(Math.abs(dx)<7&&Math.abs(dy)<7)return;d.lock=Math.abs(dx)>Math.abs(dy)?1:2;if(d.lock===1){try{c.setPointerCapture(e.pointerId)}catch(_){}el.classList.add('drag');if(!S.m3h){S.m3h=1;try{save()}catch(_){}const h=el.querySelector('.m3hint');h&&h.remove()}}}
+  if(d.lock!==1)return;d.mv=1;const now=performance.now();I.v.yaw=m3Wrap(d.yaw+dx*.012);I.vel=(e.clientX-d.lx)*.012*Math.min(1,16/Math.max(1,now-d.lt));d.lx=e.clientX;d.lt=now;I.kick()});
+ const up=e=>{const d=I.drag;if(!d)return;I.drag=null;el.classList.remove('drag');
+  if(d.mv){if(M3S.sel){I.t.yaw=I.v.yaw;I.vel=0}else{I.t.yaw=M3S.base=I.v.yaw}I.lab=0;m3Side(el);I.kick();return}
+  if(e.type==='pointercancel'||d.lock===2)return;const r=c.getBoundingClientRect(),hit=m3Pick(I,e.clientX-r.left,e.clientY-r.top);
+  if(hit&&!(hit.k===M3S.sel&&hit.s===M3S.ss)){M3S.sel=hit.k;M3S.ss=hit.s||1}else M3S.sel=null;try{navigator.vibrate&&navigator.vibrate(4)}catch(_){}m3Go(I)};
+ c.addEventListener('pointerup',up);c.addEventListener('pointercancel',up);
+ I.size=size;m3Go(I,true)}
+// where the camera should sit: the whole body, or close on the chosen muscle at a three-quarter angle
+function m3Target(I){const W=I.W,H=I.H,s=H*.9/100,k=M3S.sel,inf=k&&M3.info[k]&&(M3.info[k][M3S.ss]||M3.info[k][0]);
+ if(!inf)return{yaw:M3S.base,pitch:.16,z:1,X:W/2,Y:H*.49,f:[0,50,0]};
+ const face=Math.atan2(inf.n[0],inf.n[1]),off=(inf.c[0]>1?-1:inf.c[0]<-1?1:-1)*.42,z=Math.max(1.8,Math.min(2.9,H*.36/(Math.max(inf.h,inf.w*.9,7)*s)));
+ let yaw=-face+off;yaw=I.v?I.v.yaw+m3Wrap(yaw-I.v.yaw):yaw;return{yaw,pitch:.24,z,X:W*.3,Y:H*.47,f:inf.c.slice()}}
+function m3Pick(I,x,y){const v=I.v,P=m3Proj(v),sy=Math.sin(v.yaw),cy=Math.cos(v.yaw);let best=null,bd=20*20;for(const k of Object.keys(M3.seg)){if(!k)continue;const f=M3.seg[k];for(let i=0;i<f.length;i+=9){if(f[i+6]*sy+f[i+7]*cy<=.05)continue;const p=P((f[i]+f[i+3])/2,f[i+1],(f[i+2]+f[i+5])/2),d=(p[0]-x)*(p[0]-x)+(p[1]-y)*(p[1]-y);if(d<bd){bd=d;best={k,s:f[i+8]||(Math.abs(f[i])>1?Math.sign(f[i]):0)}}}}return best}
+function m3Side(el){const on=Math.cos(M3S.base)>=0?'0':'180';el.parentElement.querySelectorAll('.muxsd button').forEach(b=>b.classList.toggle('on',b.dataset.i===on))}
+// after a pick or a turn: move the camera and rebuild the labels or the readout panel
+function m3Go(I,first){const el=I.el,M=muLoad(),L=M.m,rd=el.parentElement.querySelector('.muxrd'),k=M3S.sel;I.t=m3Target(I);I.lab=0;I.t0=performance.now()-0;
+ el.querySelectorAll('.muxlb,.muxpn,.muxbk').forEach(x=>x.remove());el.querySelector('.muxln').innerHTML='';el.classList.toggle('zm',!!k);I.labels=[];
+ if(k){const o=L[k]||{},lv=o.lv||0,col=lv>.05?muCol(lv):'#F3F1EC',pc=Math.round((1-lv)*100),w=Math.round((M.wk[k]||0)*10)/10,pn=document.createElement('div');pn.className='muxpn';
+  pn.innerHTML=`${MUS[k][1]!==MUS[k][0]?`<div class="zsc">${esc(MUS[k][1])}</div>`:''}<div class="znm">${esc(MUS[k][0])}</div><div class="zpc"><b style="color:${col}">${pc}%</b><span>recovered</span></div><div class="zbr"><i style="width:${pc}%;background:${lv>.05?col:'#7FD6A0'}"></i></div><dl><dt>Ready</dt><dd>${lv>.05?muReady(o.ready):'now'}</dd><dt>Last trained</dt><dd>${o.last?new Date(o.last).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'Not lately'}</dd><dt>This week</dt><dd>${w} set${w===1?'':'s'}</dd></dl>`;el.appendChild(pn);
+  const bk=document.createElement('button');bk.className='muxbk';bk.dataset.a='m3out';bk.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Whole body';el.appendChild(bk);
+  if(!MRM()&&!first){pn.animate([{opacity:0,transform:'translate(12px,-50%)'},{opacity:1,transform:'translate(0,-50%)'}],{duration:480,delay:380,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'});bk.animate([{opacity:0},{opacity:1}],{duration:300,delay:380,fill:'backwards'});const bi=pn.querySelector('.zbr i');bi.style.transformOrigin='0 50%';bi.animate([{transform:'scaleX(0)'},{transform:'scaleX(1)'}],{duration:800,delay:620,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})}}
+ if(rd){const all=Object.keys(MUS),avg=Math.round(all.reduce((a,q)=>a+(1-((L[q]||{}).lv||0)),0)/all.length*100);rd.innerHTML=`<b>${avg}% recovered</b> overall. Tap a muscle.`}
+ m3Side(el);I.dirty=true;I.kick()}
+// callout lines follow the figure; labels are laid out once it has settled
+function m3Labels(I,M,now){const el=I.el,ln=el.querySelector('.muxln');if(M3S.sel||I.scanT||I.pending||I.drag||Math.abs(m3Wrap(I.t.yaw-I.v.yaw))>.22||Math.abs(I.t.z-I.v.z)>.06){I.lab=0;if(I.labels.length){el.querySelectorAll('.muxlb').forEach(x=>x.remove());ln.innerHTML='';I.labels=[]}return}
+ const v=I.v,P=m3Proj(v),sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),L=M.m,W=I.W,H=I.H;
+ const anchor=(k,s)=>{const f=M3.seg[k];let n=0,x=0,y=0;for(let i=0;i<f.length;i+=9){const ss=f[i+8]||(Math.abs(f[i])>1?Math.sign(f[i]):0);if(s&&ss&&ss!==s)continue;if(f[i+6]*sy+f[i+7]*cy<=.15)continue;const p=P(f[i],f[i+1],f[i+2]);n++;x+=p[0];y+=p[1]}return n>5?[x/n,y/n,n]:null};
+ if(!I.lab){I.lab=1;el.querySelectorAll('.muxlb').forEach(x=>x.remove());const hot=Object.keys(M3.seg).filter(k=>k&&((L[k]||{}).lv||0)>.05).map(k=>({k,a:anchor(k,0)})).filter(x=>x.a&&x.a[2]>12).sort((a,b)=>L[b.k].lv-L[a.k].lv).slice(0,3);
+  I.labels=hot.map((x,i)=>{const lr=i%2?'R':'L',sd=(lr==='L'?-1:1)*(Math.cos(v.yaw)>=0?1:-1)*-1;return{k:x.k,lr,s:M3.info[x.k][sd]?sd:0}});
+  ['L','R'].forEach(lr=>{const g=I.labels.filter(x=>x.lr===lr).map(x=>{x.a=anchor(x.k,x.s)||anchor(x.k,0);return x}).filter(x=>x.a).sort((a,b)=>a.a[1]-b.a[1]);let last=-99;g.forEach(x=>{x.ly=Math.max(40,Math.min(H-30,Math.max(x.a[1]-12,last+48)));last=x.ly})});
+  I.labels=I.labels.filter(x=>x.a);I.labels.forEach((x,i)=>{const o=L[x.k],lb=document.createElement('div');lb.className='muxlb '+x.lr;lb.style.cssText=`${x.lr==='L'?'left:0':'right:0'};bottom:${H-x.ly+5}px`;lb.innerHTML=`<b>${esc(MUS[x.k][0])}</b><span><i style="color:${muCol(o.lv)}">${Math.round((1-o.lv)*100)}%</i> · ${muReady(o.ready)}</span>`;el.appendChild(lb);
+   if(!MRM())lb.animate([{opacity:0,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:340,delay:i*130,easing:'cubic-bezier(.16,1,.3,1)',fill:'backwards'})});
+  ln.innerHTML=I.labels.map(()=>'<circle class="d" r="1.8"/><path/>').join('');if(!MRM())ln.animate([{opacity:0},{opacity:1}],{duration:420})}
+ const ps=ln.querySelectorAll('path'),cs=ln.querySelectorAll('circle');I.labels.forEach((x,i)=>{const a=anchor(x.k,x.s)||x.a;if(!ps[i])return;const x0=x.lr==='L'?0:W,x1=x.lr==='L'?108:W-108;ps[i].setAttribute('d',`M${a[0].toFixed(1)},${a[1].toFixed(1)} L${x1},${x.ly} L${x0},${x.ly}`);cs[i].setAttribute('cx',a[0].toFixed(1));cs[i].setAttribute('cy',a[1].toFixed(1))})}
+// finding figures as pages are drawn
+{let q=0;const scan=()=>{q=0;document.querySelectorAll('.m3:not([data-i])').forEach(el=>{try{m3Start(el)}catch(e){console.warn(e)}});document.querySelectorAll('canvas.m3s:not([data-i])').forEach(c=>{try{m3Still(c)}catch(_){}})};
+ new MutationObserver(()=>{if(!q)q=requestAnimationFrame(scan)}).observe(document.body,{childList:true,subtree:true});
+ addEventListener('resize',()=>{const I=M3S.inst;if(I&&I.el.isConnected){I.size();I.kick()}document.querySelectorAll('canvas.m3s').forEach(c=>{try{m3Still(c)}catch(_){}})})}
+window.addEventListener('click',e=>{const t=e.target;if(!t.closest)return;const sd=t.closest('[data-a=m3side]'),out=t.closest('[data-a=m3out]');if(!sd&&!out)return;e.stopImmediatePropagation();e.preventDefault();const I=M3S.inst;if(!I||!I.el.isConnected)return;
+ if(out){M3S.sel=null}else{M3S.sel=null;const want=+sd.dataset.i*Math.PI/180;M3S.base=I.v.yaw+m3Wrap(want-I.v.yaw)}try{navigator.vibrate&&navigator.vibrate(5)}catch(_){}m3Go(I)},true);
 
-{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/>',h:'Calm',p:'The Mood widget is now Calm: tap the orb for breathing or a quiet sit.'});R.items.push({i:'<path d="M4 12h16M12 4v16"/>',h:'Clearer Goal and Meal prep',p:'The large Goal widget shows your pace against the plan, and Meal prep shows what’s left and the next cook.'})}}
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){const it=R.items.find(x=>x.h==='A new recovery body');const p='A 3D scan of the body that glows where you’re still recovering. Drag to turn it, and tap a muscle to zoom in and see beneath the surface.';if(it)it.p=p;else R.items.push({i:WIS.body.replace(/^<svg[^>]*>|<\/svg>$/g,''),h:'A new recovery body',p})}}
+
+/* ===== v141: the large Meal prep and Goal widgets are redrawn, and Mood becomes Calm: a slow breathing orb that opens
+   a short list of calming sessions (breathing, stillness, a body scan) ===== */
+// Research notes for this block:
+// - What reads as "expensive" in an interface is restraint: generous space, two or three colours, a clear order of
+//   importance, and slow motion that answers the hand (1000logos, "What makes an app feel expensive?"; IIAD, "Why
+//   some websites just feel expensive"; Design Systems Collective, "Why luxury brands understand digital better
+//   than tech", all read 14/11/2026). So each widget here leads with one line, and fills the rest with something
+//   useful instead of leaving a gap or adding ornament.
+// - Goal: showing where you are against where you'd need to be today (a pace mark) makes progress feedback
+//   actionable; feedback against a reference point is what drives goal pursuit (Locke and Latham 2002, American
+//   Psychologist; Harkin et al. 2016, Psychological Bulletin, on progress monitoring. From memory).
+// - Calm: five minutes a day of slow, exhale-led breathing ("cyclic sighing") improved mood and lowered breathing
+//   rate more than mindfulness meditation in a month-long trial (Balban et al. 2023, Cell Reports Medicine). Slow
+//   breathing near six breaths a minute raises heart-rate variability (Lehrer and Gevirtz 2014, Frontiers in
+//   Psychology). Brief body-scan practice lowers stress (Kabat-Zinn's MBSR; from memory). The orb breathes at
+//   about 5.5 breaths a minute so that simply watching it paces you.
+// - The list asks "what do you need?" in plain words and starts in one tap; fewer, clearer choices are chosen
+//   faster (Hick 1952; Nielsen Norman Group on progressive disclosure, 2006).
+(function(){const st=document.createElement('style');st.textContent=`
+.mpl{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.mpl .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-top:8px}
+.mpl .hd1{font-size:21px;font-weight:750;line-height:1.15;letter-spacing:-.005em}
+.mpl .sb1{font-size:13.5px;color:rgba(243,241,236,.7);margin-top:4px;line-height:1.35}
+.mpl .rg{flex:none;width:46px;height:46px;position:relative}.mpl .rg svg{width:100%;height:100%;transform:rotate(-90deg)}
+.mpl .rg b{position:absolute;inset:0;display:grid;place-items:center;font-size:12.5px;font-weight:700}
+.mpl .wk7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0 4px}
+.mpl .wk7 div{text-align:center;font-size:11px;color:rgba(243,241,236,.5);padding:5px 0 6px;border-radius:10px;line-height:1.3}
+.mpl .wk7 div b{display:block;font-size:13px;font-weight:650;color:rgba(243,241,236,.86)}
+.mpl .wk7 div.td{background:rgba(255,255,255,.07)}
+.mpl .wk7 div.pp{background:rgba(127,214,160,.13);color:#9FE0B8}.mpl .wk7 div.pp b{color:#C9F0D8}
+.mpl .wk7 div.cv{box-shadow:inset 0 -2px 0 rgba(127,214,160,.45)}
+.mpl .sec1{font-size:11.5px;font-weight:650;color:rgba(243,241,236,.5);margin:10px 0 2px}
+.mpw.mpl{gap:0}.mpl .rws{margin:0;flex:none}.mpl .rw{padding:5px 0}.mpl .wl{flex:none}
+.mpl .rc1{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px;border-top:1px solid rgba(255,255,255,.07)}.mpl .rc1:first-of-type{border-top:0}
+.mpl .rc1 span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mpl .rc1 em{font-style:normal;color:rgba(243,241,236,.6);white-space:nowrap}
+.gl2{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.gl2 .gnm{font-size:15px;font-weight:650;margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gl2>*{flex:none}.gl2 .arc{position:relative;margin:0 auto;width:100%;max-width:232px;flex:none}
+.gl2 .arc svg{display:block;width:100%;height:auto;overflow:visible}
+.gl2 .arc .mid{position:absolute;left:0;right:0;bottom:6px;text-align:center;line-height:1}
+.gl2 .arc .mid b{display:block;font-family:'Archivo',system-ui,sans-serif;font-stretch:72%;font-size:34px;font-weight:900;letter-spacing:-.01em}
+.gl2 .arc .mid span{display:block;font-size:12.5px;color:rgba(243,241,236,.65);margin-top:6px}
+.gl2 .ends{display:flex;justify-content:space-between;font-size:12px;color:rgba(243,241,236,.6);max-width:264px;width:100%;margin:2px auto 0}
+.gl2 .ends b{color:#F3F1EC;font-weight:650}
+.gl2 .st3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:9px;border-top:1px solid rgba(255,255,255,.09);padding-top:10px}
+.gl2 .st3 div{min-width:0;padding:0 8px;border-left:1px solid rgba(255,255,255,.09)}.gl2 .st3 div:first-child{border-left:0;padding-left:0}
+.gl2 .st3 b{display:block;font-size:16px;font-weight:700;white-space:nowrap}.gl2 .st3 span{display:block;font-size:11.5px;color:rgba(243,241,236,.58);margin-top:2px}
+.gl2 .pace{font-size:13px;line-height:1.35;color:rgba(243,241,236,.72);margin-top:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
+.gl2 .pace b{color:#F3F1EC;font-weight:650}
+.clw{display:flex;flex-direction:column;height:100%;min-height:0;position:relative;overflow:hidden;cursor:pointer}
+.clw .orbw{flex:1;min-height:0;display:grid;place-items:center}
+.corb{width:64px;height:64px;border-radius:50%;position:relative;flex:none;background:radial-gradient(circle at 38% 32%,rgba(255,244,232,.95),color-mix(in srgb,var(--ac,#F07A4E) 55%,#F7D9C4) 42%,color-mix(in srgb,var(--ac,#F07A4E) 30%,transparent) 68%,transparent 72%);animation:corb 10.9s ease-in-out infinite;will-change:transform}
+.corb::before,.corb::after{content:'';position:absolute;inset:-14%;border-radius:50%;border:1px solid color-mix(in srgb,var(--ac,#F07A4E) 45%,transparent);opacity:.5;animation:corb2 10.9s ease-in-out infinite}
+.corb::after{inset:-30%;opacity:.22;animation-delay:.5s}
+@keyframes corb{0%,100%{transform:scale(.78);filter:brightness(.86)}50%{transform:scale(1);filter:brightness(1.06)}}
+@keyframes corb2{0%,100%{transform:scale(.86)}50%{transform:scale(1.06)}}
+.clw .ct{font-size:17px;font-weight:700;line-height:1.2}.clw .cs{font-size:13px;color:rgba(243,241,236,.68);margin-top:3px;line-height:1.35}
+.clw.m{flex-direction:row;align-items:center;gap:18px}.clw.m .orbw{flex:none;width:96px}.clw.m .corb{width:60px;height:60px}.clw.m .tx{flex:1;min-width:0}
+.clw.l .corb{width:112px;height:112px}.clw.l .tx{text-align:center}
+.clw .qk{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.clw .qk button{all:unset;cursor:pointer;text-align:center;padding:10px 4px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:13px;font-weight:650;line-height:1.2}
+.clw .qk button small{display:block;font-size:11px;font-weight:500;color:rgba(243,241,236,.55);margin-top:3px}
+.cls .corb{margin:6px auto 4px;width:72px;height:72px}
+.cls .lead{text-align:center;font-size:14px;color:rgba(243,241,236,.7);margin:14px 0 14px}
+.cls .seg4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.06);margin:0 0 12px}
+.cls .seg4 button{all:unset;cursor:pointer;text-align:center;font-size:13px;font-weight:650;padding:8px 0;border-radius:999px;color:rgba(243,241,236,.65);transition:background .2s,color .2s}
+.cls .seg4 button.on{background:#F3F1EC;color:#141412}
+.cls .opt{all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:13px 2px;border-top:1px solid rgba(255,255,255,.08)}
+.cls .opt:first-of-type{border-top:0}
+.cls .opt span{flex:1;min-width:0}.cls .opt b{display:block;font-size:16px;font-weight:650}.cls .opt small{display:block;font-size:12.5px;color:rgba(243,241,236,.6);margin-top:2px;line-height:1.3}
+.cls .opt svg{width:18px;height:18px;flex:none;opacity:.45}
+.cls .more{all:unset;cursor:pointer;display:block;margin:10px auto 0;font-size:13px;font-weight:650;color:rgba(243,241,236,.6);padding:8px 12px}
+#br{color:#F3F1EC;background:radial-gradient(120% 90% at 50% 32%,color-mix(in srgb,var(--ac,#F07A4E) 16%,#151312) 0%,#100F0E 55%,#0A0A09 100%)}
+#br .orb{background:radial-gradient(circle at 38% 32%,rgba(255,244,232,.96),color-mix(in srgb,var(--ac,#F07A4E) 55%,#F7D9C4) 42%,color-mix(in srgb,var(--ac,#F07A4E) 24%,transparent) 68%,transparent 72%);box-shadow:0 0 90px color-mix(in srgb,var(--ac,#F07A4E) 32%,transparent)}
+@media(prefers-reduced-motion:reduce){.corb,.corb::before,.corb::after{animation:none}}
+`;document.head.appendChild(st)})();
+
+// ---- Meal prep, large: what's next, the week at a glance, what to do today, and what gets cooked
+{const _wd=wd;wd=function(l){if(!l||l.id!=='prep'||!(l.w===2&&l.h===2))return _wd.apply(this,arguments);try{const t=today(),np=nextPrepFrom(t),Tk=mpTasks(t),left=Tk.filter(x=>!x.done),isT=np===t,P=np?prepList(np):null;
+  if(!np&&!Tk.length)return _wd.apply(this,arguments);
+  const head=isT?'Prep day':np?`Prep day ${whenLbl(np).toLowerCase()}`:'Nothing to batch cook',sub=P?(P.L.length?`${P.portions} portion${P.portions===1?'':'s'} to cover ${shortDay(P.days[0])} to ${shortDay(P.end)}`:`Nothing to batch cook yet for ${shortDay(P.days[0])} to ${shortDay(P.end)}`):'';
+  const dn2=Tk.length-left.length,C=2*Math.PI*19,ring=Tk.length?`<div class="rg" aria-label="${dn2} of ${Tk.length} done"><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle cx="23" cy="23" r="19" fill="none" stroke="#7FD6A0" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(C*dn2/Tk.length).toFixed(1)} ${C.toFixed(1)}"/></svg><b>${dn2}/${Tk.length}</b></div>`:'';
+  const cov=new Set(P?P.days:[]),wk=[...Array(7)].map((_,i)=>addDays(t,i)).map(d=>`<div class="${d===t?'td ':''}${isPrep(d)?'pp ':''}${cov.has(d)&&!isPrep(d)?'cv':''}">${new Date(d+'T12:00').toLocaleDateString('en-GB',{weekday:'short'}).slice(0,2)}<b>${+d.slice(8)}</b></div>`).join('');
+  const room=Tk.length?(Tk.length>1?1:2):4,rec=P&&P.L.length?P.L.slice(0,room).map(x=>`<div class="rc1"><span>${esc(x.r.n||x.r.name||'Recipe')}</span><em>${x.n} portion${x.n===1?'':'s'}</em></div>`).join(''):'';
+  return`<div class="mpw mpl">${wHead('Meal prep')}<div class="top"><div><div class="hd1">${esc(head)}</div><div class="sb1">${esc(sub)}</div></div>${ring}</div><div class="wk7">${wk}</div>
+   ${Tk.length?`<div class="sec1">${left.length?`To do today${left.length>2?', '+left.length+' in all':''}`:'All done for today'}</div><div class="rws">${[...left,...Tk.filter(x=>x.done)].slice(0,2).map(x=>tRow(t,x)).join('')}</div>`:''}
+   ${rec?`<div class="sec1">${isT?'Cooking today':'Cooking '+whenLbl(np).toLowerCase()}</div>${rec}`:''}</div>`}catch(_){return _wd.apply(this,arguments)}}}
+
+// ---- Goal, large: an arc from start to target, with a mark for where you'd need to be today
+{const _g=goalW;goalW=function(l){const G=S.goal2;if(!G||!(l&&l.w===2&&l.h===2)||(G.due&&G.due<=realToday())||G.type==='Custom'||G.type==='Develop')return _g.apply(this,arguments);
+ try{const c=gCalc(G);if(c.now==null||!isFinite(c.start)||!isFinite(c.target))return _g.apply(this,arguments);const pct=Math.max(0,Math.min(1,c.pct||0)),t=realToday(),tot=G.sd&&G.due?Math.max(1,dn(G.due)-dn(G.sd)):0,el=tot?Math.max(0,Math.min(1,(dn(t)-dn(G.sd))/tot)):null;
+  const R=132,cx=150,cy=146,pt=f=>{const a=Math.PI*(1-f);return[cx+R*Math.cos(a),cy-R*Math.sin(a)]},arc=f=>{const [x,y]=pt(f);return`M${cx-R},${cy} A${R},${R} 0 0 1 ${x.toFixed(1)},${y.toFixed(1)}`},len=Math.PI*R,[px,py]=pt(pct),pm=el!=null?pt(el):null,pm2=el!=null?(()=>{const a=Math.PI*(1-el);return[cx+(R+9)*Math.cos(a),cy-(R+9)*Math.sin(a),cx+(R-9)*Math.cos(a),cy-(R-9)*Math.sin(a)]})():null;
+  const gap=Math.abs(c.target-c.now),r1x=v=>Math.round(v*10)/10,wk=c.left!=null&&c.left>0?gap/(c.left/7):null,keep=!!c.tol;
+  const behind=el!=null&&!keep?el-pct:0,pace=keep?`Holding within <b>±${c.tol}${c.u}</b> of ${c.fmt(c.start)}.`:pct>=1?'<b>Target reached.</b> Set the next one when you’re ready.':el==null?esc(c.sugg||''):behind>.12?`<b>Behind the line.</b> ${esc(c.sugg||'')}`:behind<-.05?`<b>Ahead of the line.</b> ${esc(c.sugg||'')}`:`<b>On the line.</b> ${esc(c.sugg||'')}`;
+  return`<div class="gl2" data-a="gopen">${wlab('flag','Goal')}<div class="gnm">${esc(G.name)}</div>
+   <div class="arc"><svg viewBox="0 0 300 156" aria-hidden="true"><path d="${arc(1)}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2" stroke-linecap="round"/><path d="${arc(Math.max(.004,pct))}" fill="none" stroke="var(--ac,#F07A4E)" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="100" class="garc"/>${pm2?`<path d="M${pm2[0].toFixed(1)},${pm2[1].toFixed(1)} L${pm2[2].toFixed(1)},${pm2[3].toFixed(1)}" stroke="rgba(243,241,236,.7)" stroke-width="1.5" stroke-linecap="round"/>`:''}<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="9" fill="var(--ac,#F07A4E)" opacity=".22"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="#F3F1EC"/></svg>
+    <div class="mid"><b>${c.fmt(c.now)}</b><span>${keep?'now':`${Math.round(pct*100)}% of the way`}</span></div></div>
+   <div class="ends"><span>Start <b>${c.fmt(c.start)}</b></span><span>${keep?'Range':'Target'} <b>${keep?'±'+c.tol+c.u:c.fmt(c.target)}</b></span></div>
+   <div class="st3"><div><b>${keep?'-':r1x(gap)+c.u}</b><span>to go</span></div><div><b>${wk!=null&&!keep?r1x(wk)+c.u:'-'}</b><span>a week needed</span></div><div><b>${c.left!=null?c.left:'-'}</b><span>day${c.left===1?'':'s'} left</span></div></div>
+   <div class="pace">${pace}</div></div>`}catch(_){return _g.apply(this,arguments)}}}
+
+// ---- Calm replaces Mood: the orb breathes at about 5.5 breaths a minute; tap it for a session
+NM.mood='Calm';WDESC.mood=['Calm','A slow breathing orb. Tap it for a minute of breathing, stillness or a body scan.','mood','Body'];
+WIS.mood='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/></svg>';
+BRS.still={n:'Stillness',d:'Sit quietly and follow the slow pulse. Let thoughts come and go.',ph:[['Notice your breath',6,1],['Let it go',7,.6],['Stay with it',6,1],['Thoughts can pass',7,.6]]};
+BRS.scan={n:'Body scan',d:'Move your attention slowly from head to feet, letting each part soften.',ph:[['Soften your forehead and jaw',9,.95],['Let your shoulders drop',9,.6],['Feel your chest rise and fall',9,.95],['Loosen your hands',9,.6],['Let your stomach be soft',9,.95],['Relax your hips and thighs',9,.6],['Feel your calves and feet',9,.95],['Rest in the whole body',9,.6]]};
+const CALM=[['sigh','Calm down','Two breaths in, one long breath out'],['box','Focus','Even counts of four, to steady yourself'],['wind','Wind down','A slow 4-7-8 pattern before sleep'],['still','Stillness','Sit quietly and follow the pulse'],['scan','Body scan','Head to feet, letting each part soften'],['coh','Even breathing','About five and a half breaths a minute'],['power','Wake up','Fast rounds with breath holds']];
+const calmWeek=()=>{let n=0;try{const L=S.brLog||[];const t=Date.now();n=L.filter(x=>t-x.t<7*864e5).reduce((a,x)=>a+(x.m||0),0)}catch(_){}return Math.round(n)};
+{const _wd=wd;wd=function(l){if(!l||l.id!=='mood')return _wd.apply(this,arguments);const wkm=calmWeek(),sub=wkm?`${wkm} min this week`:'A minute is enough',lab=wlab('mood','Calm');
+ if(l.w===1&&l.h===1)return`<div class="clw" data-a="bropen">${lab}<div class="orbw"><i class="corb"></i></div><div class="cs" style="text-align:center">Tap to breathe</div></div>`;
+ if(l.h===1)return`<div class="clw m" data-a="bropen"><div class="orbw"><i class="corb"></i></div><div class="tx">${lab}<div class="ct" style="margin-top:6px">Take a minute</div><div class="cs">${sub}</div></div></div>`;
+ return`<div class="clw l">${lab}<div class="orbw" data-a="bropen"><i class="corb"></i></div><div class="tx"><div class="ct">Take a minute</div><div class="cs">${sub}</div></div><div class="qk">${CALM.slice(0,3).map(([k,n])=>`<button data-a="brgo" data-i="${k}">${n}<small>${S.brDur||3} min</small></button>`).join('')}</div></div>`}}
+// the selector: how long, then what you need. One tap starts it.
+brSheet=function(){const D=S.brDur||3,all=!!brSheet.all,row=([k,n,d])=>`<button class="opt" data-a="brgo" data-i="${k}"><span><b>${n}</b><small>${d}</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>`;
+ sheet(`<div class="cls brl"><i class="corb" style="display:block"></i><p class="lead">What do you need?</p><div class="seg4">${[1,3,5,10].map(m=>`<button class="${D===m?'on':''}" data-a="brdur" data-i="${m}">${m} min</button>`).join('')}</div>${CALM.slice(0,all?CALM.length:5).map(row).join('')}${all?'':'<button class="more" data-a="brmore">More</button>'}</div>`)};
+window.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('[data-a=brmore]');if(!el)return;e.stopImmediatePropagation();e.preventDefault();brSheet.all=true;brSheet()},true);
+// minutes of calm, for the widget's "this week"
+{const _d=brDone;brDone=function(){try{if(BR&&BR.b){const m=BR.b.power?3:Math.max(1,Math.round((S.brDur||3)));(S.brLog=S.brLog||[]).unshift({t:Date.now(),k:BR.k,m});S.brLog=S.brLog.slice(0,60);save()}}catch(_){}return _d.apply(this,arguments)}}
+
+{const R=RELEASES.find(r=>r.v===APP_VER);if(R){R.items.push({i:'<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" opacity=".5"/>',h:'Calm',p:'The Mood widget is now Calm: a slow breathing orb. Tap it and pick what you need, from calming down to a body scan.'});R.items.push({i:'<path d="M4 18a8 8 0 0116 0"/><circle cx="12" cy="10" r="1.6"/>',h:'Clearer Goal and Meal prep',p:'The large Goal widget shows an arc from start to target with a mark for where you’d need to be today. Meal prep shows the week, today’s jobs and what gets cooked.'})}}
 
 /* ===== v84: the Claude preview is a test bench: no intro, tips or pop-ups, every feature switched on, demo data ===== */
 // The live site is unaffected (PREVIEW is false on netlify.app and localhost).
