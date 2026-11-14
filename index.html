@@ -11153,14 +11153,18 @@ try{WIS.cup=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 
 {const R=RELEASES.find(r=>r.v===APP_VER);if(R)R.items.push({i:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',h:'Tidier widgets',p:'Every widget now fits each of its three sizes, Achievements has its own widget, and Home stays still after a tap.'})}
 
-/* ===== v140: the recovery body becomes a real 3D figure: a plain, softly shaded grey form with a neutral build that you can
-   turn with a finger, that scans in, warms where you're recovering, and peels back to the muscle when you tap a part ===== */
+/* ===== v140: the recovery body becomes a real 3D figure with an x-ray look: see-through, with bright outlines, in a male,
+   female or neutral build. You can turn it with a finger; it scans in, warms where you're recovering, and peels back to
+   the muscle when you tap a part ===== */
 // Research notes for this block:
 // - Optical body scanners and DEXA reports show the body as an anonymous form: a mesh or contour avatar with no
 //   face, skin or sex markers (Styku, Fit3D and ShapeScale use plain mesh avatars; DEXA reports use a greyscale
 //   outline with regions boxed). Swell follows that: one average, unmarked figure made of measurement lines, so
 //   nobody enters size or anything else to see themselves in it. (Products named from memory, not re-checked.)
-// - It is shaded like an artist's mannequin: matte grey, one soft light, no face or detail. Simple, abstract human
+// - It is drawn like a medical x-ray render: light gathers at the outline and the middle stays see-through, with no
+//   face, skin or organs. The build follows the sex given at set-up (male, female, or a neutral one if left open),
+//   so nobody enters anything extra. Scans are taken with the arms held a little away from the body, so it is too.
+// - (Earlier note) It was first shaded like an artist's mannequin: matte grey, one soft light, no face or detail. Simple, abstract human
 //   figures avoid the unease that near-realistic ones cause (Mori's 'uncanny valley', 1970; MacDorman and Ishiguro
 //   2006), and a neutral average build doesn't ask anyone to match it.
 // - Being able to turn an object yourself gives a better understanding of its shape than fixed views
@@ -11191,14 +11195,22 @@ canvas.m3s{display:block;width:100%;height:100%}
 
 // ---- the model: tubes of level rings. Stations are [height, centre x, half width, half depth, centre z], feet at 0, crown at 100
 const M3K=Object.keys(MUS);
-const M3=(()=>{const cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t),T=[];
+// three builds, chosen from the sex given at set-up: 'm', 'f', or a neutral one when it's left open
+const M3B={
+ m:{torso:[[84.9,0,3.9,3.5,0],[83.8,0,6.4,4.4,0],[81.6,0,11.6,5.7,0],[78,0,12.4,7,.5],[74,0,11.6,7,.5],[70,0,10.4,6.3,.3],[66,0,9.5,5.7,0],[62,0,9.5,5.8,0],[58,0,10.2,6.4,-.3],[54.5,0,10.8,6.9,-.5],[51.5,0,10.6,6.7,-.4],[49.6,0,9.6,6,-.2]],ax:1,ar:1,neck:1,leg:[1,1,1]},
+ f:{torso:[[84.9,0,3.5,3.2,0],[83.8,0,5.6,4,0],[81.6,0,9.8,5.1,0],[78,0,10.6,6.6,.9],[75,0,10.3,7,1.3],[72,0,9.6,6.2,.6],[68,0,8.4,5.2,0],[65,0,8.2,5.1,0],[61,0,9.6,5.9,-.2],[57,0,11.4,6.9,-.5],[53.5,0,12,7.3,-.7],[51,0,11.6,7,-.5],[49.6,0,10.3,6.2,-.2]],ax:.9,ar:.84,neck:.88,leg:[1.04,.97,.92]},
+ n:{torso:[[84.9,0,3.7,3.4,0],[83.8,0,6,4.2,0],[81.6,0,10.7,5.4,0],[78,0,11.5,6.8,.6],[74,0,11,7,.7],[70,0,10,6.3,.3],[66,0,9.1,5.5,0],[62,0,9.3,5.7,0],[58,0,10.6,6.6,-.3],[54.5,0,11.4,7,-.5],[51.5,0,11.1,6.8,-.4],[49.6,0,9.9,6.1,-.2]],ax:.95,ar:.92,neck:.94,leg:[1.02,1,.97]}};
+const m3Kind=()=>{const x=(S.setup||{}).sex;return x==='f'||x==='Female'?'f':x==='m'||x==='Male'?'m':'n'};
+function m3Make(kind){const B=M3B[kind]||M3B.n,cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t),T=[];
  const tube=(seg,s,st,K,dy)=>{const R=[];for(let i=0;i<st.length-1;i++){const p0=st[i-1]||st[i],p1=st[i],p2=st[i+1],p3=st[i+2]||p2,n=Math.max(1,Math.round((p1[0]-p2[0])/dy));for(let j=0;j<n;j++){const t=j/n;R.push([0,1,2,3,4].map(q=>cr(p0[q],p1[q],p2[q],p3[q],t)))}}
   R.push(st[st.length-1].slice());R.forEach(r=>{r[1]*=s||1;r[2]=Math.max(.3,r[2]);r[3]=Math.max(.3,r[3])});T.push({seg,s:s||0,R,K})};
- tube('head',0,[[99.4,0,.6,.7,0],[98.6,0,2.7,3.1,0],[96.9,0,4.1,4.8,0],[94.5,0,4.7,5.5,0],[92.2,0,4.6,5.3,.2],[90.2,0,4,4.6,.5],[88.6,0,3.3,3.7,.6]],28,1.1);
- tube('neck',0,[[88.2,0,3.1,3.4,.2],[86,0,3,3.2,0],[84,0,3.9,3.5,0]],22,1.3);
- tube('torso',0,[[84.9,0,3.9,3.5,0],[83.8,0,6.1,4.3,0],[81.6,0,10.8,5.5,0],[78,0,11.7,6.7,.4],[74,0,11.3,6.9,.5],[70,0,10.5,6.3,.3],[66,0,9.9,5.8,0],[62,0,10.1,6,0],[58,0,11.1,6.8,-.3],[54.5,0,11.6,7.2,-.5],[51.5,0,11.3,6.9,-.4],[49.6,0,10.1,6.1,-.2]],44,1.3);
- [1,-1].forEach(s=>{tube('arm',s,[[83.3,12.1,1.5,2.1,0],[81.6,13.7,3.2,3.9,0],[79,14.6,3.7,4.2,0],[75,15.1,3.5,3.9,0],[71,15.6,3.3,3.6,.2],[67.5,16.1,3,3.2,.2],[64.5,16.6,2.7,2.8,.1],[62,17,2.9,2.9,.3],[58,17.5,2.7,2.6,.6],[53,18.1,2.2,2,.9],[49.5,18.5,1.7,1.4,1.1],[47,18.8,2,1.2,1.3],[43.5,19.1,1.8,1,1.5],[41,19.2,1,.7,1.6]],22,1.3);
-  tube('leg',s,[[51.6,6.1,5.8,6.6,-.3],[46,6.2,5.5,6.2,0],[40,5.9,4.9,5.5,.2],[34,5.5,4.2,4.8,.2],[29.5,5.2,3.6,4,.2],[27,5.1,3.4,3.7,0],[22.5,5,3.7,4.4,-.8],[17,4.8,3.1,3.6,-.6],[11,4.6,2.2,2.6,-.2],[6.5,4.5,1.8,2.2,0],[4,4.5,2,3.2,1.2],[1.6,4.6,2.3,4.8,2.6],[.4,4.6,2.1,4.6,2.8]],26,1.3)});
+ tube('head',0,[[99.4,0,.6,.7,0],[98.6,0,2.7,3.1,0],[96.9,0,4.1,4.8,0],[94.5,0,4.7,5.5,0],[92.2,0,4.6,5.3,.2],[90.2,0,4,4.6,.5],[88.6,0,3.3,3.7,.6]].map(p=>[p[0],0,p[2]*(kind==='f'?.95:1),p[3]*(kind==='f'?.95:1),p[4]]),32,.9);
+ tube('neck',0,[[88.2,0,3.1,3.4,.2],[86,0,3,3.2,0],[84,0,3.9,3.5,0]].map(p=>[p[0],0,p[2]*B.neck,p[3]*B.neck,p[4]]),26,.9);
+ tube('torso',0,B.torso,48,1.1);
+ // arms held a little away from the body, the way a scan is taken
+ const ARM=[[83.3,12.3,1.5,2.1,0],[81.8,14,3.4,4,0],[79.2,15.3,3.9,4.3,0],[75.5,16.6,3.6,3.9,0],[71.5,17.8,3.4,3.6,.2],[68,18.8,3,3.2,.2],[65,19.7,2.7,2.8,.1],[62.5,20.4,2.9,2.9,.3],[58.5,21.5,2.7,2.6,.6],[54,22.7,2.1,2,.9],[50.5,23.6,1.7,1.4,1.1],[48,24.2,2,1.2,1.3],[44.8,24.9,1.8,1,1.5],[42.5,25.3,1,.7,1.6]].map(p=>[p[0],p[1]*B.ax,p[2]*B.ar,p[3]*B.ar,p[4]]);
+ const LEG=[[51.6,6.1,5.8,6.6,-.3],[46,6.2,5.5,6.2,0],[40,5.9,4.9,5.5,.2],[34,5.5,4.2,4.8,.2],[29.5,5.2,3.6,4,.2],[27,5.1,3.4,3.7,0],[22.5,5,3.7,4.4,-.8],[17,4.8,3.1,3.6,-.6],[11,4.6,2.2,2.6,-.2],[6.5,4.5,1.8,2.2,0],[4,4.5,2,3.2,1.2],[1.6,4.6,2.3,4.8,2.6],[.4,4.6,2.1,4.6,2.8]].map(p=>{const k=p[0]>44?B.leg[0]:p[0]>28?B.leg[1]:B.leg[2];return[p[0],p[1]*(p[0]>44?B.leg[0]:1),p[2]*k,p[3]*k,p[4]]});
+ [1,-1].forEach(s=>{tube('arm',s,ARM,22,1.15);tube('leg',s,LEG,28,1.15)});
  // which muscle a point belongs to: f = how far forward it faces, a = how far out to the side, o = outward on a limb
  const mus=(seg,s,y,th)=>{const f=Math.sin(th),c=Math.cos(th),a=Math.abs(c),o=c*(s||1);
   if(seg==='neck')return f<-.2?'traps':null;
@@ -11223,36 +11235,39 @@ const M3=(()=>{const cr=(a,b,c,d,t)=>.5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+
  const seg=pack(G),str=pack(ST),info={};
  Object.keys(seg).forEach(k=>{if(!k)return;const f=seg[k],I={};[1,-1,0].forEach(s=>{let n=0,x=0,y=0,z=0,nx=0,nz=0,y0=1e9,y1=-1e9,x0=1e9,x1=-1e9;for(let i=0;i<f.length;i+=9){if(s&&f[i+8]&&f[i+8]!==s)continue;if(s&&!f[i+8]&&Math.sign(f[i])!==s&&Math.abs(f[i])>1)continue;n++;x+=f[i];y+=f[i+1];z+=f[i+2];nx+=f[i+6];nz+=f[i+7];y0=Math.min(y0,f[i+1]);y1=Math.max(y1,f[i+1]);x0=Math.min(x0,f[i]);x1=Math.max(x1,f[i])}
    if(n)I[s]={c:[x/n,y/n,z/n],n:[nx/n,nz/n],h:y1-y0,w:x1-x0,y0,y1}});info[k]=I});
- return{seg,str,info,quad,qmus,qn:QM.length,qt:QT}})();
+ return{kind,seg,str,info,quad,qmus,qn:QM.length,qt:QT}}
+let M3=m3Make(m3Kind());
+function m3Sync(){const k=m3Kind();if(M3.kind!==k){M3=m3Make(k);M3ORD=M3DEP=M3HT=null}}
 
 // ---- drawing
 const M3S={yaw:0,base:0,sel:null,ss:1,seen:0,inst:null};
 function m3Proj(v){const sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),fx=v.f[0]*cy-v.f[2]*sy,fd=v.f[0]*sy+v.f[2]*cy,fy=v.f[1]*cp-fd*sp,k=v.s*v.z;
  return(x,y,z)=>{const rx=x*cy-z*sy,d=x*sy+z*cy,ry=y*cp-d*sp;return[v.X+(rx-fx)*k,v.Y-(ry-fy)*k,d]}}
 const M3RGB=h=>[parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
-let M3ORD=null,M3DEP=null,M3HT=null;
+let M3ORD=null,M3DEP=null,M3HT=null;/* reused buffers: projected corners, brightness level, heat */
 // where it's warm: each muscle's colour, softened across its edges so it reads as warmth, not a painted panel
 function m3Heat(L){const sig=M3K.map(k=>(((L[k]||{}).lv||0)).toFixed(2)).join();if(M3HT&&M3HT.sig===sig)return M3HT;const N=M3.qn,a=new Float32Array(N*4),b=new Float32Array(N*4),hk={};
- for(const k of M3K){const lv=(L[k]||{}).lv||0;if(lv>.05){const c=M3RGB(muCol(lv)),m=Math.min(.95,.45+.6*lv);hk[k]=[c[0]*m,c[1]*m,c[2]*m,m]}}
+ for(const k of M3K){const lv=(L[k]||{}).lv||0;if(lv>.05){const c=M3RGB(muCol(lv)),m=Math.min(.95,.08+lv*1.05);hk[k]=[c[0]*m,c[1]*m,c[2]*m,m]}}
  for(let q=0;q<N;q++){const h=hk[M3.qmus[q]];if(h){a[q*4]=h[0];a[q*4+1]=h[1];a[q*4+2]=h[2];a[q*4+3]=h[3]}}
  let src=a,dst=b;for(let pass=0;pass<3;pass++){for(const t of M3.qt){for(let i=0;i<t.n;i++)for(let j=0;j<t.K;j++){const q=t.o+i*t.K+j,l=t.o+i*t.K+(j+t.K-1)%t.K,r=t.o+i*t.K+(j+1)%t.K,u=i?q-t.K:q,d=i<t.n-1?q+t.K:q;for(let c=0;c<4;c++)dst[q*4+c]=(src[q*4+c]*2+src[l*4+c]+src[r*4+c]+src[u*4+c]+src[d*4+c])/6}}const x=src;src=dst;dst=x}
  return M3HT={sig,h:src}}
-function m3Paint(ctx,W,H,v,L,o){o=o||{};const dpr=o.dpr||1,sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),P=m3Proj(v),sel=o.sel,pl=o.peel||0,scan=o.scan==null?-1:o.scan,ac=o.ac||'#6FB7DA';
+function m3Paint(ctx,W,H,v,L,o){m3Sync();o=o||{};const dpr=o.dpr||1,sy=Math.sin(v.yaw),cy=Math.cos(v.yaw),sp=Math.sin(v.pitch),cp=Math.cos(v.pitch),P=m3Proj(v),sel=o.sel,pl=o.peel||0,scan=o.scan==null?-1:o.scan,ac=o.ac||'#9FD2EE';
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);ctx.lineCap='round';ctx.lineJoin='round';ctx.globalAlpha=1;
- const Q=M3.quad,N=M3.qn,qm=M3.qmus;if(!M3ORD){M3ORD=new Int32Array(N);M3DEP=new Float32Array(N)}
- // light from the upper left, a little in front; a soft rim so the edges don't go flat
- const LX=-.42,LY=.5,LZ=.76;let n=0;
- for(let q=0;q<N;q++){const i=q*16,nx=Q[i+12],ny=Q[i+13],nz=Q[i+14],rz0=nx*sy+nz*cy,rz=rz0*cp+ny*sp;if(rz<=-.02)continue;if(scan>=0&&Q[i+1]<scan)continue;M3DEP[q]=(Q[i]+Q[i+6])*.5*sy+(Q[i+2]+Q[i+8])*.5*cy;M3ORD[n++]=q}
- const ord=M3ORD.subarray(0,n);ord.sort((a,b)=>M3DEP[a]-M3DEP[b]);
- const HT=m3Heat(L).h;
- const selSide=o.side||0;
- for(let u=0;u<n;u++){const q=ord[u],i=q*16,nx=Q[i+12],ny=Q[i+13],nz=Q[i+14],rx=nx*cy-nz*sy,rz0=nx*sy+nz*cy,ry=ny*cp-rz0*sp,rz=rz0*cp+ny*sp;
-  let sh=.2+.6*Math.max(0,rx*LX+ry*LY+rz*LZ)+.2*Math.pow(1-Math.max(0,rz),3);const k=qm[q],hm=HT[q*4+3],isSel=sel&&k===sel&&(!selSide||!Q[i+15]||Q[i+15]===selSide);
-  let r=sh*222,g=sh*220,b=sh*216,al=1;if(hm>.02){const f=(.42+.78*sh)/hm;r+=(HT[q*4]*f-r)*hm;g+=(HT[q*4+1]*f-g)*hm;b+=(HT[q*4+2]*f-b)*hm}
-  if(sel&&!isSel){r*=.5;g*=.5;b*=.5}if(isSel)al=1-.86*pl;
-  const p0=P(Q[i],Q[i+1],Q[i+2]),p1=P(Q[i+3],Q[i+4],Q[i+5]),p2=P(Q[i+6],Q[i+7],Q[i+8]),p3=P(Q[i+9],Q[i+10],Q[i+11]);if(p0[0]<-30&&p1[0]<-30||p0[0]>W+30&&p1[0]>W+30||p0[1]<-30&&p3[1]<-30||p0[1]>H+30&&p3[1]>H+30)continue;
-  const col=`rgb(${r|0},${g|0},${b|0})`;ctx.globalAlpha=al;ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.lineTo(p3[0],p3[1]);ctx.closePath();ctx.fill();if(al>.5)ctx.stroke()}
- ctx.globalAlpha=1;
+ const Q=M3.quad,N=M3.qn,qm=M3.qmus,HT=m3Heat(L).h,selSide=o.side||0,NL=32;
+ // an x-ray look: each panel glows by how edge-on it is, so outlines are bright and the middle stays see-through.
+ // panels are grouped by brightness (front and back apart) and added as light, so no sorting is needed.
+ const fx=v.f[0]*cy-v.f[2]*sy,fd=v.f[0]*sy+v.f[2]*cy,fy=v.f[1]*cp-fd*sp,kk=v.s*v.z,VX=v.X,VY=v.Y;
+ if(!M3ORD){M3ORD=new Float32Array(N*8);M3DEP=new Int16Array(N)}const X=M3ORD,B=M3DEP,bk=[];for(let i=0;i<NL*2;i++)bk.push([]);const hot=[];
+ for(let q=0;q<N;q++){const i=q*16;if(scan>=0&&Q[i+1]<scan){B[q]=-1;continue}const nx=Q[i+12],ny=Q[i+13],nz=Q[i+14],rz0=nx*sy+nz*cy,rz=rz0*cp+ny*sp;
+  const j=q*8;let off=0;for(let c=0;c<4;c++){const x=Q[i+c*3],y=Q[i+c*3+1],z=Q[i+c*3+2],d=x*sy+z*cy,px=VX+(x*cy-z*sy-fx)*kk,py=VY-(y*cp-d*sp-fy)*kk;X[j+c*2]=px;X[j+c*2+1]=py;if(px<-40||px>W+40||py<-40||py>H+40)off++}if(off===4){B[q]=-1;continue}
+  const e=1-Math.abs(rz),k=qm[q],isSel=sel&&k===sel&&(!selSide||!Q[i+15]||Q[i+15]===selSide);let it=.075+e*e*(.42+.6*e)+(rz>0?.13*Math.max(0,-.45*(nx*cy-nz*sy)+.55*ny+.35):0);if(rz<0)it*=.55;if(Q[i+15]){const y=Q[i+1];if(y>47&&y<53&&Math.abs(Q[i])<13.5)it*=Math.max(.12,1-(y-47)/4.2);else if(y>80)it*=Math.max(.15,1-(y-80)/3)}if(sel&&!isSel)it*=.45;if(isSel)it*=1-.8*pl;
+  const lv=Math.min(NL-1,Math.max(0,Math.round(it*NL/.9)));bk[(rz>0?NL:0)+lv].push(q);B[q]=lv;
+  if(rz>0&&HT[q*4+3]>.03)hot.push(q)}
+ ctx.globalCompositeOperation='lighter';
+ for(let g=0;g<NL*2;g++){const a=bk[g];if(!a.length)continue;const it=((g%NL)+.5)/NL*.9;ctx.beginPath();for(let u=0;u<a.length;u++){const j=a[u]*8;ctx.moveTo(X[j],X[j+1]);ctx.lineTo(X[j+2],X[j+3]);ctx.lineTo(X[j+4],X[j+5]);ctx.lineTo(X[j+6],X[j+7]);ctx.closePath()}ctx.fillStyle=`rgba(214,232,244,${it.toFixed(3)})`;ctx.fill()}
+ // warmth where muscles are still recovering, laid over the front
+ for(let u=0;u<hot.length;u++){const q=hot[u],j=q*8,hm=HT[q*4+3],k=qm[q],isSel=sel&&k===sel;let a=hm*(.42+.5*Math.min(1,B[q]/NL));if(sel&&!isSel)a*=.4;if(isSel)a*=1-.7*pl;ctx.fillStyle=`rgba(${HT[q*4]/hm|0},${HT[q*4+1]/hm|0},${HT[q*4+2]/hm|0},${a.toFixed(3)})`;ctx.beginPath();ctx.moveTo(X[j],X[j+1]);ctx.lineTo(X[j+2],X[j+3]);ctx.lineTo(X[j+4],X[j+5]);ctx.lineTo(X[j+6],X[j+7]);ctx.closePath();ctx.fill()}
+ ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1;
  // under the surface: strands running down the chosen muscle, drawn in from the top
  if(sel&&pl>0&&M3.str[sel]){const f=M3.str[sel],I=(M3.info[sel]||{})[selSide]||(M3.info[sel]||{})[0],lv=(L[sel]||{}).lv||0,col=lv>.05?muCol(lv):'#A9C4DA',yc=I?I.y1-(I.y1-I.y0+1)*pl:-1;
   // cross bands first, so the strands read as fibres over a form
@@ -11281,14 +11296,14 @@ function m3Start(el){el.dataset.i=1;const c=el.querySelector('canvas'),ctx=c.get
  size();
  if(Date.now()-M3S.seen>90000&&!rm){M3S.sel=null;el.classList.remove('zm');I.t=m3Target(I);I.scan=100;I.pending=true}
  const L=()=>muLoad();
- const frame=now=>{I.raf=0;if(!el.isConnected){return}const v=I.v,t=I.t,M=L();let moving=false;
+ const frame=now=>{I.raf=0;if(!el.isConnected){return}if(I.calm&&!I.drag&&!I.dirty&&now-(I.lastT||0)<31){I.raf=requestAnimationFrame(frame);return}I.lastT=now;const v=I.v,t=I.t,M=L();let moving=false;
   if(I.pending){m3Paint(ctx,I.W,I.H,v,M.m,{dpr:I.dpr,scan:100});if(I.vis){I.pending=false;I.scanT=now;M3S.seen=Date.now();try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}I.raf=requestAnimationFrame(frame);return}
   if(I.scanT){const p=Math.min(1,(now-I.scanT)/1500),e=p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;I.scan=100-101*e;if(p>=1){I.scan=-1;I.scanT=0;I.lab=0}moving=true}
   if(I.drag){moving=true}else{const sway=!rm&&!M3S.sel?Math.sin((now-I.t0)/2600)*.13:0,ty=t.yaw+sway,k=rm?1:.12;
    if(Math.abs(I.vel)>.0005){t.yaw=M3S.base=m3Wrap(t.yaw+I.vel);I.vel*=.92;v.yaw=m3Wrap(v.yaw+I.vel);moving=true}else{const d=m3Wrap(ty-v.yaw);v.yaw=m3Wrap(v.yaw+d*k);if(Math.abs(d)>.002)moving=true}
    ['z','X','Y','pitch'].forEach(q=>{const d=t[q]-v[q];v[q]+=d*k;if(Math.abs(d)>(q==='z'||q==='pitch'?.002:.3))moving=true});for(let i=0;i<3;i++){const d=t.f[i]-v.f[i];v.f[i]+=d*k;if(Math.abs(d)>.05)moving=true}
    const pt=M3S.sel&&Math.abs(t.z-v.z)<t.z*.25?1:0;if(I.peel!==pt){I.peel+=Math.sign(pt-I.peel)*(rm?1:.035);I.peel=Math.max(0,Math.min(1,I.peel));moving=true}
-   if(sway||!rm&&!M3S.sel)moving=true}
+   I.calm=!moving;if(sway||!rm&&!M3S.sel)moving=true}
   M3S.yaw=v.yaw;m3Paint(ctx,I.W,I.H,v,M.m,{dpr:I.dpr,sel:M3S.sel,side:M3S.sel?M3S.ss:0,peel:I.peel,scan:I.scan});
   m3Labels(I,M,now);
   if(I.vis&&(moving||I.dirty)){I.dirty=false;I.raf=requestAnimationFrame(frame)}};
